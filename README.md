@@ -29,7 +29,7 @@ This is a professional business management application built with Next.js, Fireb
 
 ## 💻 How to build EXE (Windows)
 1. Ensure you have run `npm install`.
-2. Build the project:
+2. Build the project to generate static files:
    ```bash
    npm run build
    ```

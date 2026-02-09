@@ -16,6 +16,22 @@
     "electron:dev": "electron .",
     "electron:build": "electron-builder"
   },
+  "build": {
+    "appId": "com.specsbiz.sbm",
+    "productName": "SpecsBiz",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "src/main/electron.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/favicon.ico"
+    }
+  },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
     "@capacitor/cli": "^7.0.0",
