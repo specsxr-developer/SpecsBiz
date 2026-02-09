@@ -173,16 +173,22 @@ export default function InventoryPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Buy Price ({currency})</Label>
-                  <Input type="number" step="0.01" value={newProduct.purchasePrice} onChange={e => setNewProduct({...newProduct, purchasePrice: e.target.value})} />
+                  <Label className="text-[10px] font-bold uppercase opacity-70">Buy Price (per {newProduct.unit})</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{currency}</span>
+                    <Input type="number" step="0.01" className="pl-8" value={newProduct.purchasePrice} onChange={e => setNewProduct({...newProduct, purchasePrice: e.target.value})} />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Sell Price ({currency})</Label>
-                  <Input type="number" step="0.01" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} />
+                  <Label className="text-[10px] font-bold uppercase opacity-70">Sell Price (per {newProduct.unit})</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{currency}</span>
+                    <Input type="number" step="0.01" className="pl-8" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} />
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label className="sm:text-right text-xs">Stock</Label>
+                <Label className="sm:text-right text-xs">Stock ({newProduct.unit})</Label>
                 <Input type="number" step="0.01" className="sm:col-span-3 h-9" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">
@@ -245,10 +251,10 @@ export default function InventoryPage() {
                           <div className="text-[9px] text-accent uppercase font-bold">{p.category || 'No Category'} • {p.unit}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-[10px] text-muted-foreground">{currency}{p.purchasePrice?.toFixed(2)}</TableCell>
-                      <TableCell className="font-bold text-primary text-[10px] md:text-xs">{currency}{p.sellingPrice?.toFixed(2)}</TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground">{currency}{p.purchasePrice?.toFixed(2)} / {p.unit}</TableCell>
+                      <TableCell className="font-bold text-primary text-[10px] md:text-xs">{currency}{p.sellingPrice?.toFixed(2)} / {p.unit}</TableCell>
                       <TableCell className="text-[10px] md:text-xs">
-                        <span className={p.stock < 5 ? "text-red-500 font-bold" : ""}>{p.stock}</span>
+                        <span className={p.stock < 5 ? "text-red-500 font-bold" : ""}>{p.stock} {p.unit}</span>
                       </TableCell>
                       <TableCell className="p-2">
                         <DropdownMenu>
@@ -305,16 +311,22 @@ export default function InventoryPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Buy Price</Label>
-                  <Input type="number" step="0.01" value={editingProduct.purchasePrice} onChange={e => setEditingProduct({...editingProduct, purchasePrice: e.target.value})} />
+                  <Label className="text-[10px] font-bold uppercase opacity-70">Buy Price (per {editingProduct.unit})</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{currency}</span>
+                    <Input type="number" step="0.01" className="pl-8" value={editingProduct.purchasePrice} onChange={e => setEditingProduct({...editingProduct, purchasePrice: e.target.value})} />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Sell Price</Label>
-                  <Input type="number" step="0.01" value={editingProduct.sellingPrice} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} />
+                  <Label className="text-[10px] font-bold uppercase opacity-70">Sell Price (per {editingProduct.unit})</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{currency}</span>
+                    <Input type="number" step="0.01" className="pl-8" value={editingProduct.sellingPrice} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} />
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label className="sm:text-right text-xs">Stock</Label>
+                <Label className="sm:text-right text-xs">Stock ({editingProduct.unit})</Label>
                 <Input type="number" step="0.01" className="sm:col-span-3 h-9" value={editingProduct.stock} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">

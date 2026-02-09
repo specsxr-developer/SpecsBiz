@@ -194,7 +194,7 @@ export default function SalesPage() {
                     
                     <div className="grid grid-cols-2 gap-4">
                        <div>
-                          <Label className="text-[9px] text-muted-foreground font-bold uppercase">Qty</Label>
+                          <Label className="text-[9px] text-muted-foreground font-bold uppercase">Qty ({item.unit})</Label>
                           <Input 
                             type="number" 
                             step="0.01" 
