@@ -30,7 +30,7 @@ export function BottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white border-t border-border flex items-center justify-around px-2 md:hidden safe-area-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 h-16 bg-white border-t border-border flex items-center justify-around px-2 md:hidden safe-area-bottom shadow-[0_-2px_10px_rgba(0,0,0,0.05)] print:hidden">
       {navItems.map((item) => {
         const isActive = pathname === item.href
         return (

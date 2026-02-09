@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -665,9 +664,9 @@ export default function InventoryPage() {
 
       <style jsx global>{`
         @media print {
-          .print\\:hidden { display: none !important; }
+          .print\\:hidden, nav, .fixed { display: none !important; }
           body { background: white !important; padding: 0 !important; margin: 0 !important; }
-          .sidebar-wrapper, header, footer, .sidebar-inset > header { display: none !important; }
+          .sidebar-wrapper, header, footer, .sidebar-inset > header, nav, [role="navigation"] { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
           .rounded-lg, .rounded-xl { border-radius: 0 !important; }
           .shadow-lg, .shadow-xl, .shadow-sm { box-shadow: none !important; }
