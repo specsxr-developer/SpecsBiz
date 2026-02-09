@@ -2,29 +2,36 @@
 
 /**
  * @fileOverview General-purpose business chat AI agent for SpecsBiz.
+ * This flow analyzes real-time inventory, sales, and customer data to provide insights.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const BusinessChatInputSchema = z.object({
-  message: z.string().describe('The user\'s current message.'),
-  history: z.array(z.object({
-    role: z.enum(['user', 'assistant']),
-    content: z.string()
-  })).describe('The conversation history.'),
-  businessContext: z.object({
-    inventorySummary: z.string(),
-    salesSummary: z.string(),
-    customersSummary: z.string(),
-    totalRevenue: z.number(),
-    currency: z.string()
-  }).describe('Snapshot of the current business state.')
+  message: z.string().describe("The user's current message or question about their business."),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string(),
+      })
+    )
+    .describe('The conversation history to maintain context.'),
+  businessContext: z
+    .object({
+      inventorySummary: z.string(),
+      salesSummary: z.string(),
+      customersSummary: z.string(),
+      totalRevenue: z.number(),
+      currency: z.string(),
+    })
+    .describe('A snapshot of the current business state including stock, sales, and debtors.'),
 });
 export type BusinessChatInput = z.infer<typeof BusinessChatInputSchema>;
 
 const BusinessChatOutputSchema = z.object({
-  reply: z.string().describe('The assistant\'s helpful response.'),
+  reply: z.string().describe("The assistant's helpful, data-driven response."),
 });
 export type BusinessChatOutput = z.infer<typeof BusinessChatOutputSchema>;
 
@@ -36,29 +43,33 @@ const prompt = ai.definePrompt({
   name: 'businessChatPrompt',
   input: {schema: BusinessChatInputSchema},
   output: {schema: BusinessChatOutputSchema},
-  prompt: `You are "SpecsBiz Smart Assistant", a highly skilled business consultant for a retail/wholesale store.
+  prompt: `You are "SpecsBiz Smart Assistant", a highly specialized business consultant for a retail/wholesale store.
   
-  You have access to the following real-time business data:
+  Your goal is to help the business owner manage their operations efficiently by analyzing the provided data.
+  
+  CURRENT BUSINESS DATA:
   - Currency: {{businessContext.currency}}
-  - Total Revenue: {{businessContext.totalRevenue}}
-  - Inventory Status: {{businessContext.inventorySummary}}
-  - Recent Sales: {{businessContext.salesSummary}}
-  - Customers Overview: {{businessContext.customersSummary}}
+  - Total Lifetime Revenue: {{businessContext.totalRevenue}}
+  - Inventory (Top Items/Stock): {{businessContext.inventorySummary}}
+  - Recent Sales Activity: {{businessContext.salesSummary}}
+  - Customers/Debtors Overview: {{businessContext.customersSummary}}
   
-  Guidelines:
-  1. Be professional, concise, and helpful.
-  2. Use the provided data to answer specific questions about stock, revenue, or debtors.
-  3. If asked to summarize, analyze trends, or suggest actions, use the data logic.
-  4. If you don't have enough data to answer, be honest but suggest what the user should check.
-  5. Respond in the language of the query (English or Bengali).
+  OPERATIONAL GUIDELINES:
+  1. ALWAYS base your answers on the "CURRENT BUSINESS DATA" provided above.
+  2. If the user asks about stock, check the inventory summary.
+  3. If they ask about money or revenue, refer to the total revenue and sales summary.
+  4. If they ask about "Baki" or who owes money, look at the customers summary.
+  5. Be concise, professional, and actionable. Suggest steps like "You should restock [Item]" or "Contact [Customer] for payment".
+  6. If data is missing or "No records" is shown, politely ask the user to add that data in the respective section (Inventory/Sales).
+  7. Respond in the same language as the user (English or Bengali).
 
-  Conversation History:
+  CONVERSATION HISTORY:
   {{#each history}}
   {{role}}: {{content}}
   {{/each}}
   
-  User: {{message}}
-  Assistant:`,
+  User Message: {{message}}
+  Assistant Response:`,
 });
 
 const businessChatFlow = ai.defineFlow(
@@ -69,6 +80,9 @@ const businessChatFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      return { reply: "I'm sorry, I couldn't process that request right now. Please try again." };
+    }
+    return output;
   }
 );
