@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Bell, AlertTriangle, Package, Users, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { 
@@ -15,10 +15,13 @@ import { cn } from "@/lib/utils"
 
 /**
  * @fileOverview A real-time notification bell component that derives alerts from business data.
+ * Updated with larger size and 'mark as read' functionality.
  */
 export function NotificationBell() {
   const { products, customers, sales, language, currency } = useBusinessData()
   const [mounted, setMounted] = useState(false)
+  const [hasUnseen, setHasUnread] = useState(false)
+  const prevAlertsCount = useRef(0)
 
   // Hydration safety
   useEffect(() => {
@@ -88,17 +91,31 @@ export function NotificationBell() {
     return list
   }, [products, customers, sales, language, currency])
 
-  if (!mounted) return <Button variant="ghost" size="icon" className="h-10 w-10"><Bell className="h-5 w-5 opacity-20" /></Button>
+  // Detect new alerts to show red dot
+  useEffect(() => {
+    if (alerts.length > prevAlertsCount.current) {
+      setHasUnread(true)
+    }
+    prevAlertsCount.current = alerts.length
+  }, [alerts.length])
+
+  if (!mounted) return <Button variant="ghost" size="icon" className="h-12 w-12"><Bell className="h-6 w-6 opacity-20" /></Button>
 
   const unreadCount = alerts.length
 
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setHasUnread(false) // Hide red dot when opened
+    }
+  }
+
   return (
-    <Popover>
+    <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-accent/10 transition-colors">
-          <Bell className={cn("h-5 w-5 text-primary", unreadCount > 0 && "animate-tada")} />
-          {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white ring-2 ring-white shadow-md">
+        <Button variant="ghost" size="icon" className="relative h-12 w-12 rounded-full hover:bg-accent/10 transition-colors shrink-0">
+          <Bell className={cn("h-6 w-6 text-primary", hasUnseen && unreadCount > 0 && "animate-tada")} />
+          {hasUnseen && unreadCount > 0 && (
+            <span className="absolute top-2.5 right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white ring-2 ring-white shadow-md animate-in zoom-in duration-300">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -155,7 +172,7 @@ export function NotificationBell() {
         
         <div className="border-t p-3 bg-muted/20 text-center">
            <button className="text-[10px] font-black text-accent uppercase tracking-widest hover:underline transition-all">
-             {language === 'en' ? 'Open Full Reports' : 'সব রিপোর্ট দেখুন'}
+             {language === 'en' ? 'All Seen' : 'সব দেখা হয়েছে'}
            </button>
         </div>
       </PopoverContent>
