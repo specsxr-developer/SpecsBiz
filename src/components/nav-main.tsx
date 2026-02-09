@@ -40,7 +40,7 @@ export function NavMain() {
   const { language } = useBusinessData()
   const [mounted, setMounted] = useState(false)
   
-  // Hydration guard
+  // Hydration guard: ensures component only renders dynamic content after client mount
   useEffect(() => {
     setMounted(true)
   }, [])
