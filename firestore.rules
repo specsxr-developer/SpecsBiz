@@ -1,79 +1,43 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * CORE PHILOSOPHY
-     * This ruleset enforces a strict User-Ownership model. All data is hierarchically nested 
-     * under the user's unique identifier (/users/{userId}), ensuring that users can only 
-     * access their own inventory, sales, and customer data.
-     */
-
-    // --- Helper Functions ---
-
-    /** 
-     * @description Checks if the request is from an authenticated user.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** 
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** 
-     * @description Combines ownership check with a check for document existence.
-     */
     function isExistingOwner(userId) {
       return resource != null && isOwner(userId);
     }
 
-    // --- Collection Rules ---
-
     match /users/{userId} {
       allow get, list: if isOwner(userId);
-      
-      allow create: if isOwner(userId) 
-                    && request.resource.data.id == userId;
-      
-      allow update: if isExistingOwner(userId) 
-                    && request.resource.data.id == resource.data.id;
-      
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
-      /**
-       * @description Rules for Products owned by a user.
-       */
       match /products/{productId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId);
         allow update, delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description Rules for Sales transactions.
-       */
       match /sales/{saleId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId);
         allow update, delete: if isExistingOwner(userId);
       }
 
-      /**
-       * @description Rules for Customer records and their nested Baki records.
-       */
       match /customers/{customerId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId);
         allow update, delete: if isExistingOwner(userId);
 
-        /**
-         * @description Nested rules for detailed Baki transaction records.
-         */
         match /bakiRecords/{recordId} {
           allow get, list: if isOwner(userId);
           allow create: if isOwner(userId);
@@ -81,9 +45,12 @@ service cloud.firestore {
         }
       }
 
-      /**
-       * @description Rules for Business Reports.
-       */
+      match /notes/{noteId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+
       match /reports/{reportId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId);
@@ -91,7 +58,6 @@ service cloud.firestore {
       }
     }
 
-    // Default deny for any paths not explicitly matched.
     match /{path=**} {
       allow read, write: if false;
     }

@@ -10,6 +10,7 @@ export const translations = {
     biAnalytics: "BI Analytics",
     analytics: "Analytics",
     aiAssistant: "AI Assistant",
+    notebook: "Smart Notebook",
     settings: "Settings",
     cloudSync: "Cloud Sync",
     offlineMode: "Offline Mode",
@@ -26,52 +27,15 @@ export const translations = {
     saleId: "Sale #",
     noTransactions: "No transactions yet.",
 
-    // Inventory
-    manageStock: "Manage your stock and profit margins.",
-    addProduct: "Add Product",
-    searchInventory: "Search inventory...",
-    productName: "Product Name",
-    category: "Category",
-    unitType: "Unit Type",
-    buyPrice: "Buy Price",
-    sellPrice: "Sell Price",
-    stock: "Stock",
-    description: "Description",
-    saveProduct: "Save Product",
+    // Notebook
+    notesPlaceholder: "Write your ideas here...",
+    newNote: "New Note",
+    noteTitle: "Note Title",
+    allNotes: "All Notes",
+    pinned: "Pinned",
+    noNotes: "Your notebook is empty.",
+    aiNoteAssistant: "AI Note Magic",
 
-    // Sales/POS
-    productSelection: "Product Selection",
-    billSummary: "Bill Summary",
-    completeSale: "Complete Sale",
-    totalLav: "Total Profit",
-    finalTotal: "Final Total",
-    itemsInBill: "items in current bill",
-
-    // Customers/Baki
-    bakiManagement: "Baki Management",
-    creditTracking: "Detailed credit tracking for your customers.",
-    unpaidBaki: "Total Unpaid Baki",
-    activeDebtors: "Active Debtors",
-    searchCustomer: "Search by name or phone...",
-    details: "Details",
-    addBaki: "Add New Baki",
-
-    // Reports/Ledger
-    comprehensiveReport: "Comprehensive A-Z business transaction report.",
-    printLedger: "Print Ledger",
-    exportCsv: "Export CSV",
-    totalCashReceived: "Total Cash Received",
-    marketDues: "Market Dues (Baki)",
-    inventoryValue: "Inventory Value",
-
-    // Settings
-    systemSettings: "System Settings",
-    configurePrefs: "Configure your business preferences.",
-    language: "Language",
-    baseCurrency: "Base Currency",
-    dangerZone: "Danger Zone",
-    resetSystem: "Reset Full System",
-    
     // Common
     loading: "Loading...",
     noData: "No data found.",
@@ -80,7 +44,13 @@ export const translations = {
     confirm: "Confirm",
     save: "Save",
     edit: "Edit",
-    delete: "Delete"
+    delete: "Delete",
+    systemSettings: "System Settings",
+    configurePrefs: "Configure your business preferences.",
+    language: "Language",
+    baseCurrency: "Base Currency",
+    dangerZone: "Danger Zone",
+    resetSystem: "Reset Full System"
   },
   bn: {
     // Navigation
@@ -92,6 +62,7 @@ export const translations = {
     biAnalytics: "বিআই অ্যানালিটিক্স",
     analytics: "অ্যানালিটিক্স",
     aiAssistant: "AI অ্যাসিস্ট্যান্ট",
+    notebook: "স্মার্ট নোটবুক",
     settings: "সেটিংস",
     cloudSync: "ক্লাউড সিঙ্ক",
     offlineMode: "অফলাইন মোড",
@@ -108,52 +79,15 @@ export const translations = {
     saleId: "বিক্রয় নং #",
     noTransactions: "এখনো কোনো লেনদেন হয়নি।",
 
-    // Inventory
-    manageStock: "আপনার স্টক এবং লাভের হিসাব পরিচালনা করুন।",
-    addProduct: "পণ্য যোগ করুন",
-    searchInventory: "ইনভেন্টরি খুঁজুন...",
-    productName: "পণ্যের নাম",
-    category: "ক্যাটাগরি",
-    unitType: "ইউনিক টাইপ",
-    buyPrice: "ক্রয় মূল্য",
-    sellPrice: "বিক্রয় মূল্য",
-    stock: "স্টক",
-    description: "বিবরণ",
-    saveProduct: "পণ্য সংরক্ষণ করুন",
+    // Notebook
+    notesPlaceholder: "এখানে আপনার আইডিয়া লিখুন...",
+    newNote: "নতুন নোট",
+    noteTitle: "নোটের শিরোনাম",
+    allNotes: "সব নোট",
+    pinned: "পিন করা",
+    noNotes: "আপনার নোটবুক খালি।",
+    aiNoteAssistant: "AI নোট ম্যাজিক",
 
-    // Sales/POS
-    productSelection: "পণ্য নির্বাচন",
-    billSummary: "বিলের সারাংশ",
-    completeSale: "বিক্রয় সম্পন্ন করুন",
-    totalLav: "মোট লাভ",
-    finalTotal: "সর্বমোট বিল",
-    itemsInBill: "টি পণ্য বিলে আছে",
-
-    // Customers/Baki
-    bakiManagement: "বাকি ব্যবস্থাপনা",
-    creditTracking: "আপনার কাস্টমারদের বাকির বিস্তারিত হিসাব।",
-    unpaidBaki: "মোট অপিরিশোধিত বাকি",
-    activeDebtors: "সক্রিয় দেনাদার",
-    searchCustomer: "নাম বা ফোন দিয়ে খুঁজুন...",
-    details: "বিস্তারিত",
-    addBaki: "নতুন বাকি যোগ করুন",
-
-    // Reports/Ledger
-    comprehensiveReport: "ব্যবসার সব লেনদেনের পূর্ণাঙ্গ রিপোর্ট।",
-    printLedger: "লেজার প্রিন্ট করুন",
-    exportCsv: "CSV ডাউনলোড",
-    totalCashReceived: "মোট ক্যাশ পাওয়া গেছে",
-    marketDues: "বাজারের পাওনা (বাকি)",
-    inventoryValue: "স্টকের বর্তমান মূল্য",
-
-    // Settings
-    systemSettings: "সিস্টেম সেটিংস",
-    configurePrefs: "আপনার ব্যবসার সেটিংস পরিবর্তন করুন।",
-    language: "ভাষা (Language)",
-    baseCurrency: "বেস কারেন্সি",
-    dangerZone: "ডেঞ্জার জোন",
-    resetSystem: "সব ডাটা মুছুন",
-    
     // Common
     loading: "লোড হচ্ছে...",
     noData: "কোনো তথ্য পাওয়া যায়নি।",
@@ -162,6 +96,12 @@ export const translations = {
     confirm: "নিশ্চিত করুন",
     save: "সংরক্ষণ",
     edit: "সম্পাদনা",
-    delete: "মুছুন"
+    delete: "মুছুন",
+    systemSettings: "সিস্টেম সেটিংস",
+    configurePrefs: "আপনার ব্যবসার সেটিংস পরিবর্তন করুন।",
+    language: "ভাষা (Language)",
+    baseCurrency: "বেস কারেন্সি",
+    dangerZone: "ডেঞ্জার জোন",
+    resetSystem: "সব ডাটা মুছুন"
   }
 };

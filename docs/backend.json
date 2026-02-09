@@ -147,36 +147,21 @@
         "status": { "type": "string", "enum": ["pending", "paid"] }
       }
     },
-    "Report": {
+    "Note": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Report",
+      "title": "Note",
       "type": "object",
-      "description": "Represents a business report.",
+      "description": "Represents a notebook entry.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Report entity."
-        },
-        "reportDate": {
-          "type": "string",
-          "description": "Date the report was generated.",
-          "format": "date-time"
-        },
-        "type": {
-          "type": "string",
-          "description": "Type of report (e.g., sales, revenue)."
-        },
-        "data": {
-          "type": "string",
-          "description": "Report data in JSON format."
-        }
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "color": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "reportDate",
-        "type",
-        "data"
-      ]
+      "required": ["id", "title"]
     },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -200,10 +185,6 @@
         "role": {
           "type": "string",
           "description": "Role of the user (e.g., admin, staff)."
-        },
-        "isSecret": {
-          "type": "boolean",
-          "description": "Boolean value to determine if user is the secret account."
         }
       },
       "required": [
@@ -255,8 +236,16 @@
           "entityName": "BakiRecord",
           "schema": {
             "$ref": "#/backend/entities/BakiRecord"
-          },
-          "description": "Detailed records of what items were taken on credit by this customer."
+          }
+        }
+      },
+      {
+        "path": "/users/{userId}/notes/{noteId}",
+        "definition": {
+          "entityName": "Note",
+          "schema": {
+            "$ref": "#/backend/entities/Note"
+          }
         }
       },
       {

@@ -14,7 +14,8 @@ import {
   LogIn,
   ShieldCheck,
   FileSpreadsheet,
-  PieChart
+  PieChart,
+  BookOpen
 } from "lucide-react"
 import { useUser } from "@/firebase"
 import { useBusinessData } from "@/hooks/use-business-data"
@@ -45,6 +46,7 @@ export function NavMain() {
     { title: t.inventory, icon: Package, href: "/inventory" },
     { title: t.sales, icon: ShoppingCart, href: "/sales" },
     { title: t.customers, icon: Users, href: "/customers" },
+    { title: t.notebook, icon: BookOpen, href: "/notebook" },
     { title: t.masterLedger, icon: FileSpreadsheet, href: "/reports" },
     { title: t.biAnalytics, icon: PieChart, href: "/business-intelligence" },
     { title: t.analytics, icon: BarChart3, href: "/analytics" },
