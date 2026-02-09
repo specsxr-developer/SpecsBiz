@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "app-logo",
+      "description": "SpecsBiz Official Logo",
+      "imageUrl": "https://i.ibb.co.com/RqxhJ7w/Specs-Biz-Logo.png",
+      "imageHint": "SpecsBiz logo"
+    },
+    {
+      "id": "hero-dashboard",
+      "description": "Business analytics dashboard visualization",
+      "imageUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxidXNpbmVzcyUyMGFuYWx5dGljc3xlbnwwfHx8fDE3NzA1ODA1MjR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business analytics"
+    }
+  ]
+}

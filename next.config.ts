@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -14,10 +15,9 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   
-  // Future-Proofing for APK (Capacitor)
+  // Future-Proofing for APK (Capacitor) and ignoring Node modules in browser
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Mock Node.js modules that cause errors in browser/mobile builds
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
