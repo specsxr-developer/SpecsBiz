@@ -75,8 +75,7 @@ export default function DashboardPage() {
 
   const subtotal = cart.reduce((acc, item) => acc + (item.sellingPrice * item.quantity), 0)
   const totalProfit = cart.reduce((acc, item) => acc + ((item.sellingPrice - (item.purchasePrice || 0)) * item.quantity), 0)
-  const tax = subtotal * 0.05
-  const grandTotal = subtotal + tax
+  const grandTotal = subtotal
 
   const handleCheckout = () => {
     actions.addSale({

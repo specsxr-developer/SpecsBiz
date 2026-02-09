@@ -50,8 +50,7 @@ export default function SalesPage() {
   const subtotal = cart.reduce((acc, c) => acc + (c.sellingPrice * c.quantity), 0)
   const totalCost = cart.reduce((acc, c) => acc + ((c.purchasePrice || 0) * c.quantity), 0)
   const totalProfit = subtotal - totalCost
-  const tax = subtotal * 0.05
-  const grandTotal = subtotal + tax
+  const grandTotal = subtotal
 
   const handleCheckout = () => {
     actions.addSale({
@@ -240,17 +239,6 @@ export default function SalesPage() {
                       <p className="text-[9px] font-bold uppercase opacity-80">Final Total</p>
                       <p className="text-xl font-black">${grandTotal.toFixed(2)}</p>
                    </div>
-                </div>
-
-                <div className="space-y-2 text-xs px-1 text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span className="font-medium text-foreground">${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span>Tax (5%)</span>
-                    <span className="font-medium text-foreground">${tax.toFixed(2)}</span>
-                  </div>
                 </div>
 
                 <Button 
