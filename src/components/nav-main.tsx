@@ -1,6 +1,7 @@
 
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { 
@@ -38,6 +39,13 @@ export function NavMain() {
   const pathname = usePathname()
   const { user } = useUser()
   const { language } = useBusinessData()
+  const [mounted, setMounted] = useState(false)
+  
+  // Hydration guard
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const t = translations[language]
   const logoUrl = PlaceHolderImages.find(img => img.id === 'app-logo')?.imageUrl
 
@@ -52,6 +60,26 @@ export function NavMain() {
     { title: t.analytics, icon: BarChart3, href: "/analytics" },
     { title: t.aiAssistant, icon: Bot, href: "/ai-assistant" },
   ]
+
+  // If not mounted, we render a simplified version to match server output exactly
+  if (!mounted) {
+    return (
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="h-20 flex items-center px-4 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <div className="bg-sidebar-primary/10 p-1 rounded-lg overflow-hidden shrink-0">
+              <Bot className="w-8 h-8 text-sidebar-primary" />
+            </div>
+            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+              <span className="font-headline font-bold text-xl text-sidebar-foreground leading-none">SpecsBiz</span>
+              <span className="text-[10px] opacity-60 font-medium mt-0.5">by SpecsXR</span>
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent />
+      </Sidebar>
+    )
+  }
 
   return (
     <Sidebar collapsible="icon">
