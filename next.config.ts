@@ -55,6 +55,8 @@ const nextConfig: NextConfig = {
         http2: false,
         undici: false,
         perf_hooks: false,
+        process: false,
+        util: false,
       };
     }
     return config;
