@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -61,6 +60,12 @@ export function NavMain() {
     { title: t.aiAssistant, icon: Bot, href: "/ai-assistant" },
   ]
 
+  // Helper to check active path with trailing slash support
+  const checkActive = (href: string) => {
+    if (href === "/") return pathname === "/" || pathname === ""
+    return pathname === href || pathname === `${href}/` || pathname.startsWith(`${href}/`)
+  }
+
   // If not mounted, we render a simplified version to match server output exactly
   if (!mounted) {
     return (
@@ -106,7 +111,7 @@ export function NavMain() {
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton 
                   asChild 
-                  isActive={pathname === item.href}
+                  isActive={checkActive(item.href)}
                   tooltip={item.title}
                   className="px-4 h-11"
                 >
@@ -131,7 +136,7 @@ export function NavMain() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip={t.settings} className="px-4 h-11">
+            <SidebarMenuButton asChild isActive={checkActive('/settings')} tooltip={t.settings} className="px-4 h-11">
               <Link href="/settings">
                 <Settings className="w-5 h-5" />
                 <span className="font-body">{t.settings}</span>
