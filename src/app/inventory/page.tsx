@@ -58,6 +58,8 @@ export default function InventoryPage() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
 
+  const units = ["pcs", "kg", "gm", "ltr", "meter", "box", "dozen"]
+
   const [newProduct, setNewProduct] = useState({
     name: "",
     category: "",
@@ -68,8 +70,6 @@ export default function InventoryPage() {
     stock: "",
     unit: "pcs"
   })
-
-  const units = ["pcs", "kg", "gm", "ltr", "meter", "box", "dozen"]
 
   const handleAIDescription = async (isEdit = false) => {
     const target = isEdit ? editingProduct : newProduct;
@@ -126,6 +126,14 @@ export default function InventoryPage() {
     })
     setEditingProduct(null)
     toast({ title: "Product Updated" })
+  }
+
+  const openEditDialog = (product: any) => {
+    // Small delay ensures dropdown menu closes properly before dialog opens
+    // preventing the pointer-events frozen screen bug
+    setTimeout(() => {
+      setEditingProduct(product)
+    }, 10)
   }
 
   return (
@@ -262,7 +270,7 @@ export default function InventoryPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-3.5 h-3.5" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => setEditingProduct(p)}>
+                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => openEditDialog(p)}>
                               <Edit2 className="w-3.5 h-3.5" /> Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2 text-destructive text-xs" onClick={() => actions.deleteProduct(p.id)}>

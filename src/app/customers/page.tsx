@@ -102,6 +102,14 @@ export default function CustomersPage() {
     toast({ title: "Customer Updated" })
   }
 
+  const openEditDialog = (customer: any) => {
+    // Small delay ensures dropdown menu closes properly before dialog opens
+    // preventing the pointer-events frozen screen bug
+    setTimeout(() => {
+      setEditingCustomer(customer)
+    }, 10)
+  }
+
   if (isLoading) return <div className="p-10 text-center animate-pulse">Loading Customers...</div>
 
   return (
@@ -236,7 +244,7 @@ export default function CustomersPage() {
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="gap-2 text-xs" onClick={() => setEditingCustomer(c)}>
+                          <DropdownMenuItem className="gap-2 text-xs" onClick={() => openEditDialog(c)}>
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => actions.deleteCustomer(c.id)}>
