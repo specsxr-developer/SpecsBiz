@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   collection, 
   doc, 
@@ -15,17 +15,16 @@ import {
   deleteDocumentNonBlocking 
 } from '@/firebase/non-blocking-updates';
 
+const LOCAL_KEYS = {
+  PRODUCTS: 'specsbiz_local_products',
+  SALES: 'specsbiz_local_sales',
+  CUSTOMERS: 'specsbiz_local_customers',
+  CURRENCY: 'specsbiz_settings_currency',
+};
+
 export function useBusinessData() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
-
-  // Local Storage Keys
-  const LOCAL_KEYS = {
-    PRODUCTS: 'specsbiz_local_products',
-    SALES: 'specsbiz_local_sales',
-    CUSTOMERS: 'specsbiz_local_customers',
-    CURRENCY: 'specsbiz_settings_currency',
-  };
 
   // State for Local Data
   const [localProducts, setLocalProducts] = useState<any[]>([]);
@@ -36,33 +35,37 @@ export function useBusinessData() {
   // Load from Local Storage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const p = localStorage.getItem(LOCAL_KEYS.PRODUCTS);
-      const s = localStorage.getItem(LOCAL_KEYS.SALES);
-      const c = localStorage.getItem(LOCAL_KEYS.CUSTOMERS);
-      const curr = localStorage.getItem(LOCAL_KEYS.CURRENCY);
-      
-      if (p) setLocalProducts(JSON.parse(p));
-      if (s) setLocalSales(JSON.parse(s));
-      if (c) setLocalCustomers(JSON.parse(c));
-      if (curr) setCurrencyState(curr);
+      try {
+        const p = localStorage.getItem(LOCAL_KEYS.PRODUCTS);
+        const s = localStorage.getItem(LOCAL_KEYS.SALES);
+        const c = localStorage.getItem(LOCAL_KEYS.CUSTOMERS);
+        const curr = localStorage.getItem(LOCAL_KEYS.CURRENCY);
+        
+        if (p) setLocalProducts(JSON.parse(p));
+        if (s) setLocalSales(JSON.parse(s));
+        if (c) setLocalCustomers(JSON.parse(c));
+        if (curr) setCurrencyState(curr);
+      } catch (e) {
+        console.error("Error loading local data", e);
+      }
     }
   }, []);
 
   // Firestore Queries (Memoized)
   const productsQuery = useMemoFirebase(() => {
-    if (!user || !db) return null;
+    if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'products'), orderBy('name'));
-  }, [user, db]);
+  }, [user?.uid, db]);
 
   const salesQuery = useMemoFirebase(() => {
-    if (!user || !db) return null;
+    if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'sales'), orderBy('saleDate', 'desc'));
-  }, [user, db]);
+  }, [user?.uid, db]);
 
   const customersQuery = useMemoFirebase(() => {
-    if (!user || !db) return null;
+    if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'customers'), orderBy('firstName'));
-  }, [user, db]);
+  }, [user?.uid, db]);
 
   const { data: fbProducts, isLoading: pLoading } = useCollection(productsQuery);
   const { data: fbSales, isLoading: sLoading } = useCollection(salesQuery);
@@ -76,49 +79,56 @@ export function useBusinessData() {
 
   // --- Actions ---
 
-  const addProduct = (product: any) => {
+  const addProduct = useCallback((product: any) => {
     const id = product.id || Date.now().toString();
     const data = { ...product, id };
-    if (user && db) {
+    if (user?.uid && db) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'products'), data);
     } else {
-      const updated = [data, ...localProducts];
-      setLocalProducts(updated);
-      localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+      setLocalProducts(prev => {
+        const updated = [data, ...prev];
+        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+        return updated;
+      });
     }
-  };
+  }, [user?.uid, db]);
 
-  const updateProduct = (productId: string, data: any) => {
-    if (user && db) {
+  const updateProduct = useCallback((productId: string, data: any) => {
+    if (user?.uid && db) {
       updateDocumentNonBlocking(doc(db, 'users', user.uid, 'products', productId), data);
     } else {
-      const updated = localProducts.map(p => p.id === productId ? { ...p, ...data } : p);
-      setLocalProducts(updated);
-      localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+      setLocalProducts(prev => {
+        const updated = prev.map(p => p.id === productId ? { ...p, ...data } : p);
+        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+        return updated;
+      });
     }
-  };
+  }, [user?.uid, db]);
 
-  const deleteProduct = (productId: string) => {
-    if (user && db) {
+  const deleteProduct = useCallback((productId: string) => {
+    if (user?.uid && db) {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'products', productId));
     } else {
-      const updated = localProducts.filter(p => p.id !== productId);
-      setLocalProducts(updated);
-      localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+      setLocalProducts(prev => {
+        const updated = prev.filter(p => p.id !== productId);
+        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+        return updated;
+      });
     }
-  };
+  }, [user?.uid, db]);
 
-  const addSale = (sale: any) => {
+  const addSale = useCallback((sale: any) => {
     const id = sale.id || Date.now().toString();
     const data = { ...sale, id, saleDate: new Date().toISOString() };
-    if (user && db) {
+    
+    if (user?.uid && db) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'sales'), data);
       
       // Update stock for each product in sale
       if (data.items) {
         data.items.forEach((item: any) => {
           const productRef = doc(db, 'users', user.uid, 'products', item.id);
-          const currentProduct = fbProducts?.find(p => p.id === item.id);
+          const currentProduct = products.find(p => p.id === item.id);
           if (currentProduct) {
             updateDocumentNonBlocking(productRef, {
               stock: Math.max(0, currentProduct.stock - item.quantity)
@@ -127,35 +137,39 @@ export function useBusinessData() {
         });
       }
     } else {
-      const updated = [data, ...localSales];
-      setLocalSales(updated);
-      localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
+      setLocalSales(prev => {
+        const updated = [data, ...prev];
+        localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
+        return updated;
+      });
       
       // Local stock update
-      const updatedProducts = localProducts.map(p => {
-        const saleItem = data.items?.find((i: any) => i.id === p.id);
-        if (saleItem) {
-          return { ...p, stock: Math.max(0, p.stock - saleItem.quantity) };
-        }
-        return p;
+      setLocalProducts(prev => {
+        const updatedProducts = prev.map(p => {
+          const saleItem = data.items?.find((i: any) => i.id === p.id);
+          if (saleItem) {
+            return { ...p, stock: Math.max(0, p.stock - saleItem.quantity) };
+          }
+          return p;
+        });
+        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
+        return updatedProducts;
       });
-      setLocalProducts(updatedProducts);
-      localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
     }
-  };
+  }, [user?.uid, db, products]);
 
-  const deleteSale = (saleId: string) => {
+  const deleteSale = useCallback((saleId: string) => {
     const saleToDelete = sales.find(s => s.id === saleId);
     if (!saleToDelete) return;
 
-    if (user && db) {
+    if (user?.uid && db) {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', saleId));
       
       // Revert stock
       if (saleToDelete.items) {
         saleToDelete.items.forEach((item: any) => {
           const productRef = doc(db, 'users', user.uid, 'products', item.id);
-          const currentProduct = fbProducts?.find(p => p.id === item.id);
+          const currentProduct = products.find(p => p.id === item.id);
           if (currentProduct) {
             updateDocumentNonBlocking(productRef, {
               stock: currentProduct.stock + item.quantity
@@ -164,59 +178,69 @@ export function useBusinessData() {
         });
       }
     } else {
-      const updatedSales = localSales.filter(s => s.id !== saleId);
-      setLocalSales(updatedSales);
-      localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updatedSales));
+      setLocalSales(prev => {
+        const updatedSales = prev.filter(s => s.id !== saleId);
+        localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updatedSales));
+        return updatedSales;
+      });
 
       // Revert local stock
-      const updatedProducts = localProducts.map(p => {
-        const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
-        if (saleItem) {
-          return { ...p, stock: p.stock + saleItem.quantity };
-        }
-        return p;
+      setLocalProducts(prev => {
+        const updatedProducts = prev.map(p => {
+          const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
+          if (saleItem) {
+            return { ...p, stock: p.stock + saleItem.quantity };
+          }
+          return p;
+        });
+        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
+        return updatedProducts;
       });
-      setLocalProducts(updatedProducts);
-      localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
     }
-  };
+  }, [user?.uid, db, sales, products]);
 
-  const addCustomer = (customer: any) => {
+  const addCustomer = useCallback((customer: any) => {
     const id = customer.id || Date.now().toString();
     const data = { ...customer, id };
-    if (user && db) {
+    if (user?.uid && db) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'customers'), data);
     } else {
-      const updated = [data, ...localCustomers];
-      setLocalCustomers(updated);
-      localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+      setLocalCustomers(prev => {
+        const updated = [data, ...prev];
+        localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+        return updated;
+      });
     }
-  };
+  }, [user?.uid, db]);
 
-  const updateCustomer = (customerId: string, data: any) => {
-    if (user && db) {
+  const updateCustomer = useCallback((customerId: string, data: any) => {
+    if (user?.uid && db) {
       updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId), data);
     } else {
-      const updated = localCustomers.map(c => c.id === customerId ? { ...c, ...data } : c);
-      setLocalCustomers(updated);
-      localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+      setLocalCustomers(prev => {
+        const updated = prev.map(c => c.id === customerId ? { ...c, ...data } : c);
+        localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+        return updated;
+      });
     }
-  };
+  }, [user?.uid, db]);
 
-  const deleteCustomer = (customerId: string) => {
-    if (user && db) {
+  const deleteCustomer = useCallback((customerId: string) => {
+    if (user?.uid && db) {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId));
     } else {
-      const updated = localCustomers.filter(c => c.id !== customerId);
-      setLocalCustomers(updated);
-      localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+      setLocalCustomers(prev => {
+        const updated = prev.filter(c => c.id !== customerId);
+        localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+        return updated;
+      });
     }
-  };
+  }, [user?.uid, db]);
 
-  const setCurrency = (val: string) => {
+  const setCurrency = useCallback((val: string) => {
     setCurrencyState(val);
     localStorage.setItem(LOCAL_KEYS.CURRENCY, val);
-  };
+  }, []);
 
   return {
     products,
