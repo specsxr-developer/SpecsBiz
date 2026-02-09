@@ -13,6 +13,8 @@
     "typecheck": "tsc --noEmit",
     "app:export": "next build",
     "app:cap-sync": "npx cap sync",
+    "mobile:build": "npm run build && npx cap sync",
+    "mobile:open": "npx cap open android",
     "electron:dev": "electron .",
     "electron:build": "electron-builder"
   },
