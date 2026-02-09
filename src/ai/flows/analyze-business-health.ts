@@ -1,4 +1,4 @@
-
+'use server';
 /**
  * @fileOverview AI agent to analyze overall business health and predict future performance.
  */

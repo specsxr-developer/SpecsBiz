@@ -1,4 +1,4 @@
-
+'use server';
 /**
  * @fileOverview An AI agent for suggesting customer segments based on purchase history and demographics.
  */
