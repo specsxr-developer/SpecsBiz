@@ -1,14 +1,15 @@
 
 'use client';
 
+import { useState } from "react";
 import { 
   Settings, 
-  Globe, 
   Coins, 
   Shield, 
-  Bell, 
   Database,
-  Check
+  Trash2,
+  Lock,
+  AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,16 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useBusinessData } from "@/hooks/use-business-data";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +45,10 @@ const CURRENCIES = [
 export default function SettingsPage() {
   const { currency, actions } = useBusinessData();
   const { toast } = useToast();
+  
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCurrencyChange = (val: string) => {
     actions.setCurrency(val);
@@ -43,8 +58,24 @@ export default function SettingsPage() {
     });
   };
 
+  const handleReset = async () => {
+    if (password === "specsxr") {
+      setIsDeleting(true);
+      try {
+        await actions.resetAllData();
+        toast({ title: "System Reset", description: "All data has been permanently deleted." });
+      } catch (e) {
+        toast({ title: "Reset Failed", variant: "destructive" });
+        setIsDeleting(false);
+      }
+    } else {
+      toast({ title: "Wrong Password", description: "Access denied.", variant: "destructive" });
+      setPassword("");
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500 pb-10">
+    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20 relative">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-accent/10 rounded-xl">
           <Settings className="w-6 h-6 text-accent" />
@@ -121,6 +152,55 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Small Secret Reset Button */}
+      <div className="mt-12 pt-8 border-t flex justify-center">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-[10px] text-muted-foreground hover:text-destructive opacity-30 hover:opacity-100 transition-opacity"
+          onClick={() => setIsResetOpen(true)}
+        >
+          <Trash2 className="w-3 h-3 mr-1" /> Secret Wipe
+        </Button>
+      </div>
+
+      <Dialog open={isResetOpen} onOpenChange={setIsResetOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" /> Permanent Wipe
+            </DialogTitle>
+            <DialogDescription>
+              This action will permanently delete ALL inventory, sales, and customer data from this device and the cloud.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase flex items-center gap-1">
+                <Lock className="w-3 h-3" /> Master Reset Password
+              </Label>
+              <Input 
+                type="password" 
+                placeholder="Enter secret password..." 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="h-11"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="destructive" 
+              className="w-full h-12 font-bold" 
+              onClick={handleReset}
+              disabled={isDeleting || !password}
+            >
+              {isDeleting ? "Wiping Data..." : "Confirm Full Reset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

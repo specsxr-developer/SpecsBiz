@@ -7,7 +7,9 @@ import {
   doc, 
   query, 
   orderBy, 
-  onSnapshot
+  onSnapshot,
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { 
@@ -232,7 +234,7 @@ export function useBusinessData() {
     // Add to Sales
     const saleData = {
       total: amountToPay,
-      profit: 0, // We assume profit was counted at time of baki or handled manually
+      profit: 0, 
       items: [{ name: `Baki Payment: ${currentRecord.productName}`, quantity: 1, sellingPrice: amountToPay }],
       isBakiPayment: true,
       bakiProductName: currentRecord.productName,
@@ -318,7 +320,6 @@ export function useBusinessData() {
 
     if (user?.uid && db) {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', saleId));
-      // Restore stock only if it's NOT a baki payment
       if (!saleToDelete.isBakiPayment && saleToDelete.items) {
         saleToDelete.items.forEach((item: any) => {
           const productRef = doc(db, 'users', user.uid, 'products', item.id);
@@ -352,6 +353,33 @@ export function useBusinessData() {
     }
   }, [user?.uid, db, sales, products]);
 
+  const resetAllData = useCallback(async () => {
+    // 1. Clear Local Storage
+    localStorage.removeItem(LOCAL_KEYS.PRODUCTS);
+    localStorage.removeItem(LOCAL_KEYS.SALES);
+    localStorage.removeItem(LOCAL_KEYS.CUSTOMERS);
+    setLocalProducts([]);
+    setLocalSales([]);
+    setLocalCustomers([]);
+
+    // 2. Clear Firestore Data (if logged in)
+    if (user?.uid && db) {
+      const collections = ['products', 'sales', 'customers'];
+      for (const collName of collections) {
+        const collRef = collection(db, 'users', user.uid, collName);
+        const snapshot = await getDocs(collRef);
+        const batch = writeBatch(db);
+        snapshot.docs.forEach(docSnap => {
+          batch.delete(docSnap.ref);
+        });
+        await batch.commit();
+      }
+    }
+    
+    // Refresh to ensure clean state
+    window.location.reload();
+  }, [user?.uid, db]);
+
   return {
     products,
     sales,
@@ -370,7 +398,8 @@ export function useBusinessData() {
       addBakiRecord,
       payBakiRecord,
       deleteBakiRecord,
-      setCurrency
+      setCurrency,
+      resetAllData
     }
   };
 }
