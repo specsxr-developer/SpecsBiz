@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useBusinessData } from "@/hooks/use-business-data"
+import { cn } from "@/lib/utils"
 
 export default function SalesPage() {
   const { toast } = useToast()
@@ -110,7 +111,7 @@ export default function SalesPage() {
                            Stock: {item.stock} {item.unit}
                          </Badge>
                          <Badge variant="outline" className="text-[10px] py-0 px-1 font-normal bg-green-50/50 text-green-700 whitespace-nowrap">
-                           Default Profit: {currency}{(item.sellingPrice - (item.purchasePrice || 0)).toFixed(2)}
+                           Buy Price: {currency}{item.purchasePrice || 0}
                          </Badge>
                       </div>
                     </div>
@@ -159,7 +160,12 @@ export default function SalesPage() {
                     <div className="text-right">
                       <p className="text-xs font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
                       {!sale.isBakiPayment && (
-                        <p className="text-[10px] text-green-600 font-bold">+{currency}{sale.profit?.toFixed(2)} Lav</p>
+                        <p className={cn(
+                          "text-[10px] font-bold",
+                          (sale.profit || 0) < 0 ? "text-destructive" : "text-green-600"
+                        )}>
+                          {(sale.profit || 0) < 0 ? '-' : '+'}{currency}{Math.abs(sale.profit || 0).toFixed(2)} Lav
+                        </p>
                       )}
                     </div>
                   </div>
@@ -186,75 +192,88 @@ export default function SalesPage() {
                   <p className="text-xs">Select products to begin billing.</p>
                 </div>
               ) : (
-                cart.map((item) => (
-                  <div key={item.id} className="space-y-3 pb-4 border-b last:border-0 group">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-primary truncate text-sm">{item.name}</p>
-                        <div className="flex gap-2">
-                          <span className="text-[10px] text-muted-foreground uppercase">{item.unit}</span>
-                          <span className="text-[10px] text-blue-600 font-bold">In Stock: {item.stock}</span>
+                cart.map((item) => {
+                  const itemProfit = (item.sellingPrice - (item.purchasePrice || 0)) * item.quantity;
+                  const isLoss = itemProfit < 0;
+                  return (
+                    <div key={item.id} className="space-y-3 pb-4 border-b last:border-0 group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-primary truncate text-sm">{item.name}</p>
+                          <div className="flex gap-2">
+                            <span className="text-[10px] text-muted-foreground uppercase">{item.unit}</span>
+                            <span className="text-[10px] text-blue-600 font-bold">In Stock: {item.stock}</span>
+                            <span className="text-[10px] text-orange-600 font-bold">Cost: {currency}{item.purchasePrice || 0}</span>
+                          </div>
                         </div>
+                        <button 
+                          className="text-muted-foreground hover:text-red-500 h-8 w-8 shrink-0 flex items-center justify-center transition-colors"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-muted-foreground hover:text-red-500 h-8 w-8 shrink-0"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-1">
-                          <Label className="text-[9px] text-muted-foreground font-bold uppercase">Qty ({item.unit})</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            className="h-9 font-bold border-accent/30"
-                            value={item.quantity}
-                            onChange={(e) => updateQuantity(item.id, e.target.value)}
-                          />
-                       </div>
-                       <div className="space-y-1">
-                          <Label className="text-[9px] text-muted-foreground font-bold uppercase">Unit Price ({currency})</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            className="h-9 font-bold border-accent/30 text-accent"
-                            value={item.sellingPrice}
-                            onChange={(e) => updateUnitPrice(item.id, e.target.value)}
-                          />
-                       </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center px-3 py-2 bg-muted/30 rounded-lg">
-                       <div className="text-[10px] text-muted-foreground font-bold uppercase">Item Total</div>
-                       <p className="font-black text-primary text-base">{currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
-                    </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1">
+                            <Label className="text-[9px] text-muted-foreground font-bold uppercase">Qty ({item.unit})</Label>
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              className="h-9 font-bold border-accent/30"
+                              value={item.quantity}
+                              onChange={(e) => updateQuantity(item.id, e.target.value)}
+                            />
+                         </div>
+                         <div className="space-y-1">
+                            <Label className="text-[9px] text-muted-foreground font-bold uppercase">Unit Price ({currency})</Label>
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              className="h-9 font-bold border-accent/30 text-accent"
+                              value={item.sellingPrice}
+                              onChange={(e) => updateUnitPrice(item.id, e.target.value)}
+                            />
+                         </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-center px-3 py-2 bg-muted/30 rounded-lg">
+                         <div className="text-[10px] text-muted-foreground font-bold uppercase">Item Total</div>
+                         <p className="font-black text-primary text-base">{currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
+                      </div>
 
-                    {item.quantity > item.stock && (
-                      <div className="flex items-center gap-2 p-2 bg-red-50 rounded text-red-600 text-[9px] font-bold border border-red-100">
-                        <AlertTriangle className="w-3.5 h-3.5" /> 
-                        Stock warning: only {item.stock} {item.unit} available!
+                      {item.quantity > item.stock && (
+                        <div className="flex items-center gap-2 p-2 bg-red-50 rounded text-red-600 text-[9px] font-bold border border-red-100">
+                          <AlertTriangle className="w-3.5 h-3.5" /> 
+                          Stock warning: only {item.stock} {item.unit} available!
+                        </div>
+                      )}
+                      
+                      <div className={cn(
+                        "flex justify-between items-center p-2 rounded-lg border",
+                        isLoss ? "bg-red-50 border-red-100" : "bg-green-50/50 border-green-100"
+                      )}>
+                        <span className={cn("text-[10px] font-bold uppercase", isLoss ? "text-red-700" : "text-green-700")}>
+                          {isLoss ? 'Est. Loss' : 'Est. Lav'}
+                        </span>
+                        <span className={cn("text-sm font-black", isLoss ? "text-red-600" : "text-green-600")}>
+                          {isLoss ? '-' : '+'}{currency}{Math.abs(itemProfit).toFixed(2)}
+                        </span>
                       </div>
-                    )}
-                    
-                    <div className="flex justify-between items-center p-2 bg-green-50/50 rounded-lg border border-green-100">
-                      <span className="text-[10px] text-green-700 font-bold uppercase">Est. Lav</span>
-                      <span className="text-sm font-black text-green-600">+{currency}{((item.sellingPrice - (item.purchasePrice || 0)) * item.quantity).toFixed(2)}</span>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
             {cart.length > 0 && (
               <div className="space-y-6 pt-4 border-t-2 border-dashed">
                 <div className="grid grid-cols-2 gap-3">
-                   <div className="p-3 bg-green-600 text-white rounded-xl shadow-lg">
-                      <p className="text-[9px] font-bold uppercase opacity-80">Total Lav</p>
+                   <div className={cn(
+                     "p-3 text-white rounded-xl shadow-lg transition-colors",
+                     totalProfit < 0 ? "bg-destructive" : "bg-green-600"
+                   )}>
+                      <p className="text-[9px] font-bold uppercase opacity-80">{totalProfit < 0 ? 'Total Loss' : 'Total Lav'}</p>
                       <div className="flex items-center gap-1">
                         <TrendingUp className="w-4 h-4" />
                         <span className="text-xl font-black">{currency}{totalProfit.toFixed(2)}</span>

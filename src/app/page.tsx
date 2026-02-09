@@ -36,6 +36,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useBusinessData } from "@/hooks/use-business-data"
 import { translations } from "@/lib/translations"
+import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   const { toast } = useToast()
@@ -163,42 +164,52 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {cart.map((item) => (
-                        <div key={item.id} className="space-y-2 pb-3 border-b last:border-0">
-                          <div className="flex justify-between items-start">
-                            <div className="min-w-0 flex-1 mr-2">
-                              <p className="text-xs font-bold text-primary truncate">{item.name}</p>
-                              <p className="text-[9px] text-muted-foreground">{t.stock}: {item.stock} {item.unit}</p>
+                      {cart.map((item) => {
+                        const itemProfit = (item.sellingPrice - (item.purchasePrice || 0)) * item.quantity;
+                        const isLoss = itemProfit < 0;
+                        return (
+                          <div key={item.id} className="space-y-2 pb-3 border-b last:border-0">
+                            <div className="flex justify-between items-start">
+                              <div className="min-w-0 flex-1 mr-2">
+                                <p className="text-xs font-bold text-primary truncate">{item.name}</p>
+                                <p className="text-[9px] text-muted-foreground">{t.stock}: {item.stock} {item.unit} • <span className="font-bold text-blue-600">Buy: {currency}{item.purchasePrice || 0}</span></p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={() => removeFromCart(item.id)}>
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={() => removeFromCart(item.id)}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label className="text-[9px] font-bold uppercase opacity-60">Qty ({item.unit})</Label>
-                              <Input type="number" step="0.01" className="h-8 text-xs px-2" value={item.quantity} onChange={(e) => updateQuantity(item.id, e.target.value)} />
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-[9px] font-bold uppercase opacity-60">Qty ({item.unit})</Label>
+                                <Input type="number" step="0.01" className="h-8 text-xs px-2" value={item.quantity} onChange={(e) => updateQuantity(item.id, e.target.value)} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[9px] font-bold uppercase opacity-60">Unit Price ({currency})</Label>
+                                <Input type="number" step="0.01" className="h-8 text-xs px-2 font-bold text-accent" value={item.sellingPrice} onChange={(e) => updateUnitPrice(item.id, e.target.value)} />
+                              </div>
                             </div>
-                            <div className="space-y-1">
-                              <Label className="text-[9px] font-bold uppercase opacity-60">Unit Price ({currency})</Label>
-                              <Input type="number" step="0.01" className="h-8 text-xs px-2 font-bold text-accent" value={item.sellingPrice} onChange={(e) => updateUnitPrice(item.id, e.target.value)} />
+                            <div className="flex justify-between items-center mt-1">
+                               <div className={cn(
+                                 "text-[10px] font-bold px-2 py-0.5 rounded",
+                                 isLoss ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+                               )}>
+                                 {isLoss ? 'Loss' : 'Lav'}: {currency}{itemProfit.toFixed(2)}
+                               </div>
+                               <p className="text-sm font-black text-primary">{currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
                             </div>
                           </div>
-                          <div className="flex justify-between items-center mt-1">
-                             <div className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">
-                               Lav: {currency}{((item.sellingPrice - (item.purchasePrice || 0)) * item.quantity).toFixed(2)}
-                             </div>
-                             <p className="text-sm font-black text-primary">{currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </ScrollArea>
                 <div className="p-4 md:p-6 border-t bg-muted/10 space-y-3 shrink-0">
                   <div className="grid grid-cols-2 gap-2 md:gap-3">
-                    <div className="bg-green-600 text-white p-2 md:p-3 rounded-xl shadow-inner">
-                      <p className="text-[8px] md:text-[10px] font-bold uppercase opacity-80">{t.totalLav}</p>
+                    <div className={cn(
+                      "text-white p-2 md:p-3 rounded-xl shadow-inner transition-colors",
+                      totalProfit < 0 ? "bg-destructive" : "bg-green-600"
+                    )}>
+                      <p className="text-[8px] md:text-[10px] font-bold uppercase opacity-80">{totalProfit < 0 ? 'Total Loss' : t.totalLav}</p>
                       <p className="text-base md:text-xl font-black">{currency}{totalProfit.toFixed(2)}</p>
                     </div>
                     <div className="bg-primary text-white p-2 md:p-3 rounded-xl shadow-inner text-right">
@@ -281,7 +292,12 @@ export default function DashboardPage() {
                       <div className="text-right">
                         <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
                         {!sale.isBakiPayment && (
-                          <p className="text-[9px] md:text-[10px] text-green-600 font-medium">+{currency}{sale.profit?.toFixed(2)}</p>
+                          <p className={cn(
+                            "text-[9px] md:text-[10px] font-bold",
+                            (sale.profit || 0) < 0 ? "text-destructive" : "text-green-600"
+                          )}>
+                            {(sale.profit || 0) < 0 ? '-' : '+'}{currency}{Math.abs(sale.profit || 0).toFixed(2)}
+                          </p>
                         )}
                       </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => handleDeleteSale(sale.id)}>
