@@ -124,7 +124,7 @@ export function useBusinessData() {
     
     if (user?.uid && db) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'sales'), data);
-      if (data.items) {
+      if (data.items && !data.isBakiPayment) {
         data.items.forEach((item: any) => {
           const productRef = doc(db, 'users', user.uid, 'products', item.id);
           const currentProduct = products.find(p => p.id === item.id);
@@ -141,17 +141,19 @@ export function useBusinessData() {
         localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
         return updated;
       });
-      setLocalProducts(prev => {
-        const updatedProducts = prev.map(p => {
-          const saleItem = data.items?.find((i: any) => i.id === p.id);
-          if (saleItem) {
-            return { ...p, stock: Math.max(0, p.stock - saleItem.quantity) };
-          }
-          return p;
+      if (!data.isBakiPayment) {
+        setLocalProducts(prev => {
+          const updatedProducts = prev.map(p => {
+            const saleItem = data.items?.find((i: any) => i.id === p.id);
+            if (saleItem) {
+              return { ...p, stock: Math.max(0, p.stock - saleItem.quantity) };
+            }
+            return p;
+          });
+          localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
+          return updatedProducts;
         });
-        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
-        return updatedProducts;
-      });
+      }
     }
   }, [user?.uid, db, products]);
 
@@ -199,7 +201,6 @@ export function useBusinessData() {
     
     if (user?.uid && db) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'customers', customerId, 'bakiRecords'), data);
-      // Update customer totalDue
       const customer = customers.find(c => c.id === customerId);
       if (customer) {
         updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId), {
@@ -207,7 +208,6 @@ export function useBusinessData() {
         });
       }
     } else {
-      // Local management for baki records
       const updatedCustomers = localCustomers.map(c => {
         if (c.id === customerId) {
           const records = c.bakiRecords || [];
@@ -227,7 +227,21 @@ export function useBusinessData() {
   const payBakiRecord = useCallback((customerId: string, recordId: string, amountToPay: number, currentRecord: any) => {
     const newPaidAmount = (currentRecord.paidAmount || 0) + amountToPay;
     const isFullyPaid = newPaidAmount >= currentRecord.amount;
+    const remaining = Math.max(0, currentRecord.amount - newPaidAmount);
     
+    // Add to Sales
+    const saleData = {
+      total: amountToPay,
+      profit: 0, // We assume profit was counted at time of baki or handled manually
+      items: [{ name: `Baki Payment: ${currentRecord.productName}`, quantity: 1, sellingPrice: amountToPay }],
+      isBakiPayment: true,
+      bakiProductName: currentRecord.productName,
+      remainingAmount: remaining,
+      customerId: customerId,
+      saleDate: new Date().toISOString()
+    };
+    addSale(saleData);
+
     if (user?.uid && db) {
       const recordRef = doc(db, 'users', user.uid, 'customers', customerId, 'bakiRecords', recordId);
       updateDocumentNonBlocking(recordRef, {
@@ -265,7 +279,7 @@ export function useBusinessData() {
       setLocalCustomers(updatedCustomers);
       localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updatedCustomers));
     }
-  }, [user?.uid, db, customers, localCustomers]);
+  }, [user?.uid, db, customers, localCustomers, addSale]);
 
   const deleteBakiRecord = useCallback((customerId: string, recordId: string, remainingAmount: number) => {
     if (user?.uid && db) {
@@ -298,6 +312,46 @@ export function useBusinessData() {
     localStorage.setItem(LOCAL_KEYS.CURRENCY, val);
   }, []);
 
+  const deleteSale = useCallback((saleId: string) => {
+    const saleToDelete = sales.find(s => s.id === saleId);
+    if (!saleToDelete) return;
+
+    if (user?.uid && db) {
+      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', saleId));
+      // Restore stock only if it's NOT a baki payment
+      if (!saleToDelete.isBakiPayment && saleToDelete.items) {
+        saleToDelete.items.forEach((item: any) => {
+          const productRef = doc(db, 'users', user.uid, 'products', item.id);
+          const currentProduct = products.find(p => p.id === item.id);
+          if (currentProduct) {
+            updateDocumentNonBlocking(productRef, {
+              stock: currentProduct.stock + item.quantity
+            });
+          }
+        });
+      }
+    } else {
+      setLocalSales(prev => {
+        const updated = prev.filter(s => s.id !== saleId);
+        localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
+        return updated;
+      });
+      if (!saleToDelete.isBakiPayment) {
+        setLocalProducts(prev => {
+          const updatedProducts = prev.map(p => {
+            const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
+            if (saleItem) {
+              return { ...p, stock: p.stock + saleItem.quantity };
+            }
+            return p;
+          });
+          localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
+          return updatedProducts;
+        });
+      }
+    }
+  }, [user?.uid, db, sales, products]);
+
   return {
     products,
     sales,
@@ -309,6 +363,7 @@ export function useBusinessData() {
       updateProduct,
       deleteProduct,
       addSale,
+      deleteSale,
       addCustomer,
       updateCustomer,
       deleteCustomer,

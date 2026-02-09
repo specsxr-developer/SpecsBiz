@@ -16,7 +16,8 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
-  Receipt
+  Receipt,
+  ArrowDownCircle
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -223,7 +224,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
             <CardTitle className="text-sm md:text-base flex items-center gap-2"><Clock className="w-4 h-4 md:w-5 md:h-5 text-accent" /> Recent Activity</CardTitle>
-            <CardDescription className="text-xs">Your latest transactions.</CardDescription>
+            <CardDescription className="text-xs">Your latest transactions and payments.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {sales.length === 0 ? (
@@ -233,19 +234,36 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y">
-                {sales.slice(0, 5).map((sale, i) => (
+                {sales.slice(0, 10).map((sale, i) => (
                   <div key={i} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/5 group">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-1.5 md:p-2 bg-accent/10 rounded-full shrink-0"><Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-accent" /></div>
+                      <div className={`p-1.5 md:p-2 rounded-full shrink-0 ${sale.isBakiPayment ? 'bg-blue-100' : 'bg-accent/10'}`}>
+                        {sale.isBakiPayment ? (
+                          <ArrowDownCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600" />
+                        ) : (
+                          <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-accent" />
+                        )}
+                      </div>
                       <div className="min-w-0">
-                        <p className="text-xs md:text-sm font-bold truncate">Sale #{sale.id?.slice(-4)}</p>
-                        <p className="text-[9px] md:text-[10px] text-muted-foreground truncate">{new Date(sale.saleDate).toLocaleDateString()}</p>
+                        <p className="text-xs md:text-sm font-bold truncate">
+                          {sale.isBakiPayment ? `Baki Payment: ${sale.bakiProductName}` : `Sale #${sale.id?.slice(-4)}`}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[9px] md:text-[10px] text-muted-foreground truncate">{new Date(sale.saleDate).toLocaleDateString()}</p>
+                          {sale.isBakiPayment && (
+                            <Badge variant="outline" className="text-[8px] h-3.5 border-blue-200 bg-blue-50 text-blue-600 px-1">
+                              Due: {currency}{sale.remainingAmount?.toLocaleString()}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="text-right">
                         <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
-                        <p className="text-[9px] md:text-[10px] text-green-600 font-medium">+{currency}{sale.profit?.toFixed(2)}</p>
+                        {!sale.isBakiPayment && (
+                          <p className="text-[9px] md:text-[10px] text-green-600 font-medium">+{currency}{sale.profit?.toFixed(2)}</p>
+                        )}
                       </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => handleDeleteSale(sale.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
