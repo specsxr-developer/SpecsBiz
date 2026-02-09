@@ -13,7 +13,8 @@ import {
   Settings,
   Store,
   LogIn,
-  ShieldCheck
+  ShieldCheck,
+  FileSpreadsheet
 } from "lucide-react"
 import { useUser } from "@/firebase"
 
@@ -34,6 +35,7 @@ const menuItems = [
   { title: "Inventory", icon: Package, href: "/inventory" },
   { title: "Sales", icon: ShoppingCart, href: "/sales" },
   { title: "Customers", icon: Users, href: "/customers" },
+  { title: "Master Ledger", icon: FileSpreadsheet, href: "/reports" },
   { title: "Analytics", icon: BarChart3, href: "/analytics" },
   { title: "AI Assistant", icon: Bot, href: "/ai-assistant" },
 ]
