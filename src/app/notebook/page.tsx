@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { 
   BookOpen, 
   Plus, 
@@ -63,6 +63,14 @@ export default function NotebookPage() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
   const [localNotes, setLocalNotes] = useState<any[]>([])
   
+  // Toolbar State
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    align: 'left'
+  })
+
   // Real-time Firestore notes
   const notesQuery = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
@@ -129,6 +137,15 @@ export default function NotebookPage() {
       localStorage.setItem('specsbiz_local_notes', JSON.stringify(updated));
     }
     if (selectedNoteId === id) setSelectedNoteId(null);
+  }
+
+  const toggleFormat = (format: keyof typeof activeFormats) => {
+    if (format === 'align') return; // Handled separately
+    setActiveFormats(prev => ({ ...prev, [format]: !prev[format] }));
+  }
+
+  const setAlign = (align: string) => {
+    setActiveFormats(prev => ({ ...prev, align }));
   }
 
   const filteredNotes = useMemo(() => {
@@ -242,12 +259,55 @@ export default function NotebookPage() {
                 </Button>
                 
                 <div className="flex items-center bg-white/80 rounded-xl border shadow-sm p-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/10 hover:text-accent"><Bold className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/10 hover:text-accent"><Italic className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/10 hover:text-accent"><Underline className="w-4 h-4" /></Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 transition-colors", activeFormats.bold ? "bg-accent/20 text-accent font-bold" : "hover:bg-accent/10 hover:text-accent")}
+                    onClick={() => toggleFormat('bold')}
+                  >
+                    <Bold className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 transition-colors", activeFormats.italic ? "bg-accent/20 text-accent" : "hover:bg-accent/10 hover:text-accent")}
+                    onClick={() => toggleFormat('italic')}
+                  >
+                    <Italic className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 transition-colors", activeFormats.underline ? "bg-accent/20 text-accent" : "hover:bg-accent/10 hover:text-accent")}
+                    onClick={() => toggleFormat('underline')}
+                  >
+                    <Underline className="w-4 h-4" />
+                  </Button>
                   <div className="h-4 w-px bg-muted mx-1" />
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/10 hover:text-accent"><List className="w-4 h-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent/10 hover:text-accent"><AlignLeft className="w-4 h-4" /></Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 transition-colors", activeFormats.align === 'left' ? "bg-accent/20 text-accent" : "hover:bg-accent/10 hover:text-accent")}
+                    onClick={() => setAlign('left')}
+                  >
+                    <AlignLeft className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 transition-colors", activeFormats.align === 'center' ? "bg-accent/20 text-accent" : "hover:bg-accent/10 hover:text-accent")}
+                    onClick={() => setAlign('center')}
+                  >
+                    <AlignCenter className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 transition-colors", activeFormats.align === 'right' ? "bg-accent/20 text-accent" : "hover:bg-accent/10 hover:text-accent")}
+                    onClick={() => setAlign('right')}
+                  >
+                    <AlignRight className="w-4 h-4" />
+                  </Button>
                 </div>
 
                 <div className="flex items-center bg-white/80 rounded-xl border shadow-sm p-1 gap-1">
@@ -317,7 +377,14 @@ export default function NotebookPage() {
                 </div>
 
                 <Textarea 
-                  className="w-full text-base md:text-xl leading-loose border-none bg-transparent focus-visible:ring-0 p-0 resize-none placeholder:opacity-20 min-h-[60vh] font-body"
+                  className={cn(
+                    "w-full text-base md:text-xl leading-loose border-none bg-transparent focus-visible:ring-0 p-0 resize-none placeholder:opacity-20 min-h-[60vh] font-body",
+                    activeFormats.bold && "font-bold",
+                    activeFormats.italic && "italic",
+                    activeFormats.underline && "underline",
+                    activeFormats.align === 'center' && "text-center",
+                    activeFormats.align === 'right' && "text-right"
+                  )}
                   placeholder={t.notesPlaceholder}
                   value={activeNote?.content || ""}
                   onChange={e => handleSaveNote({ content: e.target.value })}
