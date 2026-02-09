@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -9,7 +10,8 @@ import {
   Phone, 
   History, 
   Tag, 
-  MoreHorizontal 
+  MoreHorizontal,
+  Inbox
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -38,19 +40,22 @@ export default function CustomersPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<{ segments: string[], reasoning: string } | null>(null)
 
-  const customers = [
-    { id: 1, name: "Sarah Jenkins", email: "sarah.j@example.com", phone: "(555) 123-4567", history: "3 Orders", total: "$450.00", segment: "V.I.P" },
-    { id: 2, name: "Michael Ross", email: "m.ross@pearson.com", phone: "(555) 987-6543", history: "1 Order", total: "$120.00", segment: "New" },
-    { id: 3, name: "Donna Paulsen", email: "donna@suitors.com", phone: "(555) 555-0199", history: "12 Orders", total: "$2,400.00", segment: "V.I.P" },
-    { id: 4, name: "Louis Litt", email: "mudding@litt.com", phone: "(555) 001-2233", history: "5 Orders", total: "$980.00", segment: "Regular" },
-  ]
+  const [customers, setCustomers] = useState<any[]>([])
 
   const handleAISegmentation = async () => {
+    if (customers.length === 0) {
+      toast({
+        title: "No Data",
+        description: "Please add some customers before running AI analysis.",
+        variant: "destructive"
+      })
+      return
+    }
+    
     setIsAnalyzing(true)
     try {
-      // Prepare mock history/demographics for flow
       const historyStr = customers.map(c => `${c.name}: ${c.history}, Total ${c.total}`).join(". ")
-      const demographicsStr = "Most customers are working professionals aged 25-50 based in urban areas."
+      const demographicsStr = "User provided customer list."
       
       const result = await suggestCustomerSegments({
         purchaseHistory: historyStr,
@@ -80,7 +85,7 @@ export default function CustomersPage() {
             variant="outline" 
             className="border-accent text-accent gap-2"
             onClick={handleAISegmentation}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || customers.length === 0}
           >
             <Sparkles className="w-4 h-4" />
             {isAnalyzing ? "Analyzing..." : "Smart Segment"}
@@ -118,73 +123,68 @@ export default function CustomersPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Purchases</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Segment</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customers.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="pl-6 font-medium">{c.name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs flex items-center gap-1 text-muted-foreground"><Mail className="w-3 h-3" /> {c.email}</span>
-                        <span className="text-xs flex items-center gap-1 text-muted-foreground"><Phone className="w-3 h-3" /> {c.phone}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="gap-1 font-normal">
-                        <History className="w-3 h-3" /> {c.history}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-semibold text-primary">{c.total}</TableCell>
-                    <TableCell>
-                      <Badge className={
-                        c.segment === 'V.I.P' ? 'bg-purple-100 text-purple-700 hover:bg-purple-100' : 
-                        c.segment === 'New' ? 'bg-blue-100 text-blue-700 hover:bg-blue-100' :
-                        'bg-gray-100 text-gray-700 hover:bg-gray-100'
-                      }>
-                        {c.segment}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Customer Details: {c.name}</DialogTitle>
-                            <CardDescription>Full purchase history and contact preferences.</CardDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="flex items-center justify-between border-b pb-2">
-                              <span className="text-sm text-muted-foreground">Status</span>
-                              <Badge className="bg-teal">Active</Badge>
-                            </div>
-                            <div className="flex items-center justify-between border-b pb-2">
-                              <span className="text-sm text-muted-foreground">Joined Date</span>
-                              <span className="text-sm font-medium">January 12, 2024</span>
-                            </div>
-                            <div className="space-y-2">
-                              <span className="text-sm font-semibold">Latest Note</span>
-                              <p className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">Customer prefers titanium frames. Contact via email only.</p>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TableCell>
+            {customers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
+                <Inbox className="w-10 h-10 opacity-20" />
+                <p className="text-sm italic">No customers found.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Purchases</TableHead>
+                    <TableHead>Total Spent</TableHead>
+                    <TableHead>Segment</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {customers.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="pl-6 font-medium">{c.name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs flex items-center gap-1 text-muted-foreground"><Mail className="w-3 h-3" /> {c.email}</span>
+                          <span className="text-xs flex items-center gap-1 text-muted-foreground"><Phone className="w-3 h-3" /> {c.phone}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="gap-1 font-normal">
+                          <History className="w-3 h-3" /> {c.history}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold text-primary">{c.total}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">
+                          {c.segment}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Customer Details: {c.name}</DialogTitle>
+                              <CardDescription>Full purchase history and contact preferences.</CardDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="flex items-center justify-between border-b pb-2">
+                                <span className="text-sm text-muted-foreground">Status</span>
+                                <Badge className="bg-teal">Active</Badge>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { 
@@ -7,7 +8,8 @@ import {
   DollarSign, 
   ArrowUpRight, 
   ArrowDownRight,
-  Clock
+  Clock,
+  Inbox
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -25,45 +27,39 @@ export default function DashboardPage() {
   const stats = [
     { 
       label: "Total Revenue", 
-      value: "$24,560", 
-      change: "+12.5%", 
+      value: "$0", 
+      change: "0%", 
       trend: "up", 
       icon: DollarSign, 
       color: "text-green-600" 
     },
     { 
       label: "Inventory Items", 
-      value: "1,240", 
-      change: "-2.4%", 
-      trend: "down", 
+      value: "0", 
+      change: "0%", 
+      trend: "up", 
       icon: Package, 
       color: "text-blue-600" 
     },
     { 
       label: "Active Customers", 
-      value: "842", 
-      change: "+4.1%", 
+      value: "0", 
+      change: "0%", 
       trend: "up", 
       icon: Users, 
       color: "text-purple-600" 
     },
     { 
       label: "Sales Count", 
-      value: "156", 
-      change: "+18.2%", 
+      value: "0", 
+      change: "0%", 
       trend: "up", 
       icon: TrendingUp, 
       color: "text-teal-600" 
     },
   ]
 
-  const recentActivities = [
-    { id: 1, action: "New Sale", item: "Blue Light Glasses", amount: "$45.00", time: "2 mins ago", status: "completed" },
-    { id: 2, action: "Stock Alert", item: "Ray-Ban Case", amount: "5 Left", time: "15 mins ago", status: "warning" },
-    { id: 3, action: "New Customer", item: "Sarah Jenkins", amount: "-", time: "1 hour ago", status: "completed" },
-    { id: 4, action: "Refund", item: "Aviator Gold", amount: "$120.00", time: "3 hours ago", status: "refunded" },
-    { id: 5, action: "Restock", item: "Reading Glasses x50", amount: "-", time: "5 hours ago", status: "completed" },
-  ]
+  const recentActivities: any[] = []
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -99,35 +95,42 @@ export default function DashboardPage() {
             <Button variant="outline" size="sm" className="text-accent border-accent">View All</Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Item/User</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentActivities.map((activity) => (
-                  <TableRow key={activity.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {activity.status === "completed" && <div className="w-2 h-2 rounded-full bg-green-500" />}
-                        {activity.status === "warning" && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
-                        {activity.status === "refunded" && <div className="w-2 h-2 rounded-full bg-red-500" />}
-                        {activity.action}
-                      </div>
-                    </TableCell>
-                    <TableCell>{activity.item}</TableCell>
-                    <TableCell className="text-muted-foreground text-xs flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {activity.time}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">{activity.amount}</TableCell>
+            {recentActivities.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+                <Inbox className="w-8 h-8 opacity-20" />
+                <p className="text-sm italic">No recent activity found.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Item/User</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentActivities.map((activity) => (
+                    <TableRow key={activity.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {activity.status === "completed" && <div className="w-2 h-2 rounded-full bg-green-500" />}
+                          {activity.status === "warning" && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
+                          {activity.status === "refunded" && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                          {activity.action}
+                        </div>
+                      </TableCell>
+                      <TableCell>{activity.item}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {activity.time}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{activity.amount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -138,23 +141,9 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { name: "Polarized Lenses", stock: 2, category: "Components" },
-                { name: "Cleaning Solution", stock: 0, category: "Accessories" },
-                { name: "Frame Screws M2", stock: 12, category: "Hardware" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.category}</p>
-                  </div>
-                  <Badge variant={item.stock === 0 ? "destructive" : "secondary"} className="bg-teal/10 text-teal border-teal/20">
-                    {item.stock} left
-                  </Badge>
-                </div>
-              ))}
+              <p className="text-sm text-muted-foreground italic text-center py-4">No low stock alerts at this time.</p>
             </div>
-            <Button className="w-full mt-6 bg-accent hover:bg-accent/90">Restock Now</Button>
+            <Button className="w-full mt-6 bg-accent hover:bg-accent/90" disabled>Restock Now</Button>
           </CardContent>
         </Card>
       </div>

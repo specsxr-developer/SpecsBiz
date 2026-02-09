@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -9,7 +10,8 @@ import {
   Minus, 
   CheckCircle2,
   Clock,
-  Receipt
+  Receipt,
+  Inbox
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -30,12 +32,7 @@ export default function SalesPage() {
   const [cart, setCart] = useState<any[]>([])
   const [search, setSearch] = useState("")
 
-  const inventory = [
-    { id: 1, name: "Classic Aviator", price: 120, stock: 24 },
-    { id: 2, name: "Blue Light Pro", price: 85, stock: 45 },
-    { id: 3, name: "Ray-Ban Case", price: 15, stock: 120 },
-    { id: 4, name: "Lens Cleaner", price: 8, stock: 50 },
-  ]
+  const inventory: any[] = []
 
   const addToCart = (item: any) => {
     const existing = cart.find(c => c.id === item.id)
@@ -73,6 +70,8 @@ export default function SalesPage() {
     setCart([])
   }
 
+  const recentSales: any[] = []
+
   return (
     <div className="grid lg:grid-cols-12 gap-6 animate-in fade-in duration-500">
       <div className="lg:col-span-7 space-y-6">
@@ -92,24 +91,30 @@ export default function SalesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {inventory.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map((item) => (
-                <div key={item.id} className="p-4 border rounded-xl bg-card hover:border-accent transition-colors flex justify-between items-center group">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-primary">{item.name}</p>
-                    <p className="text-sm text-accent font-bold">${item.price}</p>
-                    <p className="text-xs text-muted-foreground">{item.stock} in stock</p>
+            {inventory.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground italic border-2 border-dashed rounded-xl">
+                No products in inventory. Please add products first.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {inventory.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map((item) => (
+                  <div key={item.id} className="p-4 border rounded-xl bg-card hover:border-accent transition-colors flex justify-between items-center group">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-primary">{item.name}</p>
+                      <p className="text-sm text-accent font-bold">${item.price}</p>
+                      <p className="text-xs text-muted-foreground">{item.stock} in stock</p>
+                    </div>
+                    <Button 
+                      size="icon" 
+                      className="bg-accent/10 text-accent hover:bg-accent hover:text-white"
+                      onClick={() => addToCart(item)}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button 
-                    size="icon" 
-                    className="bg-accent/10 text-accent hover:bg-accent hover:text-white"
-                    onClick={() => addToCart(item)}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -120,30 +125,32 @@ export default function SalesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Invoice</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[
-                  { id: "INV-001", customer: "Walk-in", amount: "$150.00", status: "Paid" },
-                  { id: "INV-002", customer: "James Bond", amount: "$85.00", status: "Paid" },
-                  { id: "INV-003", customer: "Alice Smith", amount: "$220.00", status: "Paid" },
-                ].map((sale) => (
-                  <TableRow key={sale.id}>
-                    <TableCell className="pl-6 font-mono text-xs">{sale.id}</TableCell>
-                    <TableCell>{sale.customer}</TableCell>
-                    <TableCell className="font-semibold">{sale.amount}</TableCell>
-                    <TableCell><Badge className="bg-green-100 text-green-700 hover:bg-green-100">{sale.status}</Badge></TableCell>
+            {recentSales.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground italic">
+                No recent transactions found.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Invoice</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentSales.map((sale) => (
+                    <TableRow key={sale.id}>
+                      <TableCell className="pl-6 font-mono text-xs">{sale.id}</TableCell>
+                      <TableCell>{sale.customer}</TableCell>
+                      <TableCell className="font-semibold">{sale.amount}</TableCell>
+                      <TableCell><Badge className="bg-green-100 text-green-700 hover:bg-green-100">{sale.status}</Badge></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -10,7 +11,8 @@ import {
   MoreVertical, 
   Edit, 
   Trash,
-  ScanBarcode
+  ScanBarcode,
+  Inbox
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,12 +56,7 @@ export default function InventoryPage() {
     stock: ""
   })
 
-  const [products, setProducts] = useState([
-    { id: 1, name: "Classic Aviator", category: "Eyewear", stock: 24, price: "$120.00", sku: "EYE-001" },
-    { id: 2, name: "Blue Light Pro", category: "Eyewear", stock: 45, price: "$85.00", sku: "EYE-002" },
-    { id: 3, name: "Hard Shell Case", category: "Accessories", stock: 120, price: "$15.00", sku: "ACC-010" },
-    { id: 4, name: "Microfiber Cloth", category: "Maintenance", stock: 300, price: "$5.00", sku: "MAI-005" },
-  ])
+  const [products, setProducts] = useState<any[]>([])
 
   const handleAIDescription = async () => {
     if (!newProduct.name || !newProduct.category) {
@@ -90,7 +87,7 @@ export default function InventoryPage() {
 
   const handleAddProduct = () => {
     const p = {
-      id: products.length + 1,
+      id: Date.now(),
       name: newProduct.name,
       category: newProduct.category,
       stock: parseInt(newProduct.stock) || 0,
@@ -216,44 +213,56 @@ export default function InventoryPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.name}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground font-mono">{p.sku}</TableCell>
-                  <TableCell>{p.category}</TableCell>
-                  <TableCell>
-                    <span className={p.stock < 10 ? "text-red-500 font-bold" : ""}>
-                      {p.stock}
-                    </span>
-                  </TableCell>
-                  <TableCell>{p.price}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="gap-2"><Edit className="w-4 h-4" /> Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 text-destructive"><Trash className="w-4 h-4" /> Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
+              <div className="p-4 rounded-full bg-muted">
+                <Package className="w-10 h-10 opacity-20" />
+              </div>
+              <div className="text-center">
+                <p className="font-semibold">No products found</p>
+                <p className="text-sm">Start by adding your first product to the inventory.</p>
+              </div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {products.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground font-mono">{p.sku}</TableCell>
+                    <TableCell>{p.category}</TableCell>
+                    <TableCell>
+                      <span className={p.stock < 10 ? "text-red-500 font-bold" : ""}>
+                        {p.stock}
+                      </span>
+                    </TableCell>
+                    <TableCell>{p.price}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="gap-2"><Edit className="w-4 h-4" /> Edit</DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 text-destructive"><Trash className="w-4 h-4" /> Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
