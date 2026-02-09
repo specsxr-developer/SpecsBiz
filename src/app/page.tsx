@@ -174,9 +174,9 @@ export default function DashboardPage() {
                                 <p className="text-xs font-bold text-primary truncate">{item.name}</p>
                                 <p className="text-[9px] text-muted-foreground">{t.stock}: {item.stock} {item.unit} • <span className="font-bold text-blue-600">Buy: {currency}{item.purchasePrice || 0}</span></p>
                               </div>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 shrink-0" onClick={() => removeFromCart(item.id)}>
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <button className="text-muted-foreground hover:text-red-500 transition-colors p-1" onClick={() => removeFromCart(item.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
@@ -195,7 +195,7 @@ export default function DashboardPage() {
                                )}>
                                  {isLoss ? 'Loss' : 'Lav'}: {currency}{itemProfit.toFixed(2)}
                                </div>
-                               <p className="text-sm font-black text-primary">{currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
+                               <p className="text-sm font-black text-primary">Item Total: {currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
                             </div>
                           </div>
                         );

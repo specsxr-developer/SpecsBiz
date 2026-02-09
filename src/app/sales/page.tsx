@@ -111,7 +111,7 @@ export default function SalesPage() {
                            Stock: {item.stock} {item.unit}
                          </Badge>
                          <Badge variant="outline" className="text-[10px] py-0 px-1 font-normal bg-green-50/50 text-green-700 whitespace-nowrap">
-                           Buy Price: {currency}{item.purchasePrice || 0}
+                           Buy: {currency}{item.purchasePrice || 0}
                          </Badge>
                       </div>
                     </div>
@@ -203,11 +203,11 @@ export default function SalesPage() {
                           <div className="flex gap-2">
                             <span className="text-[10px] text-muted-foreground uppercase">{item.unit}</span>
                             <span className="text-[10px] text-blue-600 font-bold">In Stock: {item.stock}</span>
-                            <span className="text-[10px] text-orange-600 font-bold">Cost: {currency}{item.purchasePrice || 0}</span>
+                            <span className="text-[10px] text-orange-600 font-bold">Buy Price: {currency}{item.purchasePrice || 0}</span>
                           </div>
                         </div>
                         <button 
-                          className="text-muted-foreground hover:text-red-500 h-8 w-8 shrink-0 flex items-center justify-center transition-colors"
+                          className="text-muted-foreground hover:text-red-500 transition-colors"
                           onClick={() => removeFromCart(item.id)}
                         >
                           <Trash2 className="w-4 h-4" />
