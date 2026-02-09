@@ -1,8 +1,8 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { NavMain } from "@/components/nav-main";
+import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { BusinessProvider } from '@/hooks/use-business-data';
@@ -36,9 +36,10 @@ export default function RootLayout({
                     <h1 className="text-lg md:text-xl font-headline font-semibold text-primary truncate">Smart Dashboard</h1>
                   </div>
                 </header>
-                <main className="flex-1 p-3 md:p-6 w-full max-w-full overflow-x-hidden">
+                <main className="flex-1 p-3 md:p-6 pb-20 md:pb-6 w-full max-w-full overflow-x-hidden">
                   {children}
                 </main>
+                <BottomNav />
               </SidebarInset>
             </SidebarProvider>
             <Toaster />
