@@ -8,11 +8,12 @@ import {
   Sparkles, 
   Mail, 
   Phone, 
-  History, 
   MoreHorizontal,
   Inbox,
   Plus,
-  MapPin
+  MapPin,
+  Trash,
+  Edit2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -35,16 +36,24 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
 import { suggestCustomerSegments } from "@/ai/flows/suggest-customer-segments"
 import { useToast } from "@/hooks/use-toast"
 import { useBusinessData } from "@/hooks/use-business-data"
 
 export default function CustomersPage() {
   const { toast } = useToast()
-  const { customers, sales, actions, isLoading } = useBusinessData()
+  const { customers, actions, isLoading } = useBusinessData()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [aiAnalysis, setAiAnalysis] = useState<{ segments: string[], reasoning: string } | null>(null)
   const [search, setSearch] = useState("")
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState<any>(null)
 
   const [newCustomer, setNewCustomer] = useState({
     firstName: "",
@@ -63,7 +72,7 @@ export default function CustomersPage() {
     
     setIsAnalyzing(true)
     try {
-      const historyStr = customers.map(c => `${c.firstName}: New Customer`).join(". ")
+      const historyStr = customers.map(c => `${c.firstName}: Customer`).join(". ")
       const demographicsStr = "User provided customer list."
       const result = await suggestCustomerSegments({
         purchaseHistory: historyStr,
@@ -82,7 +91,15 @@ export default function CustomersPage() {
     if (!newCustomer.firstName || !newCustomer.email) return
     actions.addCustomer(newCustomer)
     setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", segment: "New" })
+    setIsAddOpen(false)
     toast({ title: "Customer Added" })
+  }
+
+  const handleUpdateCustomer = () => {
+    if (!editingCustomer.firstName || !editingCustomer.email) return
+    actions.updateCustomer(editingCustomer.id, editingCustomer)
+    setEditingCustomer(null)
+    toast({ title: "Customer Updated" })
   }
 
   if (isLoading) return <div className="p-10 text-center animate-pulse">Loading Customers...</div>
@@ -107,7 +124,7 @@ export default function CustomersPage() {
             {isAnalyzing ? "Analyzing..." : "Smart Segment"}
           </Button>
           
-          <Dialog>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="bg-accent hover:bg-accent/90 gap-2 flex-1 sm:flex-none">
                 <Plus className="w-4 h-4" /> Add Customer
@@ -116,7 +133,6 @@ export default function CustomersPage() {
             <DialogContent className="w-[95vw] sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Add New Customer</DialogTitle>
-                <CardDescription>Enter contact details for relationship tracking.</CardDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -215,7 +231,19 @@ export default function CustomersPage() {
                       <span className="text-[10px] flex items-center gap-1 text-muted-foreground max-w-[150px] truncate"><MapPin className="w-2.5 h-2.5" /> {c.address || 'No address'}</span>
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="gap-2 text-xs" onClick={() => setEditingCustomer(c)}>
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => actions.deleteCustomer(c.id)}>
+                            <Trash className="w-3.5 h-3.5" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -224,6 +252,44 @@ export default function CustomersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingCustomer} onOpenChange={(open) => !open && setEditingCustomer(null)}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Customer</DialogTitle>
+          </DialogHeader>
+          {editingCustomer && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">First Name</Label>
+                  <Input className="h-9" value={editingCustomer.firstName} onChange={e => setEditingCustomer({...editingCustomer, firstName: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Last Name</Label>
+                  <Input className="h-9" value={editingCustomer.lastName} onChange={e => setEditingCustomer({...editingCustomer, lastName: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Email</Label>
+                <Input type="email" className="h-9" value={editingCustomer.email} onChange={e => setEditingCustomer({...editingCustomer, email: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Phone</Label>
+                <Input className="h-9" value={editingCustomer.phone} onChange={e => setEditingCustomer({...editingCustomer, phone: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Address</Label>
+                <Input className="h-9" value={editingCustomer.address} onChange={e => setEditingCustomer({...editingCustomer, address: e.target.value})} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button className="w-full bg-accent" onClick={handleUpdateCustomer}>Update Customer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -8,12 +8,10 @@ import {
   Users, 
   DollarSign, 
   ArrowUpRight, 
-  ArrowDownRight,
   Clock,
   Inbox,
   Plus,
   ShoppingCart,
-  Zap,
   Search,
   Trash2,
   CheckCircle2,
@@ -86,6 +84,11 @@ export default function DashboardPage() {
     toast({ title: "Sale Successful", description: `Grand Total: ${currency}${grandTotal.toFixed(2)}` })
     setCart([])
     setIsSaleDialogOpen(false)
+  }
+
+  const handleDeleteSale = (saleId: string) => {
+    actions.deleteSale(saleId)
+    toast({ title: "Sale Deleted", description: "Stock has been restored." })
   }
 
   return (
@@ -172,11 +175,6 @@ export default function DashboardPage() {
                               <p className="text-base md:text-lg font-black text-primary">{currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
                             </div>
                           </div>
-                          {item.quantity > item.stock && (
-                            <div className="bg-red-50 border border-red-100 text-red-600 text-[9px] font-bold p-1.5 rounded flex items-center gap-1.5">
-                              <AlertTriangle className="w-3 h-3" /> Over stock!
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -193,7 +191,7 @@ export default function DashboardPage() {
                       <p className="text-base md:text-xl font-black">{currency}{grandTotal.toFixed(2)}</p>
                     </div>
                   </div>
-                  <Button className="w-full h-10 md:h-14 text-sm md:text-lg bg-accent hover:bg-accent/90 font-bold shadow-xl" disabled={cart.length === 0 || cart.some(i => i.quantity > i.stock || i.quantity <= 0)} onClick={handleCheckout}>
+                  <Button className="w-full h-10 md:h-14 text-sm md:text-lg bg-accent hover:bg-accent/90 font-bold shadow-xl" disabled={cart.length === 0} onClick={handleCheckout}>
                     <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 mr-2" /> Complete Bill
                   </Button>
                 </div>
@@ -236,7 +234,7 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y">
                 {sales.slice(0, 5).map((sale, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/5">
+                  <div key={i} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/5 group">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="p-1.5 md:p-2 bg-accent/10 rounded-full shrink-0"><Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-accent" /></div>
                       <div className="min-w-0">
@@ -244,9 +242,14 @@ export default function DashboardPage() {
                         <p className="text-[9px] md:text-[10px] text-muted-foreground truncate">{new Date(sale.saleDate).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
-                      <p className="text-[9px] md:text-[10px] text-green-600 font-medium">+{currency}{sale.profit?.toFixed(2)}</p>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right">
+                        <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
+                        <p className="text-[9px] md:text-[10px] text-green-600 font-medium">+{currency}{sale.profit?.toFixed(2)}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => handleDeleteSale(sale.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
                 ))}

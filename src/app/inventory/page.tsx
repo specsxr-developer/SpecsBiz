@@ -9,7 +9,8 @@ import {
   Sparkles, 
   MoreVertical, 
   Trash,
-  Inbox
+  Inbox,
+  Edit2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,6 +55,9 @@ export default function InventoryPage() {
   const { products, actions, isLoading, currency } = useBusinessData()
   const [isGenerating, setIsGenerating] = useState(false)
   const [search, setSearch] = useState("")
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<any>(null)
+
   const [newProduct, setNewProduct] = useState({
     name: "",
     category: "",
@@ -67,8 +71,9 @@ export default function InventoryPage() {
 
   const units = ["pcs", "kg", "gm", "ltr", "meter", "box", "dozen"]
 
-  const handleAIDescription = async () => {
-    if (!newProduct.name || !newProduct.category) {
+  const handleAIDescription = async (isEdit = false) => {
+    const target = isEdit ? editingProduct : newProduct;
+    if (!target.name || !target.category) {
       toast({ title: "Missing Info", description: "Enter name and category first.", variant: "destructive" })
       return
     }
@@ -76,12 +81,16 @@ export default function InventoryPage() {
     setIsGenerating(true)
     try {
       const result = await generateProductDescription({
-        productName: newProduct.name,
-        productCategory: newProduct.category,
-        keyFeatures: newProduct.features,
+        productName: target.name,
+        productCategory: target.category,
+        keyFeatures: target.features || "",
         targetAudience: "General Customers"
       })
-      setNewProduct(prev => ({ ...prev, description: result.description }))
+      if (isEdit) {
+        setEditingProduct({ ...editingProduct, description: result.description })
+      } else {
+        setNewProduct(prev => ({ ...prev, description: result.description }))
+      }
       toast({ title: "AI Description Ready" })
     } catch (error) {
       toast({ title: "AI Error", variant: "destructive" })
@@ -92,7 +101,6 @@ export default function InventoryPage() {
 
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.sellingPrice) return;
-    
     actions.addProduct({
       name: newProduct.name,
       category: newProduct.category,
@@ -100,11 +108,24 @@ export default function InventoryPage() {
       purchasePrice: parseFloat(newProduct.purchasePrice) || 0,
       sellingPrice: parseFloat(newProduct.sellingPrice) || 0,
       unit: newProduct.unit,
+      description: newProduct.description,
       sku: `SKU-${Math.floor(Math.random() * 1000)}`
     })
-    
     setNewProduct({ name: "", category: "", features: "", description: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs" })
+    setIsAddOpen(false)
     toast({ title: "Product Added" })
+  }
+
+  const handleUpdateProduct = () => {
+    if (!editingProduct.name || !editingProduct.sellingPrice) return;
+    actions.updateProduct(editingProduct.id, {
+      ...editingProduct,
+      stock: parseFloat(editingProduct.stock) || 0,
+      purchasePrice: parseFloat(editingProduct.purchasePrice) || 0,
+      sellingPrice: parseFloat(editingProduct.sellingPrice) || 0,
+    })
+    setEditingProduct(null)
+    toast({ title: "Product Updated" })
   }
 
   return (
@@ -117,7 +138,7 @@ export default function InventoryPage() {
           <p className="text-xs md:text-sm text-muted-foreground">Manage your stock and profit margins.</p>
         </div>
         
-        <Dialog>
+        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger asChild>
             <Button className="bg-accent hover:bg-accent/90 w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" /> Add Product
@@ -131,17 +152,17 @@ export default function InventoryPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
                 <Label htmlFor="name" className="sm:text-right text-xs">Name</Label>
-                <Input id="name" className="sm:col-span-3 h-9" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                <Input className="sm:col-span-3 h-9" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                <Label htmlFor="category" className="sm:text-right text-xs">Category</Label>
-                <Input id="category" className="sm:col-span-3 h-9" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} />
+                <Label className="sm:text-right text-xs">Category</Label>
+                <Input className="sm:col-span-3 h-9" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                <Label htmlFor="unit" className="sm:text-right text-xs">Unit Type</Label>
+                <Label className="sm:text-right text-xs">Unit Type</Label>
                 <Select value={newProduct.unit} onValueChange={(val) => setNewProduct({...newProduct, unit: val})}>
                   <SelectTrigger className="sm:col-span-3 h-9">
-                    <SelectValue placeholder="Select Unit" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {units.map(u => (
@@ -151,31 +172,31 @@ export default function InventoryPage() {
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid grid-cols-1 gap-1.5">
+                <div className="space-y-1.5">
                   <Label className="text-xs">Buy Price ({currency})</Label>
-                  <Input type="number" step="0.01" className="h-9" value={newProduct.purchasePrice} onChange={e => setNewProduct({...newProduct, purchasePrice: e.target.value})} />
+                  <Input type="number" step="0.01" value={newProduct.purchasePrice} onChange={e => setNewProduct({...newProduct, purchasePrice: e.target.value})} />
                 </div>
-                <div className="grid grid-cols-1 gap-1.5">
+                <div className="space-y-1.5">
                   <Label className="text-xs">Sell Price ({currency})</Label>
-                  <Input type="number" step="0.01" className="h-9" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} />
+                  <Input type="number" step="0.01" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-4">
-                <Label htmlFor="stock" className="sm:text-right text-xs">Stock</Label>
-                <Input id="stock" type="number" step="0.01" className="sm:col-span-3 h-9" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} />
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label className="sm:text-right text-xs">Stock</Label>
+                <Input type="number" step="0.01" className="sm:col-span-3 h-9" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">
                 <Label className="sm:text-right mt-2 text-xs">Description</Label>
                 <div className="sm:col-span-3 space-y-2">
                   <Textarea className="min-h-[60px] text-xs" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
-                  <Button size="sm" variant="secondary" className="w-full gap-2 text-[10px]" onClick={handleAIDescription} disabled={isGenerating}>
+                  <Button size="sm" variant="secondary" className="w-full gap-2 text-[10px]" onClick={() => handleAIDescription(false)} disabled={isGenerating}>
                     <Sparkles className="w-3.5 h-3.5" /> {isGenerating ? "Analyzing..." : "AI Generate Description"}
                   </Button>
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" className="bg-accent w-full" onClick={handleAddProduct}>Save Product</Button>
+              <Button className="bg-accent w-full" onClick={handleAddProduct}>Save Product</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -206,10 +227,10 @@ export default function InventoryPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-[10px] md:text-xs">Product</TableHead>
-                    <TableHead className="text-[10px] md:text-xs">Buy</TableHead>
-                    <TableHead className="text-[10px] md:text-xs">Sell</TableHead>
-                    <TableHead className="text-[10px] md:text-xs">Stock</TableHead>
+                    <TableHead className="text-xs">Product</TableHead>
+                    <TableHead className="text-xs">Buy Price</TableHead>
+                    <TableHead className="text-xs">Sell Price</TableHead>
+                    <TableHead className="text-xs">Stock</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -220,8 +241,8 @@ export default function InventoryPage() {
                     <TableRow key={p.id}>
                       <TableCell className="font-medium p-3">
                         <div className="min-w-0">
-                          <p className="text-xs truncate">{p.name}</p>
-                          <div className="text-[9px] text-accent uppercase font-bold">{p.unit}</div>
+                          <p className="text-xs font-bold truncate">{p.name}</p>
+                          <div className="text-[9px] text-accent uppercase font-bold">{p.category || 'No Category'} • {p.unit}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-[10px] text-muted-foreground">{currency}{p.purchasePrice?.toFixed(2)}</TableCell>
@@ -235,6 +256,9 @@ export default function InventoryPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="w-3.5 h-3.5" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => setEditingProduct(p)}>
+                              <Edit2 className="w-3.5 h-3.5" /> Edit
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2 text-destructive text-xs" onClick={() => actions.deleteProduct(p.id)}>
                               <Trash className="w-3.5 h-3.5" /> Delete
                             </DropdownMenuItem>
@@ -249,6 +273,53 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          {editingProduct && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label className="sm:text-right text-xs">Name</Label>
+                <Input className="sm:col-span-3 h-9" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label className="sm:text-right text-xs">Category</Label>
+                <Input className="sm:col-span-3 h-9" value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Buy Price</Label>
+                  <Input type="number" step="0.01" value={editingProduct.purchasePrice} onChange={e => setEditingProduct({...editingProduct, purchasePrice: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Sell Price</Label>
+                  <Input type="number" step="0.01" value={editingProduct.sellingPrice} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label className="sm:text-right text-xs">Stock</Label>
+                <Input type="number" step="0.01" className="sm:col-span-3 h-9" value={editingProduct.stock} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-4">
+                <Label className="sm:text-right mt-2 text-xs">Description</Label>
+                <div className="sm:col-span-3 space-y-2">
+                  <Textarea className="min-h-[60px] text-xs" value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
+                  <Button size="sm" variant="secondary" className="w-full gap-2 text-[10px]" onClick={() => handleAIDescription(true)} disabled={isGenerating}>
+                    <Sparkles className="w-3.5 h-3.5" /> {isGenerating ? "Analyzing..." : "AI Generate Description"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button className="bg-accent w-full" onClick={handleUpdateProduct}>Update Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
