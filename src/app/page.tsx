@@ -23,28 +23,20 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription,
-  SheetTrigger,
-  SheetFooter
-} from "@/components/ui/sheet"
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogTrigger,
+  DialogFooter
+} from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function DashboardPage() {
@@ -55,11 +47,11 @@ export default function DashboardPage() {
   const [quickCustomer, setQuickCustomer] = useState({ name: "", phone: "" })
   
   // Sale Panel States
-  const [isSalePanelOpen, setIsSalePanelOpen] = useState(false)
+  const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [cart, setCart] = useState<any[]>([])
 
-  // Mock Inventory for the Panel
+  // Mock Inventory (Ideally fetched from Firestore later)
   const [inventory] = useState<any[]>([
     { id: 1, name: "Premium Fabric", buyPrice: 150, sellPrice: 280, stock: 45.5, unit: "meter" },
     { id: 2, name: "Gold Frame Aviator", buyPrice: 1200, sellPrice: 2500, stock: 12, unit: "pcs" },
@@ -86,11 +78,10 @@ export default function DashboardPage() {
     setQuickCustomer({ name: "", phone: "" })
   }
 
-  // Sale Logic
   const addToCart = (product: any) => {
     const existing = cart.find(c => c.id === product.id)
     if (existing) {
-      toast({ title: "Item exists", description: "Update quantity in the cart." })
+      toast({ title: "Item exists", description: "Adjust quantity in the checkout area." })
     } else {
       setCart([...cart, { ...product, quantity: 1 }])
       toast({ title: "Added to Cart", description: `${product.name} added.` })
@@ -114,10 +105,10 @@ export default function DashboardPage() {
   const handleCheckout = () => {
     toast({
       title: "Sale Successful",
-      description: `Billed $${grandTotal.toFixed(2)} with $${totalProfit.toFixed(2)} Lav (Profit).`,
+      description: `Billed $${grandTotal.toFixed(2)} with $${totalProfit.toFixed(2)} Profit (Lav).`,
     })
     setCart([])
-    setIsSalePanelOpen(false)
+    setIsSaleDialogOpen(false)
   }
 
   return (
@@ -125,43 +116,43 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-primary font-headline">Business Overview</h1>
-          <p className="text-muted-foreground">Welcome back. Here is what is happening today.</p>
+          <p className="text-muted-foreground">Welcome back. Manage your daily operations below.</p>
         </div>
         
-        {/* NEW SEPARATE SALE BUTTON */}
-        <Sheet open={isSalePanelOpen} onOpenChange={setIsSalePanelOpen}>
-          <SheetTrigger asChild>
+        <Dialog open={isSaleDialogOpen} onOpenChange={setIsSaleDialogOpen}>
+          <DialogTrigger asChild>
             <Button size="lg" className="bg-accent hover:bg-accent/90 shadow-lg gap-2 text-lg h-14 px-8">
               <ShoppingCart className="w-6 h-6" /> Create New Sale
             </Button>
-          </SheetTrigger>
-          <SheetContent className="sm:max-w-[550px] flex flex-col h-full">
-            <SheetHeader className="pb-4 border-b">
-              <SheetTitle className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-accent" /> Professional Sale Panel
-              </SheetTitle>
-              <SheetDescription>Select products, adjust quantities, and review profit margins.</SheetDescription>
-            </SheetHeader>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[800px] h-[90vh] flex flex-col p-0 overflow-hidden">
+            <DialogHeader className="p-6 border-b bg-accent/5">
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-accent" /> New Sale Transaction
+              </DialogTitle>
+              <DialogDescription>Select products and adjust quantities for professional billing.</DialogDescription>
+            </DialogHeader>
 
-            <div className="flex-1 flex flex-col gap-6 py-6 min-h-0">
-              {/* Product Selection Area */}
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search products by name..." 
-                    className="pl-9" 
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                  />
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 min-h-0">
+              {/* Product Selection List */}
+              <div className="border-r flex flex-col min-h-0 bg-muted/20">
+                <div className="p-4 border-b bg-white">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search items..." 
+                      className="pl-9" 
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                    />
+                  </div>
                 </div>
-                
-                <ScrollArea className="h-[200px] border rounded-lg p-2 bg-muted/30">
-                  <div className="grid grid-cols-1 gap-2">
+                <ScrollArea className="flex-1 p-4">
+                  <div className="space-y-3">
                     {inventory
                       .filter(i => i.name.toLowerCase().includes(search.toLowerCase()))
                       .map((item) => (
-                        <div key={item.id} className="p-3 border rounded-md bg-card flex justify-between items-center hover:border-accent transition-all cursor-pointer group" onClick={() => addToCart(item)}>
+                        <div key={item.id} className="p-3 border rounded-xl bg-white flex justify-between items-center hover:border-accent transition-all cursor-pointer shadow-sm group" onClick={() => addToCart(item)}>
                           <div>
                             <p className="text-sm font-bold text-primary">{item.name}</p>
                             <div className="flex items-center gap-2 mt-1">
@@ -169,9 +160,11 @@ export default function DashboardPage() {
                               <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700">Lav: ${(item.sellPrice - item.buyPrice).toFixed(2)}</Badge>
                             </div>
                           </div>
-                          <div className="text-right flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <span className="font-bold text-accent text-sm">${item.sellPrice}</span>
-                            <Button size="icon" variant="secondary" className="h-7 w-7"><Plus className="w-3 h-3" /></Button>
+                            <div className="p-1 rounded-full bg-accent/10 group-hover:bg-accent group-hover:text-white transition-colors">
+                              <Plus className="w-4 h-4" />
+                            </div>
                           </div>
                         </div>
                     ))}
@@ -179,91 +172,88 @@ export default function DashboardPage() {
                 </ScrollArea>
               </div>
 
-              {/* Cart Area */}
-              <div className="flex-1 flex flex-col min-h-0">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Cart Items</h3>
-                <ScrollArea className="flex-1 border rounded-lg p-4 bg-white shadow-inner">
+              {/* Cart / Checkout Area */}
+              <div className="flex flex-col min-h-0 bg-white">
+                <div className="p-4 border-b bg-muted/5">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Cart Items</h3>
+                </div>
+                <ScrollArea className="flex-1 p-4">
                   {cart.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-40 py-10">
-                      <ShoppingCart className="w-12 h-12 mb-2" />
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground opacity-30 py-12">
+                      <ShoppingCart className="w-12 h-12 mb-3" />
                       <p className="text-sm italic">Cart is empty</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {cart.map((item) => (
-                        <div key={item.id} className="space-y-3 pb-4 border-b last:border-0">
+                        <div key={item.id} className="space-y-2 pb-4 border-b last:border-0">
                           <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <p className="font-bold text-primary">{item.name}</p>
-                              <p className="text-[10px] text-muted-foreground uppercase">Unit Price: ${item.sellPrice} / {item.unit}</p>
+                            <div>
+                              <p className="text-sm font-bold text-primary">{item.name}</p>
+                              <p className="text-[10px] text-muted-foreground">Price: ${item.sellPrice} / {item.unit}</p>
                             </div>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500" onClick={() => removeFromCart(item.id)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                           
-                          <div className="flex items-end gap-4">
-                            <div className="w-32">
-                              <Label className="text-[10px] font-bold uppercase opacity-60">Quantity ({item.unit})</Label>
+                          <div className="flex items-end justify-between gap-4">
+                            <div className="flex-1">
+                              <Label className="text-[10px] font-bold uppercase opacity-60">Qty ({item.unit})</Label>
                               <Input 
                                 type="number" 
                                 step="0.01" 
-                                className="h-9" 
+                                className="h-8" 
                                 value={item.quantity} 
                                 onChange={(e) => updateQuantity(item.id, e.target.value)} 
                               />
                             </div>
-                            <div className="flex-1 text-right">
-                              <p className="text-[10px] font-bold uppercase opacity-60">Item Total</p>
+                            <div className="text-right">
                               <p className="text-lg font-black text-primary">${(item.sellPrice * item.quantity).toFixed(2)}</p>
                             </div>
                           </div>
 
                           {item.quantity > item.stock && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 text-[10px] font-bold p-2 rounded flex items-center gap-2">
-                              <AlertTriangle className="w-3.5 h-3.5" /> Out of stock! Avail: {item.stock} {item.unit}
+                            <div className="bg-red-50 border border-red-100 text-red-600 text-[10px] font-bold p-2 rounded flex items-center gap-2">
+                              <AlertTriangle className="w-3 h-3" /> Over stock limit (Avail: {item.stock})
                             </div>
                           )}
-                          
-                          <div className="bg-green-50 p-2 rounded flex justify-between items-center text-[11px]">
-                            <span className="text-green-700 font-bold">Estimated Lav (Profit)</span>
-                            <span className="font-black text-green-600">+${((item.sellPrice - item.buyPrice) * item.quantity).toFixed(2)}</span>
+
+                          <div className="flex justify-between items-center text-[10px] text-green-700 bg-green-50 p-1.5 rounded font-medium">
+                            <span>Item Profit</span>
+                            <span>+${((item.sellPrice - item.buyPrice) * item.quantity).toFixed(2)}</span>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </ScrollArea>
+                
+                <div className="p-6 border-t bg-muted/10 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-green-600 text-white p-3 rounded-xl shadow-inner">
+                      <p className="text-[10px] font-bold uppercase opacity-80">Total Lav (Profit)</p>
+                      <p className="text-xl font-black">${totalProfit.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-primary text-white p-3 rounded-xl shadow-inner text-right">
+                      <p className="text-[10px] font-bold uppercase opacity-80">Grand Total</p>
+                      <p className="text-xl font-black">${grandTotal.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full h-14 text-lg bg-accent hover:bg-accent/90 font-bold shadow-xl" 
+                    disabled={cart.length === 0 || cart.some(i => i.quantity > i.stock || i.quantity <= 0)}
+                    onClick={handleCheckout}
+                  >
+                    <CheckCircle2 className="w-5 h-5 mr-2" /> Complete Bill
+                  </Button>
+                </div>
               </div>
             </div>
-
-            <SheetFooter className="mt-auto pt-6 border-t bg-muted/50 -mx-6 px-6">
-              <div className="w-full space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-green-600 text-white p-3 rounded-xl shadow-md">
-                    <p className="text-[10px] font-bold uppercase opacity-80">Total Lav (Profit)</p>
-                    <p className="text-xl font-black">${totalProfit.toFixed(2)}</p>
-                  </div>
-                  <div className="bg-primary text-white p-3 rounded-xl shadow-md text-right">
-                    <p className="text-[10px] font-bold uppercase opacity-80">Grand Total</p>
-                    <p className="text-xl font-black">${grandTotal.toFixed(2)}</p>
-                  </div>
-                </div>
-                
-                <Button 
-                  className="w-full h-16 text-xl bg-accent hover:bg-accent/90 font-bold shadow-xl" 
-                  disabled={cart.length === 0 || cart.some(i => i.quantity > i.stock || i.quantity <= 0)}
-                  onClick={handleCheckout}
-                >
-                  <CheckCircle2 className="w-6 h-6 mr-2" /> Complete & Print Receipt
-                </Button>
-              </div>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
           <Card key={i} className="hover:shadow-md transition-shadow">
@@ -287,14 +277,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-7">
-        {/* Quick Entry System - Refined */}
         <Card className="lg:col-span-4 border-accent/20">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-accent" />
-              <CardTitle className="text-lg">Quick Business Entry</CardTitle>
+              <CardTitle className="text-lg">Quick Entry</CardTitle>
             </div>
-            <CardDescription>Rapidly add inventory or new customers.</CardDescription>
+            <CardDescription>Rapidly update inventory or customers.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="inventory" className="w-full">
@@ -338,16 +327,15 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Alerts / Activity */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Review latest transactions.</CardDescription>
+            <CardDescription>Review your latest business actions.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
               <Inbox className="w-8 h-8 opacity-20" />
-              <p className="text-sm italic">No recent activity.</p>
+              <p className="text-sm italic">No recent transactions yet.</p>
             </div>
           </CardContent>
         </Card>
