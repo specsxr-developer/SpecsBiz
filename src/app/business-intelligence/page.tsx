@@ -29,6 +29,7 @@ import { useBusinessData } from "@/hooks/use-business-data"
 import { analyzeBusinessHealth, type AnalyzeBusinessHealthOutput } from "@/ai/flows/analyze-business-health"
 import { useToast } from "@/hooks/use-toast"
 import { format, subMonths, eachMonthOfInterval, isSameMonth } from "date-fns"
+import { cn } from "@/lib/utils"
 
 const chartConfig = {
   revenue: {
