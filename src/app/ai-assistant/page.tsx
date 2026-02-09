@@ -31,8 +31,17 @@ const QUICK_ACTIONS = [
   "Analyze revenue trends",
   "Who owes the most money?",
   "Suggest restock quantities",
-  "Compare sales with last month",
   "Identify slowest moving items"
+]
+
+const QUICK_ACTIONS_BN = [
+  "গত সপ্তাহের বিক্রয় সারসংক্ষেপ",
+  "স্টক কম আছে এমন পণ্যের রিপোর্ট",
+  "সেরা কাস্টমারদের তালিকা",
+  "আয় বৃদ্ধির প্রবণতা বিশ্লেষণ",
+  "কার কাছে বেশি টাকা বকেয়া আছে?",
+  "কতটুকু পণ্য কেনা দরকার পরামর্শ দাও",
+  "সবচেয়ে কম বিক্রি হওয়া পণ্যগুলো কি?"
 ]
 
 export default function AIAssistantPage() {
@@ -47,8 +56,8 @@ export default function AIAssistantPage() {
       id: 1, 
       role: "assistant" as const, 
       content: language === 'bn' 
-        ? "হ্যালো! আমি আপনার SpecsBiz স্মার্ট অ্যাসিস্ট্যান্ট। আমি আপনার ইনভেন্টরি, সেলস এবং কাস্টমার ডাটা বিশ্লেষণে সাহায্য করতে পারি। আমি এখন অনলাইনে এবং আপনার ডাটার সাথে কানেক্টেড আছি।" 
-        : "Hello! I'm your SpecsBiz Smart Assistant. I am online and synced with your real-time business data. How can I help you today?" 
+        ? "হ্যালো! আমি SpecsAI। আমি আপনার ব্যবসার সব ডেটা জানি। আপনার ইনভেন্টরি, সেলস বা বাকি নিয়ে কোনো প্রশ্ন আছে? সরাসরি জিজ্ঞেস করতে পারেন!" 
+        : "Hi! I'm SpecsAI. I know your business inside out. Got questions about inventory, sales, or debts? Just ask me!" 
     }
   ])
 
@@ -70,22 +79,22 @@ export default function AIAssistantPage() {
     setIsLoading(true)
 
     try {
-      // Prepare business context summary with more detail
+      // Prepare detailed business context summary
       const inventorySummary = products.length > 0 
-        ? products.map(p => `${p.name}: ${p.stock} ${p.unit} (Price: ${currency}${p.sellingPrice})`).slice(0, 30).join(', ')
+        ? products.map(p => `${p.name}: ${p.stock} ${p.unit} (Buy: ${currency}${p.purchasePrice}, Sell: ${currency}${p.sellingPrice})`).join(', ')
         : "No inventory records found."
         
       const salesSummary = sales.length > 0
-        ? sales.map(s => `${currency}${s.total} on ${new Date(s.saleDate).toLocaleDateString()}`).slice(0, 20).join(', ')
+        ? sales.map(s => `${currency}${s.total} (${s.isBakiPayment ? 'Baki Payment' : 'Direct Sale'}) on ${new Date(s.saleDate).toLocaleDateString()}`).slice(0, 30).join(', ')
         : "No sales recorded yet."
         
       const customersSummary = customers.length > 0
-        ? customers.map(c => `${c.firstName}: ${currency}${c.totalDue} baki`).slice(0, 20).join(', ')
+        ? customers.map(c => `${c.firstName}: ${currency}${c.totalDue} total baki`).slice(0, 20).join(', ')
         : "No customer records found."
         
       const totalRevenue = sales.reduce((acc, s) => acc + (s.total || 0), 0)
 
-      const history = messages.map(m => ({ role: m.role, content: m.content })).slice(-10)
+      const history = messages.map(m => ({ role: m.role, content: m.content })).slice(-15)
 
       const result = await businessChat({
         message: messageText,
@@ -108,29 +117,31 @@ export default function AIAssistantPage() {
     } catch (error) {
       toast({ 
         variant: "destructive", 
-        title: "AI Connection Error", 
-        description: "The AI service is currently busy. Please try again in a moment." 
+        title: language === 'bn' ? "কানেকশন সমস্যা" : "AI Connection Error", 
+        description: language === 'bn' ? "সার্ভারে সমস্যা হচ্ছে, একটু পরে চেষ্টা করুন।" : "The AI service is currently busy. Please try again in a moment." 
       })
     } finally {
       setIsLoading(false)
     }
   }
 
+  const actions = language === 'bn' ? QUICK_ACTIONS_BN : QUICK_ACTIONS
+
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-140px)] animate-in zoom-in-95 duration-500 w-full max-w-full">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
         <div className="min-w-0">
           <h2 className="text-xl md:text-2xl font-bold font-headline text-primary flex items-center gap-2 truncate">
-            <Bot className="w-5 h-5 md:w-6 md:h-6 text-accent shrink-0" /> {t.aiAssistant}
+            <Bot className="w-5 h-5 md:w-6 md:h-6 text-accent shrink-0" /> SpecsAI
           </h2>
-          <p className="text-[10px] md:text-xs text-muted-foreground truncate">Your intelligent companion for business insights.</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground truncate">Your advanced, informal business buddy.</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1 flex items-center shrink-0">
-            <Wifi className="w-3 h-3 mr-1 animate-pulse" /> Always Active
+            <Wifi className="w-3 h-3 mr-1 animate-pulse" /> {language === 'bn' ? 'সক্রিয়' : 'Always Active'}
           </Badge>
           <Badge variant="outline" className="text-accent border-accent px-3 py-1 flex items-center shrink-0 hidden sm:flex">
-            <Sparkles className="w-3 h-3 mr-1" /> Gemini Pro
+            <Sparkles className="w-3 h-3 mr-1" /> {language === 'bn' ? 'অ্যাডভান্সড ব্রেইন' : 'Advanced Brain'}
           </Badge>
         </div>
       </div>
@@ -146,9 +157,11 @@ export default function AIAssistantPage() {
                 <CardTitle className="text-sm truncate">SpecsAI</CardTitle>
                 <CardDescription className="text-[10px] truncate flex items-center gap-1">
                   {isLoading ? (
-                    <span className="flex items-center gap-1"><Loader2 className="w-2 h-2 animate-spin" /> Analyzing your business data...</span>
+                    <span className="flex items-center gap-1 font-bold text-accent">
+                      <Loader2 className="w-2 h-2 animate-spin" /> {language === 'bn' ? 'ডেটা এনালাইজ করছি...' : 'Thinking and analyzing...'}
+                    </span>
                   ) : (
-                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500" /> Synced with your store</span>
+                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500" /> {language === 'bn' ? 'অনলাইনে আছে' : 'Ready to help'}</span>
                   )}
                 </CardDescription>
               </div>
@@ -177,7 +190,7 @@ export default function AIAssistantPage() {
                         <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]" />
                         <div className="w-1.5 h-1.5 bg-accent rounded-full animate-bounce" />
                       </div>
-                      <span className="text-[10px] uppercase font-bold tracking-widest text-accent/70">Thinking...</span>
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-accent/70">{language === 'bn' ? 'ভাবছি...' : 'Analyzing...'}</span>
                     </div>
                   </div>
                 )}
@@ -190,7 +203,7 @@ export default function AIAssistantPage() {
             <div className="px-3 md:px-4 py-2 bg-muted/20 w-full">
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-2 pb-2">
-                  {QUICK_ACTIONS.map((action, i) => (
+                  {actions.map((action, i) => (
                     <Button 
                       key={i} 
                       variant="outline" 
@@ -210,7 +223,7 @@ export default function AIAssistantPage() {
             <CardFooter className="p-3 md:p-4 w-full bg-white">
               <div className="flex w-full gap-2">
                 <Input 
-                  placeholder="Ask me about your inventory, sales, or debtors..." 
+                  placeholder={language === 'bn' ? "ব্যবসায়িক প্রশ্ন করুন (যেমন: কার কত বাকি?)" : "Ask about inventory, sales, or debts..."}
                   className="flex-1 text-sm h-11 shadow-inner border-accent/10 focus-visible:ring-accent bg-muted/5"
                   value={input}
                   onChange={e => setInput(e.target.value)}
@@ -233,21 +246,21 @@ export default function AIAssistantPage() {
           <Card className="border-accent/10">
             <CardHeader className="p-4">
               <CardTitle className="text-sm font-semibold flex items-center gap-2 text-primary">
-                <Wifi className="w-4 h-4 text-green-500" /> Connection Status
+                <Wifi className="w-4 h-4 text-green-500" /> {language === 'bn' ? 'অ্যাসিস্ট্যান্ট স্ট্যাটাস' : 'Connection Status'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0">
               <div className="flex items-center justify-between text-[11px] border-b pb-2">
-                <span className="text-muted-foreground">AI Model</span>
-                <span className="font-bold text-accent">Gemini 2.5 Flash</span>
+                <span className="text-muted-foreground">Brain Model</span>
+                <span className="font-bold text-accent">Gemini Advanced</span>
               </div>
               <div className="flex items-center justify-between text-[11px] border-b pb-2">
-                <span className="text-muted-foreground">Database Sync</span>
-                <span className="font-bold text-green-600">Active</span>
+                <span className="text-muted-foreground">{language === 'bn' ? 'ডেটা সিঙ্ক' : 'Database Sync'}</span>
+                <span className="font-bold text-green-600">{language === 'bn' ? 'লাইভ' : 'Active'}</span>
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Response Mode</span>
-                <span className="font-bold text-blue-600">Smart Analysis</span>
+                <span className="text-muted-foreground">{language === 'bn' ? 'টোন' : 'Response Mode'}</span>
+                <span className="font-bold text-blue-600">{language === 'bn' ? 'অনানুষ্ঠানিক' : 'Informal'}</span>
               </div>
             </CardContent>
           </Card>
@@ -258,12 +271,14 @@ export default function AIAssistantPage() {
             </div>
             <CardHeader className="p-4 pb-2 relative">
               <CardTitle className="text-xs uppercase tracking-widest font-bold opacity-70 flex items-center gap-2">
-                <Sparkles className="w-3 h-3 text-accent" /> Intelligence
+                <Sparkles className="w-3 h-3 text-accent" /> {language === 'bn' ? 'স্মার্ট ব্রেইন' : 'Intelligence'}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0 relative">
               <p className="text-[11px] leading-relaxed opacity-90">
-                I can help you forecast trends, detect VIP customers, and suggest restock quantities based on your real sales history.
+                {language === 'bn' 
+                  ? "আমি আপনার ব্যবসার ট্রেন্ড বুঝতে পারি। কার কাছে কত টাকা আটকে আছে বা কোন মালটা বেশি চলছে—সবই আমি বলে দিতে পারব।" 
+                  : "I can spot trends in your business. I'll tell you who owes the most or which items are selling like hotcakes."}
               </p>
             </CardContent>
           </Card>

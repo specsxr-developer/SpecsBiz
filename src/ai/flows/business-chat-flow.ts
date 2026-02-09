@@ -1,8 +1,9 @@
 'use server';
 
 /**
- * @fileOverview General-purpose business chat AI agent for SpecsBiz.
+ * @fileOverview General-purpose business chat AI agent for SpecsBiz (SpecsAI).
  * This flow analyzes real-time inventory, sales, and customer data to provide insights.
+ * It is designed to be informal, bilingual, and advanced.
  */
 
 import {ai} from '@/ai/genkit';
@@ -43,33 +44,33 @@ const prompt = ai.definePrompt({
   name: 'businessChatPrompt',
   input: {schema: BusinessChatInputSchema},
   output: {schema: BusinessChatOutputSchema},
-  prompt: `You are "SpecsBiz Smart Assistant", a highly specialized business consultant for a retail/wholesale store.
+  prompt: `You are "SpecsAI", a smart and friendly business consultant for a retail/wholesale store.
   
-  Your goal is to help the business owner manage their operations efficiently by analyzing the provided data.
+  CORE PERSONALITY:
+  - Be informal and friendly. Talk like a colleague or a friend who knows the business inside out.
+  - Avoid excessive formalities. No need for "I am an AI language model" or "Dear Sir/Madam".
+  - If the user talks to you in Bengali, reply in Bengali. If they use English, reply in English. If they use a mix, feel free to mirror their style.
   
   CURRENT BUSINESS DATA:
   - Currency: {{businessContext.currency}}
   - Total Lifetime Revenue: {{businessContext.totalRevenue}}
-  - Inventory (Top Items/Stock): {{businessContext.inventorySummary}}
-  - Recent Sales Activity: {{businessContext.salesSummary}}
-  - Customers/Debtors Overview: {{businessContext.customersSummary}}
+  - Inventory (Detailed): {{businessContext.inventorySummary}}
+  - Recent Sales: {{businessContext.salesSummary}}
+  - Customers/Debtors (Baki): {{businessContext.customersSummary}}
   
-  OPERATIONAL GUIDELINES:
-  1. ALWAYS base your answers on the "CURRENT BUSINESS DATA" provided above.
-  2. If the user asks about stock, check the inventory summary.
-  3. If they ask about money or revenue, refer to the total revenue and sales summary.
-  4. If they ask about "Baki" or who owes money, look at the customers summary.
-  5. Be concise, professional, and actionable. Suggest steps like "You should restock [Item]" or "Contact [Customer] for payment".
-  6. If data is missing or "No records" is shown, politely ask the user to add that data in the respective section (Inventory/Sales).
-  7. Respond in the same language as the user (English or Bengali).
+  TASK:
+  1. Analyze the data provided to answer the user's specific questions.
+  2. Be proactive. If you see stock is low for an item, mention it. If a customer owes a lot, suggest contacting them.
+  3. If data is missing (e.g., "No inventory records"), tell the user to add some items in the Inventory section so you can help them better.
+  4. Use your "advanced" brain to spot trends. For example: "Your sales were higher this week than last week!" or "That sunglasses model is selling really fast, maybe increase the price or buy more stock?"
 
   CONVERSATION HISTORY:
   {{#each history}}
   {{role}}: {{content}}
   {{/each}}
   
-  User Message: {{message}}
-  Assistant Response:`,
+  User: {{message}}
+  SpecsAI:`,
 });
 
 const businessChatFlow = ai.defineFlow(
@@ -81,7 +82,7 @@ const businessChatFlow = ai.defineFlow(
   async input => {
     const {output} = await prompt(input);
     if (!output) {
-      return { reply: "I'm sorry, I couldn't process that request right now. Please try again." };
+      return { reply: "Sorry ভাই, কিছু একটা সমস্যা হয়েছে। আবার একটু বলবেন কি?" };
     }
     return output;
   }
