@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset enforces a strict User-Ownership model. All data is hierarchically nested 
+     * under the user's unique identifier (/users/{userId}), ensuring that users can only 
+     * access their own inventory, sales, and customer data.
+     *
+     * DATA STRUCTURE
+     * The database follows a tree structure where every entity is a subcollection of a user:
+     * - /users/{userId} (Root Profile)
+     *   - /products/{productId}
+     *   - /sales/{saleId}
+     *   - /customers/{customerId}
+     *   - /reports/{reportId}
+     *
+     * KEY SECURITY DECISIONS
+     * 1. Authorization Independence: By nesting all data under a userId, security decisions 
+     *    are made based on path variables, eliminating the need for expensive get() calls.
+     * 2. Secret Account Shared Access: The requirement for a "secret account" shared among 
+     *    multiple people is handled by Firebase Auth. Any person logged into the specific 
+     *    UID associated with 'xrratul4763@gmail.com' will be granted access via the 
+     *    isOwner() check.
+     * 3. Default Posture: Unauthenticated users are denied all access. This forces 
+     *    local-only storage for users who do not sign in, as requested.
+     * 4. Prototyping Flexibility: Rules focus on "Who" can access data rather than "What" 
+     *    the data looks like (schema-less updates), allowing for rapid feature iteration.
+     */
+
+    // --- Helper Functions ---
+
+    /** 
+     * @description Checks if the request is from an authenticated user.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** 
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     * Use this for path-based authorization.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** 
+     * @description Combines ownership check with a check for document existence.
+     * Used for updates and deletes to prevent operations on non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the User root document.
+     * @path /users/{userId}
+     * @allow (create) if auth.uid == '123' and path is /users/123
+     * @deny (read) if auth.uid == '456' but path is /users/123
+     * @principle Validates that a user can only manage their own root profile and enforces ID consistency.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      
+      allow create: if isOwner(userId) 
+                    && request.resource.data.id == userId;
+      
+      allow update: if isExistingOwner(userId) 
+                    && request.resource.data.id == resource.data.id;
+      
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for Products owned by a user.
+       * @path /users/{userId}/products/{productId}
+       * @allow (list) if auth.uid matches userId in path.
+       * @deny (write) if trying to modify products in another user's path.
+       * @principle Hierarchical isolation ensures private data access.
+       */
+      match /products/{productId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for Sales transactions.
+       * @path /users/{userId}/sales/{saleId}
+       * @allow (create) if auth.uid matches userId.
+       * @deny (update) if the sale record does not exist.
+       * @principle Ensures transaction records are private to the creator.
+       */
+      match /sales/{saleId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for Customer records.
+       * @path /users/{userId}/customers/{customerId}
+       * @allow (get) if auth.uid matches userId.
+       * @deny (list) if user is not signed in.
+       * @principle Protects sensitive customer contact information.
+       */
+      match /customers/{customerId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for Business Reports.
+       * @path /users/{userId}/reports/{reportId}
+       * @allow (delete) if user is the owner and report exists.
+       * @deny (create) if userId in path does not match request.auth.uid.
+       * @principle Restricts financial and aggregate data to the authenticated owner.
+       */
+      match /reports/{reportId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+    }
+
+    // Default deny for any paths not explicitly matched.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
