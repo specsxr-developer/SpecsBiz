@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -129,8 +128,7 @@ export default function InventoryPage() {
   }
 
   const openEditDialog = (product: any) => {
-    // Small delay ensures dropdown menu closes properly before dialog opens
-    // preventing the pointer-events frozen screen bug
+    // Break execution context to ensure dropdown closes and pointer-events are restored
     setTimeout(() => {
       setEditingProduct(product)
     }, 10)

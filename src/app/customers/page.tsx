@@ -116,6 +116,19 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
+  // Helper functions to open dialogs with delay to prevent pointer-events lock
+  const openEditProfile = (customer: any) => {
+    setTimeout(() => setEditingCustomer(customer), 10);
+  }
+
+  const openAddBaki = () => {
+    setTimeout(() => setIsRecordAddOpen(true), 10);
+  }
+
+  const openPaymentDialog = (record: any) => {
+    setTimeout(() => setPaymentDialogRecord(record), 10);
+  }
+
   const handleAddCustomer = () => {
     if (!newCustomer.firstName) return
     actions.addCustomer({
@@ -306,7 +319,7 @@ export default function CustomersPage() {
                             <Button variant="ghost" size="icon" className="h-9 w-9"><MoreHorizontal className="w-4 h-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => setEditingCustomer(c)}>
+                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => openEditProfile(c)}>
                               <Edit2 className="w-3.5 h-3.5" /> Edit Profile
                             </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => actions.deleteCustomer(c.id)}>
@@ -344,7 +357,7 @@ export default function CustomersPage() {
                 <p className="text-[10px] font-bold uppercase opacity-50">Total Owed</p>
                 <p className="text-2xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
               </div>
-              <Button className="h-full bg-accent hover:bg-accent/90 shadow-xl px-6 font-bold" onClick={() => setIsRecordAddOpen(true)}>
+              <Button className="h-full bg-accent hover:bg-accent/90 shadow-xl px-6 font-bold" onClick={openAddBaki}>
                 <Plus className="w-5 h-5 mr-2" /> Add New Baki
               </Button>
             </div>
@@ -413,7 +426,7 @@ export default function CustomersPage() {
                                   variant="outline" 
                                   size="sm" 
                                   className="h-8 text-xs border-accent text-accent hover:bg-accent/5"
-                                  onClick={() => setPaymentDialogRecord(record)}
+                                  onClick={() => openPaymentDialog(record)}
                                 >
                                   <CreditCard className="w-3.5 h-3.5 mr-1" /> Pay Part
                                 </Button>
