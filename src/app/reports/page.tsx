@@ -230,7 +230,7 @@ export default function MasterLedgerPage() {
       if (typeof window !== 'undefined') {
         window.print();
       }
-    }, 800);
+    }, 1000);
   }
 
   if (dataLoading) {
@@ -247,19 +247,19 @@ export default function MasterLedgerPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       {/* Print Only Header with Logo and App Name */}
-      <div className="hidden print:flex flex-col items-center justify-center mb-8 border-b pb-6 w-full text-center">
-        <div className="flex items-center gap-4 mb-2">
+      <div className="hidden print:flex flex-col items-center justify-center mb-6 border-b pb-4 w-full text-center">
+        <div className="flex items-center gap-3 mb-2">
           {logoUrl && (
             <img 
               src={logoUrl} 
               alt="SpecsBiz Logo" 
-              className="h-24 w-24 object-contain"
+              className="h-14 w-14 object-contain"
             />
           )}
-          <h1 className="text-5xl font-black text-primary font-headline">SpecsBiz</h1>
+          <h1 className="text-3xl font-black text-primary font-headline">SpecsBiz</h1>
         </div>
-        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Master Ledger Official Report</p>
-        <div className="text-[10px] mt-2 opacity-50 font-medium">Generated on: {new Date().toLocaleString()}</div>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Master Ledger Official Report</p>
+        <div className="text-[9px] mt-1 opacity-50 font-medium">Generated on: {new Date().toLocaleString()}</div>
       </div>
 
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -512,7 +512,7 @@ export default function MasterLedgerPage() {
           .text-destructive { color: #cc0000 !important; }
           .text-green-600 { color: #008800 !important; }
           h1, h2, h3, p { color: black !important; }
-          img { max-height: 100px !important; width: auto !important; }
+          img { max-height: 80px !important; width: auto !important; }
         }
       `}</style>
     </div>
