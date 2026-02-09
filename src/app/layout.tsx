@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { NavMain } from "@/components/nav-main";
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { BusinessProvider } from '@/hooks/use-business-data';
 
 export const metadata: Metadata = {
   title: 'SpecsBiz | Smart Business Manager',
@@ -25,21 +26,23 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
         <FirebaseClientProvider>
-          <SidebarProvider defaultOpen={true}>
-            <NavMain />
-            <SidebarInset className="max-w-full overflow-hidden">
-              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10 w-full">
-                <SidebarTrigger className="-ml-1" />
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-lg md:text-xl font-headline font-semibold text-primary truncate">Smart Dashboard</h1>
-                </div>
-              </header>
-              <main className="flex-1 p-3 md:p-6 w-full max-w-full overflow-x-hidden">
-                {children}
-              </main>
-            </SidebarInset>
-          </SidebarProvider>
-          <Toaster />
+          <BusinessProvider>
+            <SidebarProvider defaultOpen={true}>
+              <NavMain />
+              <SidebarInset className="max-w-full overflow-hidden">
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10 w-full">
+                  <SidebarTrigger className="-ml-1" />
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-lg md:text-xl font-headline font-semibold text-primary truncate">Smart Dashboard</h1>
+                  </div>
+                </header>
+                <main className="flex-1 p-3 md:p-6 w-full max-w-full overflow-x-hidden">
+                  {children}
+                </main>
+              </SidebarInset>
+            </SidebarProvider>
+            <Toaster />
+          </BusinessProvider>
         </FirebaseClientProvider>
       </body>
     </html>
