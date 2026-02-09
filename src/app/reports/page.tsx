@@ -218,15 +218,19 @@ export default function MasterLedgerPage() {
 
   const handlePrint = () => {
     // 1. Close the dialog first
-    setIsPrintDialogOpen(false)
+    setIsPrintDialogOpen(false);
     
-    // 2. Wait for the dialog and overlay to be completely removed from the DOM
-    // This is critical to ensure pointer-events are restored and the print dialog triggers
+    // 2. Clear focus to ensure the browser doesn't block the print call
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    // 3. Wait for the dialog animation to complete and the DOM to be clean
     setTimeout(() => {
       if (typeof window !== 'undefined') {
-        window.print()
+        window.print();
       }
-    }, 500) // Increased timeout for reliability
+    }, 800);
   }
 
   if (dataLoading) {
@@ -341,8 +345,8 @@ export default function MasterLedgerPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full bg-accent hover:bg-accent/90 gap-2" onClick={handlePrint}>
-              <Printer className="w-4 h-4" /> Start Printing Now
+            <Button className="w-full bg-accent hover:bg-accent/90 gap-2 h-12 text-lg font-bold" onClick={handlePrint}>
+              <Printer className="w-5 h-5" /> Start Printing Now
             </Button>
           </DialogFooter>
         </DialogContent>
