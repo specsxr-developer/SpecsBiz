@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { 
   Select, 
   SelectContent, 
@@ -246,7 +247,7 @@ export default function SettingsPage() {
 
       <div className="grid gap-6 print:hidden">
         
-        {/* New PDF Export Card */}
+        {/* Full Data Export Card */}
         <Card className="border-accent/20 shadow-lg bg-white overflow-hidden">
           <div className="bg-accent/5 p-4 border-b border-accent/10 flex items-center justify-between">
             <div className="flex items-center gap-3">
