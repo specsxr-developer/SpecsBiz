@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
         path: false,
         os: false,
         crypto: false,
+        async_hooks: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+        http2: false,
+        undici: false,
+        perf_hooks: false,
       };
     }
     return config;
