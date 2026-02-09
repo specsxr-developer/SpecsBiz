@@ -248,7 +248,12 @@ export default function DashboardPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs md:text-sm font-bold truncate">
-                          {sale.isBakiPayment ? `Baki Payment: ${sale.bakiProductName}` : `${t.saleId}${sale.id?.slice(-4)}`}
+                          {sale.isBakiPayment 
+                            ? `Baki Payment: ${sale.bakiProductName}` 
+                            : sale.items && sale.items.length > 0 
+                              ? (sale.items.length === 1 ? sale.items[0].name : `${sale.items[0].name} + ${sale.items.length - 1} items`)
+                              : `${t.saleId}${sale.id?.slice(-4)}`
+                          }
                         </p>
                         <div className="flex items-center gap-2">
                           <p className="text-[9px] md:text-[10px] text-muted-foreground truncate">{new Date(sale.saleDate).toLocaleDateString()}</p>

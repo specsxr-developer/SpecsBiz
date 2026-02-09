@@ -141,12 +141,21 @@ export default function SalesPage() {
                 {sales.slice(0, 5).map((sale) => (
                   <div key={sale.id} className="flex items-center justify-between p-4 hover:bg-muted/5">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold truncate">Sale #{sale.id.slice(-4)}</p>
+                      <p className="text-xs font-bold truncate">
+                        {sale.isBakiPayment 
+                          ? `Baki Payment: ${sale.bakiProductName}` 
+                          : sale.items && sale.items.length > 0 
+                            ? (sale.items.length === 1 ? sale.items[0].name : `${sale.items[0].name} + ${sale.items.length - 1} items`)
+                            : `Sale #${sale.id.slice(-4)}`
+                        }
+                      </p>
                       <p className="text-[10px] text-muted-foreground">{new Date(sale.saleDate).toLocaleString()}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
-                      <p className="text-[10px] text-green-600 font-bold">+{currency}{sale.profit?.toFixed(2)} Lav</p>
+                      {!sale.isBakiPayment && (
+                        <p className="text-[10px] text-green-600 font-bold">+{currency}{sale.profit?.toFixed(2)} Lav</p>
+                      )}
                     </div>
                   </div>
                 ))}

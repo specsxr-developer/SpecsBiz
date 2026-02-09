@@ -352,7 +352,12 @@ export default function AnalyticsPage() {
                     </div>
                     <div>
                       <div className="font-bold text-sm text-primary">
-                        {sale.isBakiPayment ? `Baki Payment: ${sale.bakiProductName}` : `Sale #${sale.id?.slice(-4)}`}
+                        {sale.isBakiPayment 
+                          ? `Baki Payment: ${sale.bakiProductName}` 
+                          : (sale.items && sale.items.length > 0 
+                              ? (sale.items.length === 1 ? sale.items[0].name : `${sale.items[0].name} (+${sale.items.length - 1})`)
+                              : `Sale #${sale.id?.slice(-4)}`)
+                        }
                       </div>
                       <div className="text-[10px] text-muted-foreground flex items-center gap-2">
                         <span>{format(new Date(sale.saleDate), "MMM dd, yyyy • hh:mm a")}</span>

@@ -126,11 +126,17 @@ export default function MasterLedgerPage() {
 
     // 1. Add Sales (Direct & Baki Payments)
     sales.forEach(s => {
+      const itemName = s.isBakiPayment 
+        ? `Payment: ${s.bakiProductName}` 
+        : (s.items && s.items.length > 0 
+            ? (s.items.length === 1 ? s.items[0].name : `${s.items[0].name} (+${s.items.length - 1})`)
+            : `Sale #${s.id?.slice(-4)}`);
+
       entries.push({
         id: s.id,
         date: new Date(s.saleDate),
         type: s.isBakiPayment ? 'Baki Payment' : 'Direct Sale',
-        item: s.isBakiPayment ? `Payment: ${s.bakiProductName}` : (s.items?.[0]?.name || 'Multiple Items'),
+        item: itemName,
         amount: s.total,
         paid: s.total,
         unpaid: 0,
