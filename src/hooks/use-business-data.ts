@@ -7,6 +7,7 @@ import {
   doc, 
   query, 
   orderBy, 
+  onSnapshot
 } from 'firebase/firestore';
 import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { 
@@ -123,8 +124,6 @@ export function useBusinessData() {
     
     if (user?.uid && db) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'sales'), data);
-      
-      // Update stock for each product in sale
       if (data.items) {
         data.items.forEach((item: any) => {
           const productRef = doc(db, 'users', user.uid, 'products', item.id);
@@ -142,8 +141,6 @@ export function useBusinessData() {
         localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
         return updated;
       });
-      
-      // Local stock update
       setLocalProducts(prev => {
         const updatedProducts = prev.map(p => {
           const saleItem = data.items?.find((i: any) => i.id === p.id);
@@ -157,47 +154,6 @@ export function useBusinessData() {
       });
     }
   }, [user?.uid, db, products]);
-
-  const deleteSale = useCallback((saleId: string) => {
-    const saleToDelete = sales.find(s => s.id === saleId);
-    if (!saleToDelete) return;
-
-    if (user?.uid && db) {
-      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', saleId));
-      
-      // Revert stock
-      if (saleToDelete.items) {
-        saleToDelete.items.forEach((item: any) => {
-          const productRef = doc(db, 'users', user.uid, 'products', item.id);
-          const currentProduct = products.find(p => p.id === item.id);
-          if (currentProduct) {
-            updateDocumentNonBlocking(productRef, {
-              stock: currentProduct.stock + item.quantity
-            });
-          }
-        });
-      }
-    } else {
-      setLocalSales(prev => {
-        const updatedSales = prev.filter(s => s.id !== saleId);
-        localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updatedSales));
-        return updatedSales;
-      });
-
-      // Revert local stock
-      setLocalProducts(prev => {
-        const updatedProducts = prev.map(p => {
-          const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
-          if (saleItem) {
-            return { ...p, stock: p.stock + saleItem.quantity };
-          }
-          return p;
-        });
-        localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
-        return updatedProducts;
-      });
-    }
-  }, [user?.uid, db, sales, products]);
 
   const addCustomer = useCallback((customer: any) => {
     const id = customer.id || Date.now().toString();
@@ -237,6 +193,63 @@ export function useBusinessData() {
     }
   }, [user?.uid, db]);
 
+  const addBakiRecord = useCallback((customerId: string, record: any) => {
+    const recordId = Date.now().toString();
+    const data = { ...record, id: recordId, takenDate: new Date().toISOString(), status: 'pending' };
+    
+    if (user?.uid && db) {
+      addDocumentNonBlocking(collection(db, 'users', user.uid, 'customers', customerId, 'bakiRecords'), data);
+      // Update customer totalDue
+      const customer = customers.find(c => c.id === customerId);
+      if (customer) {
+        updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId), {
+          totalDue: (customer.totalDue || 0) + data.amount
+        });
+      }
+    } else {
+      // Local management for baki records
+      const updatedCustomers = localCustomers.map(c => {
+        if (c.id === customerId) {
+          const records = c.bakiRecords || [];
+          return { 
+            ...c, 
+            totalDue: (c.totalDue || 0) + data.amount,
+            bakiRecords: [data, ...records]
+          };
+        }
+        return c;
+      });
+      setLocalCustomers(updatedCustomers);
+      localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updatedCustomers));
+    }
+  }, [user?.uid, db, customers, localCustomers]);
+
+  const deleteBakiRecord = useCallback((customerId: string, recordId: string, amount: number) => {
+    if (user?.uid && db) {
+      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId, 'bakiRecords', recordId));
+      const customer = customers.find(c => c.id === customerId);
+      if (customer) {
+        updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId), {
+          totalDue: Math.max(0, (customer.totalDue || 0) - amount)
+        });
+      }
+    } else {
+      const updatedCustomers = localCustomers.map(c => {
+        if (c.id === customerId) {
+          const records = (c.bakiRecords || []).filter((r: any) => r.id !== recordId);
+          return { 
+            ...c, 
+            totalDue: Math.max(0, (c.totalDue || 0) - amount),
+            bakiRecords: records
+          };
+        }
+        return c;
+      });
+      setLocalCustomers(updatedCustomers);
+      localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updatedCustomers));
+    }
+  }, [user?.uid, db, customers, localCustomers]);
+
   const setCurrency = useCallback((val: string) => {
     setCurrencyState(val);
     localStorage.setItem(LOCAL_KEYS.CURRENCY, val);
@@ -253,10 +266,11 @@ export function useBusinessData() {
       updateProduct,
       deleteProduct,
       addSale,
-      deleteSale,
       addCustomer,
       updateCustomer,
       deleteCustomer,
+      addBakiRecord,
+      deleteBakiRecord,
       setCurrency
     }
   };
