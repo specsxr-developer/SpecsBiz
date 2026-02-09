@@ -64,7 +64,10 @@ export function NavMain() {
               <Bot className="w-8 h-8 text-sidebar-primary" />
             )}
           </div>
-          <span className="font-headline font-bold text-xl group-data-[collapsible=icon]:hidden text-sidebar-foreground">SpecsBiz</span>
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <span className="font-headline font-bold text-xl text-sidebar-foreground leading-none">SpecsBiz</span>
+            <span className="text-[10px] opacity-60 font-medium mt-0.5">by SpecsXR</span>
+          </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>
