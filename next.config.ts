@@ -2,8 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // Static Export mode is REQUIRED for Capacitor/Mobile Apps
-  output: 'export',
+  // Removed output: 'export' to support Server Actions (SpecsAI) on Netlify
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -16,7 +15,6 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   
-  // Future-Proofing for APK (Capacitor) and ignoring Node modules in browser
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

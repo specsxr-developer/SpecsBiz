@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
@@ -11,7 +12,8 @@ import {
   Trash2,
   BrainCircuit,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCcw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -27,19 +29,17 @@ import { collection, query, orderBy, addDoc, serverTimestamp, getDocs, writeBatc
 import { cn } from "@/lib/utils"
 
 const QUICK_ACTIONS = [
-  "Analyze my overall business",
-  "Who owes the most baki?",
-  "Predict next month profit",
-  "Any items losing money?",
-  "Suggest what to restock"
+  "Analyze my business",
+  "Who owes most baki?",
+  "Suggest what to restock",
+  "Predict future profit"
 ]
 
 const QUICK_ACTIONS_BN = [
-  "আমার ব্যবসার পুরো অবস্থা জানাও",
+  "আমার ব্যবসার অবস্থা জানাও",
   "কার কাছে সবচেয়ে বেশি বাকি?",
-  "পরের মাসের লাভের সম্ভাবনা কত?",
-  "কোন পণ্যে আমার লস হচ্ছে?",
-  "নতুন করে কি কি মাল কেনা উচিত?"
+  "কি কি মাল কেনা উচিত?",
+  "ভবিষ্যতে কেমন লাভ হবে?"
 ]
 
 export default function AIAssistantPage() {
@@ -51,8 +51,9 @@ export default function AIAssistantPage() {
   
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Subscribing to chat messages in real-time
+  // Real-time Firestore sync for chat history
   const aiMessagesQuery = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'aiMessages'), orderBy('timestamp', 'asc'), limit(50));
@@ -66,14 +67,12 @@ export default function AIAssistantPage() {
         id: 'welcome', 
         role: "assistant" as const, 
         content: language === 'bn' 
-          ? "হ্যালো ভাই! আমি SpecsAI। আপনার ব্যবসার মগজ এখন আমার হাতে। দোকানের প্রতিটি মাল আর কাস্টমারের বকেয়া আমি জানি। ব্যবসার কি অবস্থা জানতে চান? শুরু করুন!" 
-          : "Hi Partner! I'm SpecsAI. I have full access to your business brain. I know every product and every customer debt. Ready to analyze your business or predict the future? Let's talk!" 
+          ? "হ্যালো ভাই! আমি SpecsAI। আপনার ব্যবসার মগজ এখন আমার হাতে। দোকানের প্রতিটি মাল আর কাস্টমারের বকেয়া আমি জানি। কি নিয়ে আলোচনা করতে চান? শুরু করুন!" 
+          : "Hi Partner! I'm SpecsAI. I have full access to your business brain. Ready to analyze your business or predict the future? Let's talk!" 
       }];
     }
     return allFbMessages;
   }, [allFbMessages, language]);
-
-  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -100,7 +99,7 @@ export default function AIAssistantPage() {
     try {
       await saveMessage('user', messageText);
 
-      // Constructing DEEP CONTEXT for the AI
+      // Preparation of DEEP BUSINESS CONTEXT
       const inventorySummary = products.length > 0 
         ? products.map(p => `[Item: ${p.name}, Stock: ${p.stock}${p.unit}, Buy: ${p.purchasePrice}, Sell: ${p.sellingPrice}]`).join('\n')
         : "Inventory is empty."
@@ -121,7 +120,7 @@ export default function AIAssistantPage() {
       const history = currentMessages
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
-        .slice(-10) // Keeping memory of last 10 interactions
+        .slice(-10)
 
       const result = await businessChat({
         message: messageText,
@@ -142,7 +141,7 @@ export default function AIAssistantPage() {
       await saveMessage('assistant', result.reply);
     } catch (error) {
       console.error("Chat Action Error:", error);
-      await saveMessage('assistant', "দুঃখিত ভাই, এআই-এর সাথে কানেকশনে সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।");
+      await saveMessage('assistant', "দুঃখিত ভাই, সার্ভারের সাথে যোগাযোগ করা যাচ্ছে না। দয়া করে আবার চেষ্টা করুন।");
     } finally {
       setIsLoading(false)
     }
@@ -206,7 +205,7 @@ export default function AIAssistantPage() {
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
-                    <MessageSquare className="w-2.5 h-2.5" /> Connected to Your Shop Data
+                    <MessageSquare className="w-2.5 h-2.5" /> Direct Access to Your Shop
                   </span>
                 )}
               </CardDescription>
@@ -214,7 +213,7 @@ export default function AIAssistantPage() {
           </div>
         </CardHeader>
         
-        <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative bg-[url('https://picsum.photos/seed/specs/1200/800')] bg-cover bg-fixed">
+        <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative">
           <div className="absolute inset-0 bg-white/90 backdrop-blur-[2px]" />
           <ScrollArea className="h-full w-full relative z-10">
             <div className="p-4 md:p-8 space-y-8">
