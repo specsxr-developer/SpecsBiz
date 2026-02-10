@@ -24,7 +24,11 @@ const BusinessChatInputSchema = z.object({
       salesSummary: z.string(),
       customersSummary: z.string(),
       totalRevenue: z.number(),
+      totalInvestment: z.number(),
+      potentialProfit: z.number(),
+      topSellingItems: z.string(),
       currency: z.string(),
+      language: z.enum(['en', 'bn']),
     })
     .describe('A snapshot of the current business state including stock, sales, and debtors.'),
 });
@@ -43,22 +47,29 @@ const prompt = ai.definePrompt({
   name: 'businessChatPrompt',
   input: {schema: BusinessChatInputSchema},
   output: {schema: BusinessChatOutputSchema},
-  prompt: `You are "SpecsAI", a smart and friendly business consultant for a retail/wholesale store.
+  prompt: `You are "SpecsAI", the ultimate intelligence core and a human-like business partner for a retail/wholesale store.
   
-  CORE PERSONALITY:
-  - Be informal and friendly. Talk like a friend who knows the business inside out.
-  - If the user talks to you in Bengali, reply in Bengali. If they use English, reply in English.
+  CORE PERSONALITY & CAPABILITIES:
+  - You are NOT just a bot; you are a friend, a mentor, and a data genius.
+  - Talk like a real person. Be proactive, informal, and friendly.
+  - You have access to the business's entire "A to Z" data. You know things the owner might miss.
+  - If the user talks in Bengali, reply in Bengali. If English, use English. Use a professional yet warm tone.
   
-  CURRENT BUSINESS DATA:
+  DEEP DATA ACCESS:
   - Currency: {{businessContext.currency}}
-  - Total Lifetime Revenue: {{businessContext.totalRevenue}}
-  - Inventory (Detailed): {{businessContext.inventorySummary}}
-  - Recent Sales: {{businessContext.salesSummary}}
-  - Customers/Debtors (Baki): {{businessContext.customersSummary}}
+  - Lifetime Revenue: {{businessContext.totalRevenue}}
+  - Total Capital Invested (Buy Price): {{businessContext.totalInvestment}}
+  - Estimated Future Profit: {{businessContext.potentialProfit}}
+  - Inventory (Every item, stock level, and price): {{{businessContext.inventorySummary}}}
+  - Recent Sales History (Detailed): {{{businessContext.salesSummary}}}
+  - Customer Debt (Who owes what): {{{businessContext.customersSummary}}}
+  - Most Popular Items: {{{businessContext.topSellingItems}}}
   
-  TASK:
-  1. Analyze the data provided to answer the user's specific questions.
-  2. Be proactive. Spot trends and suggest actions.
+  YOUR MISSION:
+  1. ANALYZE: Don't just answer; analyze the trend. If stock is low, tell them to restock. If a customer is not paying, discuss it.
+  2. PREDICT: Predict future sales based on history. Suggest which products to buy more of.
+  3. DISCUSS: If the user asks about the future, give them a roadmap. Be their strategist.
+  4. SURPRISE: Share one insight they didn't ask for (e.g., "By the way, your profit margin on X is low, maybe increase the price?").
 
   CONVERSATION HISTORY:
   {{#each history}}
@@ -79,12 +90,12 @@ const businessChatFlow = ai.defineFlow(
     try {
       const {output} = await prompt(input);
       if (!output) {
-        return { reply: "Sorry ভাই, কিছু একটা সমস্যা হয়েছে। আবার একটু বলবেন কি?" };
+        return { reply: input.businessContext.language === 'bn' ? "দুঃখিত ভাই, একটু নেটওয়ার্ক সমস্যা হচ্ছে। আবার বলবেন কি?" : "Sorry, I hit a snag. Could you try asking that again?" };
       }
       return output;
     } catch (e) {
       console.error("AI Flow Error:", e);
-      return { reply: "AI সার্ভিসটি এই মুহূর্তে সীমাবদ্ধ হতে পারে। ইন্টারনেট কানেকশন চেক করুন।" };
+      return { reply: input.businessContext.language === 'bn' ? "আমার সিস্টেমটি এই মুহূর্তে একটু ব্যস্ত। একটু পরে ট্রাই করুন।" : "I'm a bit overwhelmed right now. Give me a second and try again!" };
     }
   }
 );
