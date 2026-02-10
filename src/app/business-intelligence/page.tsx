@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useMemo, useState } from "react"
@@ -144,7 +143,7 @@ export default function BusinessIntelligencePage() {
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-white/70 text-[10px] uppercase font-bold tracking-widest">Total Investment</CardDescription>
-            <CardTitle className="text-3xl font-black">{currency}{metrics.totalInvestment.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl font-black truncate">{currency}{metrics.totalInvestment.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-[10px] text-white/60">Total value based on purchase costs of all stock.</p>
@@ -157,7 +156,7 @@ export default function BusinessIntelligencePage() {
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-white/70 text-[10px] uppercase font-bold tracking-widest">Potential Profit</CardDescription>
-            <CardTitle className="text-3xl font-black">{currency}{metrics.potentialProfit.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl font-black truncate">{currency}{metrics.potentialProfit.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-[10px] text-white/60">Expected margin if current inventory is cleared.</p>
@@ -170,7 +169,7 @@ export default function BusinessIntelligencePage() {
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="text-white/70 text-[10px] uppercase font-bold tracking-widest">Total Stock Value</CardDescription>
-            <CardTitle className="text-3xl font-black">{currency}{metrics.totalStockValue.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl font-black truncate">{currency}{metrics.totalStockValue.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-[10px] text-white/60">Total estimated selling value of your warehouse.</p>
@@ -216,8 +215,8 @@ export default function BusinessIntelligencePage() {
         </Card>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="shadow-lg border-accent/5">
+      <div className="grid lg:grid-cols-2 gap-8 items-start">
+        <Card className="shadow-lg border-accent/5 overflow-hidden h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg">Revenue Trends</CardTitle>
@@ -225,11 +224,11 @@ export default function BusinessIntelligencePage() {
             </div>
             <Badge variant="outline" className="text-[9px] text-accent border-accent/20 bg-accent/5">Live Sync</Badge>
           </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full mt-4">
-              <ChartContainer config={chartConfig}>
+          <CardContent className="p-4 pt-0">
+            <div className="h-[280px] w-full mt-4">
+              <ChartContainer config={chartConfig} className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                     <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis fontSize={10} tickLine={false} axisLine={false} />
@@ -238,7 +237,7 @@ export default function BusinessIntelligencePage() {
                       dataKey="revenue" 
                       fill="var(--color-revenue)" 
                       radius={[4, 4, 0, 0]} 
-                      barSize={40}
+                      barSize={30}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -247,12 +246,12 @@ export default function BusinessIntelligencePage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-accent/5">
+        <Card className="shadow-lg border-accent/5 overflow-hidden h-full">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Category Analysis</CardTitle>
             <CardDescription className="text-xs">Profit potential by category</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-4">
+          <CardContent className="space-y-6 p-6 pt-4">
             {categoryAnalysis.map((cat, i) => (
               <div key={i} className="space-y-2">
                 <div className="flex justify-between items-center text-xs">

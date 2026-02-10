@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo } from "react"
@@ -194,7 +193,7 @@ export default function AnalyticsPage() {
   if (isLoading) return <div className="p-10 text-center animate-pulse text-accent font-bold">Syncing Analytics Data...</div>
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20 max-w-full overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold font-headline text-primary flex items-center gap-2">
@@ -225,41 +224,41 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-primary text-white border-none shadow-lg">
+        <Card className="bg-primary text-white border-none shadow-lg overflow-hidden">
           <CardHeader className="p-4 pb-0">
             <CardDescription className="text-white/70 text-[10px] uppercase font-bold tracking-widest">Revenue ({timeRange})</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            <div className="text-2xl font-black">{currency}{metrics.revenue.toLocaleString()}</div>
+            <div className="text-2xl font-black truncate">{currency}{metrics.revenue.toLocaleString()}</div>
             <div className="flex items-center gap-1 text-[10px] mt-1 opacity-70">
               <TrendingUp className="w-3 h-3" /> Sales Volume: {metrics.count}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-accent text-white border-none shadow-lg">
+        <Card className="bg-accent text-white border-none shadow-lg overflow-hidden">
           <CardHeader className="p-4 pb-0">
             <CardDescription className="text-white/70 text-[10px] uppercase font-bold tracking-widest">Net Profit ({timeRange})</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            <div className="text-2xl font-black">{currency}{metrics.profit.toLocaleString()}</div>
+            <div className="text-2xl font-black truncate">{currency}{metrics.profit.toLocaleString()}</div>
             <div className="flex items-center gap-1 text-[10px] mt-1 opacity-70">
               <Target className="w-3 h-3" /> Efficiency: {metrics.revenue > 0 ? ((metrics.profit / metrics.revenue) * 100).toFixed(1) : 0}%
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-600 text-white border-none shadow-lg">
+        <Card className="bg-blue-600 text-white border-none shadow-lg overflow-hidden">
           <CardHeader className="p-4 pb-0">
             <CardDescription className="text-white/70 text-[10px] uppercase font-bold tracking-widest">Avg Transaction</CardDescription>
           </CardHeader>
           <CardContent className="p-4 pt-2">
-            <div className="text-2xl font-black">{currency}{metrics.avgTicket.toFixed(2)}</div>
+            <div className="text-2xl font-black truncate">{currency}{metrics.avgTicket.toFixed(2)}</div>
             <div className="text-[10px] mt-1 opacity-70">Revenue per order</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-muted text-foreground border-none shadow-md">
+        <Card className="bg-muted text-foreground border-none shadow-md overflow-hidden">
           <CardHeader className="p-4 pb-0">
             <CardDescription className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest">Growth Forecast</CardDescription>
           </CardHeader>
@@ -280,7 +279,7 @@ export default function AnalyticsPage() {
                 </CardTitle>
                 <CardDescription className="text-primary-foreground/70">Strategic analysis for {timeRange} data.</CardDescription>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="text-[10px] uppercase font-bold tracking-widest opacity-70">Health Score</p>
                 <p className="text-4xl font-black text-accent">{auditResult.healthScore}%</p>
               </div>
@@ -310,7 +309,7 @@ export default function AnalyticsPage() {
                  <div className="space-y-3">
                    {auditResult.predictions.map((pred, i) => (
                      <div key={i} className="p-3 border rounded-lg bg-white shadow-sm flex items-center gap-3">
-                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        <TrendingUp className="w-4 h-4 text-green-500 shrink-0" />
                         <p className="text-[11px] font-medium">{pred}</p>
                      </div>
                    ))}
@@ -322,7 +321,7 @@ export default function AnalyticsPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-1">
-        <Card className="shadow-lg border-accent/10">
+        <Card className="shadow-lg border-accent/10 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg">Performance Timeline</CardTitle>
@@ -330,11 +329,11 @@ export default function AnalyticsPage() {
             </div>
             <Badge variant="outline" className="text-accent border-accent/20 bg-accent/5">Live Data</Badge>
           </CardHeader>
-          <CardContent>
-            <div className="h-[350px] w-full mt-4">
-              <ChartContainer config={chartConfig}>
+          <CardContent className="p-4 pt-0">
+            <div className="h-[320px] w-full mt-4">
+              <ChartContainer config={chartConfig} className="h-full w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart data={chartData}>
+                  <RechartsBarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
                     <YAxis fontSize={10} tickLine={false} axisLine={false} />
@@ -343,13 +342,13 @@ export default function AnalyticsPage() {
                       dataKey="revenue" 
                       fill="var(--color-revenue)" 
                       radius={[4, 4, 0, 0]} 
-                      barSize={timeRange === "year" ? 40 : 20}
+                      barSize={timeRange === "year" ? 30 : 15}
                     />
                     <Bar 
                       dataKey="profit" 
                       fill="var(--color-profit)" 
                       radius={[4, 4, 0, 0]} 
-                      barSize={timeRange === "year" ? 40 : 20}
+                      barSize={timeRange === "year" ? 30 : 15}
                     />
                   </RechartsBarChart>
                 </ResponsiveContainer>
@@ -359,10 +358,10 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card className="border-accent/10 shadow-md">
+      <Card className="border-accent/10 shadow-md overflow-hidden">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-accent" /> {timeRange.toUpperCase()} Report Breakdown (A-Z)
+            <Calendar className="w-5 h-5 text-accent" /> {timeRange.toUpperCase()} Report Breakdown
           </CardTitle>
           <CardDescription>All transactions recorded in this period.</CardDescription>
         </CardHeader>
@@ -373,15 +372,15 @@ export default function AnalyticsPage() {
               <p className="text-xs">No transactions found for this period.</p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y max-w-full overflow-x-hidden">
               {filteredSales.map((sale, i) => (
                 <div key={sale.id || i} className="flex items-center justify-between p-4 hover:bg-muted/20 group transition-colors">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 min-w-0">
                     <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent shrink-0">
                       <Clock className="w-5 h-5" />
                     </div>
-                    <div>
-                      <div className="font-bold text-sm text-primary">
+                    <div className="min-w-0">
+                      <div className="font-bold text-sm text-primary truncate">
                         {sale.isBakiPayment 
                           ? `Baki Payment: ${sale.bakiProductName}` 
                           : (sale.items && sale.items.length > 0 
@@ -389,17 +388,17 @@ export default function AnalyticsPage() {
                               : `Sale #${sale.id?.slice(-4)}`)
                         }
                       </div>
-                      <div className="text-[10px] text-muted-foreground flex items-center gap-2">
-                        <span>{format(new Date(sale.saleDate), "MMM dd, yyyy • hh:mm a")}</span>
-                        {sale.isBakiPayment && <Badge variant="outline" className="text-[8px] h-4 bg-blue-50">Debt Clearance</Badge>}
+                      <div className="text-[10px] text-muted-foreground flex items-center gap-2 truncate">
+                        <span>{format(new Date(sale.saleDate), "MMM dd, yyyy")}</span>
+                        {sale.isBakiPayment && <Badge variant="outline" className="text-[8px] h-4 bg-blue-50 px-1">Debt Clearance</Badge>}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right">
                       <div className="font-black text-sm">{currency}{sale.total?.toLocaleString()}</div>
                       <div className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
-                        <ArrowUpRight className="w-3 h-3" /> Profit: {currency}{sale.profit?.toLocaleString()}
+                        <ArrowUpRight className="w-3 h-3" /> {currency}{sale.profit?.toLocaleString()}
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => setDeleteId(sale.id)}>
@@ -412,9 +411,9 @@ export default function AnalyticsPage() {
           )}
         </CardContent>
         <CardFooter className="bg-muted/30 p-4 border-t">
-           <div className="flex justify-between w-full text-xs font-bold text-muted-foreground">
+           <div className="flex justify-between w-full text-[10px] md:text-xs font-bold text-muted-foreground">
               <span>Total Transactions: {filteredSales.length}</span>
-              <span className="text-primary">Period Net Result: {currency}{metrics.profit.toLocaleString()}</span>
+              <span className="text-primary truncate ml-2">Period Net Result: {currency}{metrics.profit.toLocaleString()}</span>
            </div>
         </CardFooter>
       </Card>
