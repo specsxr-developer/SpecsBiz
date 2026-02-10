@@ -33,31 +33,28 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         
-        {/* OneSignal Initialization Script with Domain Protection */}
+        {/* OneSignal Initialization with Domain Protection to prevent NextJS errors */}
         <script dangerouslySetInnerHTML={{
           __html: `
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             OneSignalDeferred.push(async function(OneSignal) {
               try {
-                // Only initialize if we are on the configured production domain or localhost to avoid origin errors
                 const currentHost = window.location.hostname;
                 const isProd = currentHost === "starlit-figolla-73c2bb.netlify.app";
                 const isDev = currentHost === "localhost" || currentHost.includes("web-workstation");
 
+                // Only initialize if we are on the configured domain to avoid origin errors
                 if (isProd || isDev) {
                   await OneSignal.init({
                     appId: "39316530-c197-4734-94f1-e6aae18dc20c",
-                    safari_web_id: "web.onesignal.auto.0bc6006c-...", 
                     notifyButton: {
                       enable: false,
                     },
                     allowLocalhostAsSecureOrigin: true,
                   });
-                } else {
-                  console.log("OneSignal initialization skipped: Domain mismatch.");
                 }
               } catch (e) {
-                console.warn("OneSignal failed to load:", e.message);
+                console.warn("OneSignal initialization skipped or failed:", e.message);
               }
             });
           `
