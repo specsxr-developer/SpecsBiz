@@ -26,7 +26,8 @@ import {
   ArrowRight,
   ChevronLeft,
   FileText,
-  MoreVertical
+  MoreVertical,
+  ShoppingCart
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -77,10 +78,11 @@ export default function CustomersPage() {
   const { toast } = useToast()
   const { user } = useUser()
   const db = useFirestore()
-  const { customers, actions, isLoading, currency, language } = useBusinessData()
+  const { customers, products, actions, isLoading, currency, language } = useBusinessData()
   const t = translations[language]
   
   const [search, setSearch] = useState("")
+  const [productSearch, setProductSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [addStep, setAddStep] = useState(1) // 1: Profile, 2: Baki Details
   const [editingCustomer, setEditingCustomer] = useState<any>(null)
@@ -88,9 +90,12 @@ export default function CustomersPage() {
   // Details Sheet States
   const [detailsCustomer, setDetailsCustomer] = useState<any>(null)
   const [isRecordAddOpen, setIsRecordAddOpen] = useState(false)
+  
+  // New Record State
   const [newRecord, setNewRecord] = useState({
     productName: "",
     quantity: "1",
+    unitPrice: "",
     amount: "",
     promiseDate: new Date().toISOString().split('T')[0],
     note: ""
@@ -113,14 +118,33 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
+  // Auto calculate amount when quantity or unit price changes
+  useEffect(() => {
+    const qty = parseFloat(newRecord.quantity) || 0
+    const price = parseFloat(newRecord.unitPrice) || 0
+    const total = (qty * price).toFixed(2)
+    setNewRecord(prev => ({ ...prev, amount: total }))
+  }, [newRecord.quantity, newRecord.unitPrice])
+
   // Reset dialog state when opening
   const handleOpenAddDialog = (open: boolean) => {
     setIsAddOpen(open)
     if (open) {
       setAddStep(1)
       setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
-      setNewRecord({ productName: "", quantity: "1", amount: "", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+      setNewRecord({ productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+      setProductSearch("")
     }
+  }
+
+  const selectProduct = (p: any) => {
+    setNewRecord(prev => ({
+      ...prev,
+      productName: p.name,
+      unitPrice: p.sellingPrice.toString(),
+    }))
+    setProductSearch("")
+    toast({ title: language === 'en' ? "Product Selected" : "পণ্য সিলেক্ট করা হয়েছে" })
   }
 
   // Fetch Baki Records for selected customer
@@ -191,7 +215,8 @@ export default function CustomersPage() {
     setNewRecord({
       productName: "",
       quantity: "1",
-      amount: "",
+      unitPrice: "",
+      amount: "0.00",
       promiseDate: new Date().toISOString().split('T')[0],
       note: ""
     });
@@ -236,6 +261,12 @@ export default function CustomersPage() {
 
   const totalMarketBaki = customers.reduce((acc, c) => acc + (c.totalDue || 0), 0)
 
+  // Filter products for dropdown
+  const filteredProducts = useMemo(() => {
+    if (!productSearch) return []
+    return products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+  }, [products, productSearch])
+
   if (isLoading) return <div className="p-10 text-center animate-pulse text-accent font-bold">{t.loading}</div>
 
   return (
@@ -254,7 +285,7 @@ export default function CustomersPage() {
                 <Plus className="w-5 h-5" /> {t.addNewBakiUser}
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] sm:max-w-[500px] overflow-hidden p-0">
+            <DialogContent className="w-[95vw] sm:max-w-[500px] overflow-hidden p-0 border-accent/20">
               <DialogHeader className="p-6 pb-0">
                 <DialogTitle className="text-xl font-headline flex items-center gap-2">
                   {addStep === 1 ? t.registerNewCustomer : t.initialBakiDetails}
@@ -292,20 +323,61 @@ export default function CustomersPage() {
                   </div>
                 ) : (
                   <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                    {/* Smart Product Search */}
+                    <div className="space-y-1.5 relative">
+                      <Label className="text-xs font-bold uppercase opacity-70 flex items-center gap-2">
+                        <ShoppingCart className="w-3 h-3" /> {language === 'en' ? 'Quick Product Select (A to Z)' : 'পণ্য নির্বাচন করুন (অটো)'}
+                      </Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input 
+                          className="h-11 pl-10 border-accent/30 bg-accent/5 focus-visible:ring-accent" 
+                          placeholder={language === 'en' ? 'Search inventory...' : 'পণ্যের নাম দিয়ে খুঁজুন...'}
+                          value={productSearch}
+                          onChange={e => setProductSearch(e.target.value)}
+                        />
+                      </div>
+                      {filteredProducts.length > 0 && (
+                        <Card className="absolute z-50 w-full mt-1 shadow-2xl border-accent/20 max-h-48 overflow-hidden">
+                          <ScrollArea className="h-full">
+                            {filteredProducts.map(p => (
+                              <button 
+                                key={p.id} 
+                                onClick={() => selectProduct(p)}
+                                className="w-full text-left p-3 hover:bg-accent/10 transition-colors border-b last:border-0 flex justify-between items-center"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold truncate">{p.name}</p>
+                                  <p className="text-[10px] text-muted-foreground">{language === 'en' ? 'Stock' : 'স্টক'}: {p.stock} {p.unit}</p>
+                                </div>
+                                <span className="text-xs font-black text-accent">{currency}{p.sellingPrice}</span>
+                              </button>
+                            ))}
+                          </ScrollArea>
+                        </Card>
+                      )}
+                    </div>
+
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold uppercase opacity-70">{t.language === 'en' ? 'Product Name' : 'পণ্যের নাম'}</Label>
                       <Input className="h-11 border-accent/20" placeholder="e.g. Super Power Battery" value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-bold uppercase opacity-70">{t.language === 'en' ? 'Quantity' : 'পরিমাণ'}</Label>
+                        <Label className="text-[10px] font-bold uppercase opacity-70">{language === 'en' ? 'Qty' : 'পরিমাণ'}</Label>
                         <Input type="number" step="0.01" className="h-11 border-accent/20" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-bold uppercase opacity-70">{t.language === 'en' ? 'Total Owed' : 'মোট বকেয়া'} ({currency})</Label>
-                        <Input type="number" step="0.01" className="h-11 border-accent/20 font-black text-destructive" placeholder="0.00" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
+                        <Label className="text-[10px] font-bold uppercase opacity-70">{language === 'en' ? 'Unit Price' : 'দর'}</Label>
+                        <Input type="number" step="0.01" className="h-11 border-accent/20" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase opacity-70">{t.language === 'en' ? 'Total' : 'মোট বকেয়া'}</Label>
+                        <Input type="number" step="0.01" className="h-11 border-accent/20 font-black text-destructive bg-destructive/5" placeholder="0.00" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
                       </div>
                     </div>
+
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold uppercase opacity-70">{t.promiseDate}</Label>
                       <div className="relative">
@@ -316,7 +388,7 @@ export default function CustomersPage() {
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold uppercase opacity-70">{t.noteRemarks}</Label>
                       <Textarea 
-                        className="border-accent/20 text-xs min-h-[80px]" 
+                        className="border-accent/20 text-xs min-h-[60px]" 
                         placeholder="Add extra details here..." 
                         value={newRecord.note} 
                         onChange={e => setNewRecord({...newRecord, note: e.target.value})} 
@@ -594,6 +666,72 @@ export default function CustomersPage() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {/* Separate Add Baki Dialog for existing customer */}
+      <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>{t.language === 'en' ? 'Add New Baki' : 'নতুন বাকি লিখুন'}</DialogTitle>
+            <DialogDescription>{detailsCustomer?.firstName}-এর নতুন হিসেব যোগ করুন।</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+             {/* Product selection logic same as add flow */}
+             <div className="space-y-1.5 relative">
+                <Label className="text-xs font-bold uppercase opacity-70">{language === 'en' ? 'Quick Select' : 'পণ্য খুঁজুন'}</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    className="h-11 pl-10 border-accent/30 bg-accent/5" 
+                    placeholder={language === 'en' ? 'Type product name...' : 'পণ্যের নাম লিখুন...'}
+                    value={productSearch}
+                    onChange={e => setProductSearch(e.target.value)}
+                  />
+                </div>
+                {filteredProducts.length > 0 && (
+                  <Card className="absolute z-50 w-full mt-1 shadow-xl border-accent/20 max-h-40 overflow-hidden">
+                    <ScrollArea className="h-full">
+                      {filteredProducts.map(p => (
+                        <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/10 border-b last:border-0 flex justify-between">
+                          <span className="text-xs font-bold">{p.name}</span>
+                          <span className="text-xs font-black text-accent">{currency}{p.sellingPrice}</span>
+                        </button>
+                      ))}
+                    </ScrollArea>
+                  </Card>
+                )}
+             </div>
+             
+             <div className="space-y-1.5">
+                <Label className="text-xs">{t.language === 'en' ? 'Product Name' : 'পণ্যের নাম'}</Label>
+                <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} />
+             </div>
+
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{language === 'en' ? 'Quantity' : 'পরিমাণ'}</Label>
+                  <Input type="number" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{language === 'en' ? 'Unit Price' : 'দর'}</Label>
+                  <Input type="number" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                </div>
+             </div>
+
+             <div className="space-y-1.5">
+                <Label className="text-xs font-black text-destructive">{language === 'en' ? 'Total Owed' : 'মোট বকেয়া'}</Label>
+                <Input type="number" className="h-12 text-lg font-bold bg-destructive/5 border-destructive/20" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
+             </div>
+
+             <div className="space-y-1.5">
+                <Label className="text-xs">{t.promiseDate}</Label>
+                <Input type="date" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
+             </div>
+          </div>
+          <DialogFooter>
+            <Button className="w-full h-12 bg-accent" onClick={handleAddBakiRecordOnly}>{t.language === 'en' ? 'Record Baki' : 'বাকি সেভ করুন'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Partial Payment Dialog */}
       <Dialog open={!!paymentDialogRecord} onOpenChange={(open) => !open && setPaymentDialogRecord(null)}>

@@ -1,7 +1,8 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // Removed output: 'export' to support Server Actions (SpecsAI) on Netlify
+  // output: 'export' removed to allow Server Actions (Required for SpecsAI on Netlify)
   images: {
     unoptimized: true,
     remotePatterns: [
