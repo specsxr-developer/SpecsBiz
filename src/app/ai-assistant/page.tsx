@@ -51,8 +51,6 @@ export default function AIAssistantPage() {
   
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [password, setPassword] = useState("")
-  const [isDeleting, setIsDeleting] = useState(false)
 
   // Fetch full chat history for this user
   const aiMessagesQuery = useMemoFirebase(() => {
@@ -144,7 +142,8 @@ export default function AIAssistantPage() {
       await saveMessage('assistant', result.reply);
     } catch (error) {
       console.error("Chat Error:", error);
-      await saveMessage('assistant', "maybe AI er limit shes !");
+      // User requested error message
+      await saveMessage('assistant', "eita AI er reply na....");
     } finally {
       setIsLoading(false)
     }

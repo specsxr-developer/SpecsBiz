@@ -32,6 +32,7 @@ export type BusinessChatInput = z.infer<typeof BusinessChatInputSchema>;
 
 export async function businessChat(input: BusinessChatInput): Promise<{ reply: string }> {
   try {
+    // We use gemini-1.5-flash which is the most stable and reliable for business context
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
       system: `You are "SpecsAI", the highly intelligent, human-like MASTER BUSINESS PARTNER for a shop owner using SpecsBiz.
@@ -44,6 +45,7 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
       - PREDICT THE FUTURE: Based on the sales history, tell the owner what might happen in the next month.
       - BE PROACTIVE: If you see stock is low or debt is high, mention it even if the user didn't ask.
       - LANGUAGE: If language is 'bn', reply in high-quality Bengali (বাংলা). If English, use English.
+      - REAL-TIME KNOWLEDGE: Every piece of data provided below is LIVE and CURRENT. Use it to discuss strategy.
 
       LIVE BUSINESS DATA (YOUR BRAIN):
       - Capital in Stock: ${input.businessContext.currency}${input.businessContext.totalInvestment}
@@ -69,6 +71,7 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
     return { reply: response.text };
   } catch (error: any) {
     console.error("SpecsAI Master Error:", error);
-    return { reply: "maybe AI er limit shes !" };
+    // User requested error message
+    return { reply: "eita AI er reply na...." };
   }
 }
