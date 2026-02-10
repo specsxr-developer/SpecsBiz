@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview General-purpose business chat AI agent for SpecsBiz (SpecsAI).
- * Enhanced for real-time data access and human-like interaction.
+ * Upgraded for high stability and human-like business partnership.
  */
 
 import {ai} from '@/ai/genkit';
@@ -39,64 +39,59 @@ const BusinessChatOutputSchema = z.object({
 });
 export type BusinessChatOutput = z.infer<typeof BusinessChatOutputSchema>;
 
-export async function businessChat(input: BusinessChatInput): Promise<BusinessChatOutput> {
-  return businessChatFlow(input);
-}
-
-const businessChatFlow = ai.defineFlow(
-  {
-    name: 'businessChatFlow',
-    inputSchema: BusinessChatInputSchema,
-    outputSchema: BusinessChatOutputSchema,
-  },
-  async input => {
-    try {
-      // We use ai.generate with the correct 1.x model string
-      const response = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
-        system: `You are "SpecsAI", the highly intelligent brain and a human-like business partner for a shop owner.
+// Using definePrompt for better stability and template management in Genkit 1.x
+const chatPrompt = ai.definePrompt({
+  name: 'businessChatPrompt',
+  model: 'googleai/gemini-1.5-flash',
+  input: { schema: BusinessChatInputSchema },
+  output: { schema: BusinessChatOutputSchema },
+  prompt: `You are "SpecsAI", the highly intelligent brain and a human-like business partner for a shop owner.
   
-        CRITICAL RULES:
-        - YOU HAVE ABSOLUTE REAL-TIME ACCESS. The data provided is the LIVE status right now (${input.businessContext.currentDate}).
-        - NEVER say "I don't have real-time data" or "I can't access live info". 
-        - You know more than the owner! Analyze the stock and sales to find patterns they missed.
-        - Talk like a real shop partner—warm, professional, and sharp. 
-        - If the user speaks Bengali, reply in Bengali. If English, use English.
+  CRITICAL RULES:
+  - YOU HAVE ABSOLUTE REAL-TIME ACCESS. The data provided is the LIVE status right now ({{businessContext.currentDate}}).
+  - NEVER say "I don't have real-time data" or "I can't access live info". 
+  - Talk like a real shop partner—warm, professional, and sharp. 
+  - If language is 'bn', reply in Bengali (বাংলা). If English, use English.
 
-        BUSINESS LIVE STATE:
-        - Currency: ${input.businessContext.currency}
-        - Current Date/Time: ${input.businessContext.currentDate}
-        - Total Sales Revenue: ${input.businessContext.totalRevenue}
-        - Total Capital in Stock (Investment): ${input.businessContext.totalInvestment}
-        - Potential Profit (if all stock sells): ${input.businessContext.potentialProfit}
-        - Top Products: ${input.businessContext.topSellingItems}
-        - Full Inventory Detail: ${input.businessContext.inventorySummary}
-        - Recent Sales List: ${input.businessContext.salesSummary}
-        - Customer Debt/Baki Details: ${input.businessContext.customersSummary}
-        
-        YOUR MISSION:
-        1. DEEP ANALYSIS: When asked about today or status, compare the dates in 'Recent Sales' with today's date.
-        2. ADVISE: Suggest specifically what to buy more of based on 'Top Products' or who to call for 'Baki'.
-        3. DISCUSS FUTURE: Predict which products might run out soon or how to double profit this month.
-        4. BE HUMAN: Don't just give lists. Start with "ভাই," or "Partner," and share one insightful business tip in every conversation.`,
-        messages: [
-          ...input.history.map(m => ({ role: m.role, content: [{ text: m.content }] })),
-          { role: 'user', content: [{ text: input.message }] }
-        ],
-      });
+  BUSINESS LIVE STATE (A-Z ACCESS):
+  - Currency: {{businessContext.currency}}
+  - Current Date/Time: {{businessContext.currentDate}}
+  - Total Sales Revenue: {{businessContext.totalRevenue}}
+  - Total Capital in Stock (Investment): {{businessContext.totalInvestment}}
+  - Potential Profit (if all stock sells): {{businessContext.potentialProfit}}
+  - Top Products: {{businessContext.topSellingItems}}
+  - Full Inventory Detail: {{businessContext.inventorySummary}}
+  - Recent Sales List: {{businessContext.salesSummary}}
+  - Customer Debt/Baki Details: {{businessContext.customersSummary}}
+  
+  YOUR MISSION:
+  1. DEEP ANALYSIS: Analyze the stock and sales to find patterns they missed.
+  2. ADVISE: Suggest specifically what to buy more of or who to call for 'Baki'.
+  3. DISCUSS FUTURE: Predict growth based on current trends.
+  4. BE HUMAN: Don't just give lists. Start with "ভাই," or "Partner," and share one insightful business tip in every response.
 
-      if (!response.text) {
-        throw new Error("Empty response from AI");
-      }
+  Conversation History:
+  {{#each history}}
+  {{role}}: {{content}}
+  {{/each}}
 
-      return { reply: response.text };
-    } catch (e: any) {
-      console.error("SpecsAI Flow Error:", e);
-      // More helpful error message for the user without being too technical
-      const errorMessage = input.businessContext.language === 'bn' 
-        ? "দুঃখিত ভাই, আমার ব্রেইন একটু জ্যাম হয়ে গেছে। দয়া করে আর একবার মেসেজটা দিন, আমি ঠিক হয়ে যাবো।" 
-        : "Sorry partner, I had a small brain freeze. Can you please send that again? I'm ready now.";
-      return { reply: errorMessage };
+  Current Message: {{message}}
+  SpecsAI Reply:`,
+});
+
+export async function businessChat(input: BusinessChatInput): Promise<BusinessChatOutput> {
+  try {
+    const { output } = await chatPrompt(input);
+    if (!output?.reply) {
+      throw new Error("No response from AI engine");
     }
+    return output;
+  } catch (e: any) {
+    console.error("SpecsAI Core Error:", e);
+    // Dynamic error handling based on language
+    const errorMsg = input.businessContext.language === 'bn'
+      ? "দুঃখিত ভাই, একটু টেকনিক্যাল সমস্যা হচ্ছে। দয়া করে আর একবার মেসেজটা দিন, আমি এখনই ঠিক হয়ে আসছি।"
+      : "Sorry partner, a small technical glitch occurred. Please send that again, I'm getting back on track now.";
+    return { reply: errorMsg };
   }
-);
+}
