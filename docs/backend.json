@@ -144,6 +144,7 @@
         "paidAmount": { "type": "number", "description": "How much the customer has paid for this specific item so far." },
         "takenDate": { "type": "string", "format": "date-time" },
         "promiseDate": { "type": "string", "format": "date-time" },
+        "note": { "type": "string", "description": "Additional remarks or notes for this record." },
         "status": { "type": "string", "enum": ["pending", "paid"] }
       }
     },

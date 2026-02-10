@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -23,13 +24,15 @@ import {
   CreditCard,
   Receipt,
   ArrowRight,
-  ChevronLeft
+  ChevronLeft,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { 
   Table, 
@@ -87,7 +90,8 @@ export default function CustomersPage() {
     productName: "",
     quantity: "1",
     amount: "",
-    promiseDate: new Date().toISOString().split('T')[0]
+    promiseDate: new Date().toISOString().split('T')[0],
+    note: ""
   })
 
   // Partial Payment State
@@ -110,7 +114,7 @@ export default function CustomersPage() {
     if (open) {
       setAddStep(1)
       setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
-      setNewRecord({ productName: "", quantity: "1", amount: "", promiseDate: new Date().toISOString().split('T')[0] })
+      setNewRecord({ productName: "", quantity: "1", amount: "", promiseDate: new Date().toISOString().split('T')[0], note: "" })
     }
   }
 
@@ -148,7 +152,8 @@ export default function CustomersPage() {
         productName: newRecord.productName,
         quantity: parseFloat(newRecord.quantity) || 1,
         amount: parseFloat(newRecord.amount) || 0,
-        promiseDate: new Date(newRecord.promiseDate).toISOString()
+        promiseDate: new Date(newRecord.promiseDate).toISOString(),
+        note: newRecord.note
       });
     }
 
@@ -176,14 +181,16 @@ export default function CustomersPage() {
       productName: newRecord.productName,
       quantity: parseFloat(newRecord.quantity) || 1,
       amount: parseFloat(newRecord.amount) || 0,
-      promiseDate: new Date(newRecord.promiseDate).toISOString()
+      promiseDate: new Date(newRecord.promiseDate).toISOString(),
+      note: newRecord.note
     });
 
     setNewRecord({
       productName: "",
       quantity: "1",
       amount: "",
-      promiseDate: new Date().toISOString().split('T')[0]
+      promiseDate: new Date().toISOString().split('T')[0],
+      note: ""
     });
     setIsRecordAddOpen(false);
     toast({ title: "Baki Recorded" });
@@ -279,6 +286,15 @@ export default function CustomersPage() {
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input type="date" className="h-11 pl-10 border-accent/20" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold uppercase opacity-70">Note / Remarks (Optional)</Label>
+                      <Textarea 
+                        className="border-accent/20 text-xs min-h-[80px]" 
+                        placeholder="Add extra details here..." 
+                        value={newRecord.note} 
+                        onChange={e => setNewRecord({...newRecord, note: e.target.value})} 
+                      />
                     </div>
                   </div>
                 )}
@@ -476,6 +492,13 @@ export default function CustomersPage() {
                             </div>
                           </div>
                           
+                          {record.note && (
+                            <div className="bg-white/50 p-2 rounded border border-dashed border-accent/20 mb-3 flex items-start gap-2">
+                               <FileText className="w-3 h-3 text-accent mt-0.5" />
+                               <p className="text-[10px] text-muted-foreground italic leading-relaxed">{record.note}</p>
+                            </div>
+                          )}
+
                           {record.status !== 'paid' && (
                             <div className="space-y-2 mb-4">
                               <div className="flex justify-between text-[10px] font-bold uppercase">
@@ -611,6 +634,15 @@ export default function CustomersPage() {
                 type="date" 
                 value={newRecord.promiseDate} 
                 onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase font-bold opacity-70">Note / Remarks</Label>
+              <Textarea 
+                className="text-xs border-accent/20 min-h-[80px]" 
+                placeholder="Write any special details about this item..." 
+                value={newRecord.note} 
+                onChange={e => setNewRecord({...newRecord, note: e.target.value})} 
               />
             </div>
           </div>
