@@ -47,16 +47,17 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
       - Total Revenue: ${input.businessContext.currency}${input.businessContext.totalRevenue}
       - Investment: ${input.businessContext.currency}${input.businessContext.totalInvestment}
       - Potential Profit: ${input.businessContext.currency}${input.businessContext.potentialProfit}
-      - Inventory: ${input.businessContext.inventorySummary}
-      - Sales: ${input.businessContext.salesSummary}
-      - Customers/Baki: ${input.businessContext.customersSummary}
+      - Inventory Details: ${input.businessContext.inventorySummary}
+      - Recent Sales: ${input.businessContext.salesSummary}
+      - Customers & Baki: ${input.businessContext.customersSummary}
       
       YOUR MISSION:
-      - Discuss business strategy.
-      - Suggest which products to restock.
+      - Discuss business strategy and growth.
+      - Suggest which products to restock based on popularity and profit.
       - Proactively point out mistakes (e.g., selling at a loss, giving too much credit to a risky customer).
       - Predict future performance based on sales trends.
-      - If you don't know something, don't make it up, just be honest like a partner.`,
+      - If you don't know something, don't make it up, just be honest like a partner.
+      - ALWAYS give one useful business tip in every reply.`,
       history: input.history.map(m => ({
         role: m.role === 'assistant' ? 'model' : 'user',
         content: [{ text: m.content }]
@@ -71,6 +72,7 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
     return { reply: response.text };
   } catch (error: any) {
     console.error("SpecsAI Connection Error:", error);
-    return { reply: input.businessContext.language === 'bn' ? "দুঃখিত ভাই, সার্ভারের সাথে যোগাযোগ করতে পারছি না। দয়া করে আপনার নেট বা GEMINI_API_KEY চেক করুন।" : "Sorry Partner, I'm having trouble connecting to our brain. Please check your connection or API key." };
+    // User requested no mention of API keys if possible, but keeping it as a fallback error message
+    return { reply: input.businessContext.language === 'bn' ? "দুঃখিত ভাই, আমার ব্রেইন একটু জ্যাম হয়ে গেছে। দয়া করে আর একবার মেসেজটা দিন, আমি এখনই আপনার ডাটা চেক করে বলছি।" : "Sorry Partner, my brain is a bit jammed. Please send the message again, I'm checking your data right now." };
   }
 }

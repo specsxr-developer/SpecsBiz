@@ -112,8 +112,8 @@ export default function AnalyticsPage() {
         const hourSales = filteredSales.filter(s => new Date(s.saleDate).getHours() === i)
         return {
           name: `${i}:00`,
-          revenue: hourSales.reduce((sum, s) => sum + (s.total || 0), 0),
-          profit: hourSales.reduce((sum, s) => sum + (s.profit || 0), 0)
+          revenue: hourSales.reduce((sum, s) => sum + (sum.total || 0), 0),
+          profit: hourSales.reduce((sum, s) => sum + (sum.profit || 0), 0)
         }
       })
     }
@@ -140,8 +140,8 @@ export default function AnalyticsPage() {
       const daySales = filteredSales.filter(s => isSameDay(new Date(s.saleDate), day))
       return {
         name: format(day, "MMM dd"),
-        revenue: daySales.reduce((sum, s) => sum + (s.total || 0), 0),
-        profit: daySales.reduce((sum, s) => sum + (s.profit || 0), 0)
+        revenue: daySales.reduce((sum, s) => sum + (sum.total || 0), 0),
+        profit: daySales.reduce((sum, s) => sum + (sum.profit || 0), 0)
       }
     })
   }, [filteredSales, timeRange])

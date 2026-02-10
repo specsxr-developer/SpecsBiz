@@ -6,13 +6,13 @@ import {
   Loader2,
   Trash2,
   BrainCircuit,
-  Clock,
-  ShieldCheck,
   Zap,
-  MessageSquare
+  MessageSquare,
+  Sparkles,
+  Bot
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -49,6 +49,7 @@ export default function AIAssistantPage() {
   const [isLoading, setIsLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Real-time chat messages from Firestore
   const aiMessagesQuery = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'aiMessages'), orderBy('timestamp', 'asc'), limit(50));
@@ -94,17 +95,18 @@ export default function AIAssistantPage() {
     try {
       await saveMessage('user', messageText);
 
+      // Construct powerful business context for the AI
       const inventorySummary = products.length > 0 
-        ? products.map(p => `[${p.name}, Stock: ${p.stock}${p.unit}, Buy: ${p.purchasePrice}, Sell: ${p.sellingPrice}]`).join('\n')
-        : "Empty."
+        ? products.map(p => `[Name: ${p.name}, Stock: ${p.stock}${p.unit}, Cost: ${p.purchasePrice}, Price: ${p.sellingPrice}, Category: ${p.category}]`).join('\n')
+        : "No products in inventory."
         
       const salesSummary = sales.length > 0
-        ? sales.slice(0, 20).map(s => `Date: ${new Date(s.saleDate).toLocaleDateString()}, Total: ${s.total}`).join('\n')
-        : "None."
+        ? sales.slice(0, 30).map(s => `Date: ${new Date(s.saleDate).toLocaleDateString()}, Total: ${s.total}, Profit: ${s.profit}, Items: ${s.items?.map((i: any) => i.name).join(', ')}`).join('\n')
+        : "No sales records found."
         
       const customersSummary = customers.length > 0
-        ? customers.map(c => `${c.firstName}: Due ${currency}${c.totalDue}`).join('\n')
-        : "None."
+        ? customers.map(c => `${c.firstName} ${c.lastName}: Owed ${currency}${c.totalDue}, Phone: ${c.phone}`).join('\n')
+        : "No customer debt records."
 
       const history = currentMessages
         .filter(m => m.id !== 'welcome')
@@ -129,7 +131,7 @@ export default function AIAssistantPage() {
 
       await saveMessage('assistant', result.reply);
     } catch (error) {
-      await saveMessage('assistant', "দুঃখিত ভাই, সার্ভারে সমস্যা হচ্ছে। দয়া করে GEMINI_API_KEY সেট করা আছে কি না চেক করুন।");
+      await saveMessage('assistant', language === 'bn' ? "দুঃখিত ভাই, সার্ভারে একটু সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।" : "Sorry Partner, I'm having trouble connecting to my brain. Please try again.");
     } finally {
       setIsLoading(false)
     }
@@ -151,79 +153,106 @@ export default function AIAssistantPage() {
     <div className="flex flex-col gap-4 h-[calc(100vh-140px)] w-full max-w-6xl mx-auto">
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-3">
-          <BrainCircuit className="w-6 h-6 text-accent animate-pulse" />
-          <h2 className="text-xl font-black text-primary">SpecsAI Master Brain</h2>
+          <div className="p-2 bg-accent/10 rounded-xl">
+            <BrainCircuit className="w-6 h-6 text-accent animate-pulse" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-primary leading-tight">SpecsAI Master Brain</h2>
+            <p className="text-[10px] font-bold text-accent uppercase tracking-widest">A to Z Business Partner</p>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={clearChat} className="text-destructive">
+        <Button variant="ghost" size="sm" onClick={clearChat} className="text-destructive font-bold hover:bg-destructive/5">
           <Trash2 className="w-4 h-4 mr-2" /> {t.clearChat}
         </Button>
       </div>
 
-      <Card className="flex-1 flex flex-col min-h-0 shadow-2xl border-accent/10 bg-white/80 backdrop-blur-sm rounded-[2rem] overflow-hidden">
-        <CardHeader className="border-b bg-muted/30 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-white shadow-lg">
-              <AvatarFallback className="bg-primary text-white font-bold">S</AvatarFallback>
+      <Card className="flex-1 flex flex-col min-h-0 shadow-2xl border-accent/10 bg-white/80 backdrop-blur-md rounded-[2.5rem] overflow-hidden">
+        <CardHeader className="border-b bg-muted/30 p-4 md:p-6">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12 border-2 border-white shadow-xl">
+              <AvatarFallback className="bg-primary text-white font-black text-xl">S</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-sm font-bold">SpecsAI Partner</CardTitle>
-              <CardDescription className="text-[10px] font-bold text-accent uppercase">
-                {isLoading ? "Analyzing Data..." : "Online & Savvy"}
-              </CardDescription>
+              <CardTitle className="text-base font-black text-primary">SpecsAI Intelligence</CardTitle>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className={cn("w-2 h-2 rounded-full", isLoading ? "bg-amber-500 animate-pulse" : "bg-green-500")} />
+                <CardDescription className="text-[10px] font-bold text-accent uppercase">
+                  {isLoading ? "Analyzing Shop Data..." : "Partner is Online"}
+                </CardDescription>
+              </div>
             </div>
           </div>
         </CardHeader>
         
         <CardContent className="flex-1 min-h-0 p-0 relative">
           <ScrollArea className="h-full w-full">
-            <div className="p-4 space-y-6">
+            <div className="p-4 md:p-8 space-y-8">
               {currentMessages.map((msg, idx) => (
-                <div key={msg.id || idx} className={cn("flex w-full", msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                <div key={msg.id || idx} className={cn("flex w-full animate-in fade-in slide-in-from-bottom-2 duration-500", msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   <div className={cn(
-                    "max-w-[85%] p-4 rounded-2xl shadow-sm",
-                    msg.role === 'user' ? 'bg-accent text-white' : 'bg-white border'
+                    "max-w-[85%] md:max-w-[75%] p-5 rounded-3xl shadow-md transition-all",
+                    msg.role === 'user' 
+                      ? 'bg-primary text-white rounded-tr-none' 
+                      : 'bg-white border border-accent/5 rounded-tl-none'
                   )}>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <div className="flex items-center gap-2 mb-2 opacity-50">
+                       {msg.role === 'user' ? <MessageSquare className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
+                       <span className="text-[9px] font-black uppercase tracking-widest">{msg.role === 'user' ? 'Shop Owner' : 'SpecsAI Partner'}</span>
+                    </div>
+                    <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap font-medium">
+                      {msg.content}
+                    </p>
                   </div>
                 </div>
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-white border p-4 rounded-2xl flex gap-2">
-                    <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-accent rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 bg-accent rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <div className="bg-white border border-accent/10 p-5 rounded-3xl rounded-tl-none shadow-sm flex items-center gap-3">
+                    <Sparkles className="w-4 h-4 text-accent animate-spin" />
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 bg-accent/40 rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-accent/40 rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <div className="w-2 h-2 bg-accent/40 rounded-full animate-bounce [animation-delay:0.4s]" />
+                    </div>
                   </div>
                 </div>
               )}
-              <div ref={scrollRef} />
+              <div ref={scrollRef} className="h-4" />
             </div>
           </ScrollArea>
         </CardContent>
 
-        <div className="border-t bg-white p-4">
-          <ScrollArea className="w-full whitespace-nowrap mb-3">
+        <div className="border-t bg-white/50 backdrop-blur-sm p-4 md:p-6">
+          <ScrollArea className="w-full whitespace-nowrap mb-4">
             <div className="flex gap-2 pb-2">
               {(language === 'bn' ? QUICK_ACTIONS_BN : QUICK_ACTIONS).map((action, i) => (
-                <button key={i} onClick={() => handleSend(action)} className="text-[10px] px-3 py-1.5 rounded-full border border-accent/20 bg-white hover:bg-accent/5 font-bold shrink-0">
-                  <Zap className="w-3 h-3 inline mr-1 text-yellow-500" /> {action}
+                <button 
+                  key={i} 
+                  onClick={() => handleSend(action)} 
+                  className="text-[10px] px-4 py-2 rounded-full border border-accent/20 bg-white hover:bg-accent hover:text-white transition-all font-black uppercase tracking-tighter shadow-sm shrink-0"
+                >
+                  <Zap className="w-3 h-3 inline mr-1.5 text-amber-500 fill-amber-500" /> {action}
                 </button>
               ))}
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
           
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Input 
-              placeholder={language === 'bn' ? "ভাই, ব্যবসা নিয়ে আলাপ করুন..." : "Talk strategy, Partner..."}
-              className="flex-1"
+              placeholder={language === 'bn' ? "ভাই, ব্যবসা নিয়ে কোনো পরামর্শ চান?" : "Partner, ask me anything about the shop..."}
+              className="flex-1 h-14 md:h-16 rounded-2xl bg-white border-accent/10 text-base shadow-inner focus-visible:ring-accent"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               disabled={isLoading}
             />
-            <Button className="bg-accent" onClick={() => handleSend()} disabled={isLoading || !input.trim()}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <Button 
+              className="bg-accent hover:bg-accent/90 h-14 md:h-16 w-14 md:w-16 rounded-2xl shadow-xl transition-all active:scale-95 shrink-0" 
+              onClick={() => handleSend()} 
+              disabled={isLoading || !input.trim()}
+            >
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin text-white" /> : <Send className="w-6 h-6 text-white" />}
             </Button>
           </div>
         </div>
