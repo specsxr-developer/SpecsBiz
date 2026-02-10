@@ -34,17 +34,18 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         
-        {/* Median.co JS Bridge Handler */}
+        {/* OneSignal Initialization Hook */}
         <script dangerouslySetInnerHTML={{
           __html: `
             window.OneSignal = window.OneSignal || [];
             OneSignal.push(function() {
               OneSignal.init({
-                appId: "YOUR_ONESIGNAL_APP_ID", // Replace this with your actual ID from OneSignal Dashboard
+                appId: "YOUR_ONESIGNAL_APP_ID", // <-- আপনার OneSignal App ID এখানে বসাবেন
                 safari_web_id: "web.onesignal.auto.0bc...",
                 notifyButton: {
                   enable: false,
                 },
+                allowLocalhostAsSecureOrigin: true,
               });
             });
           `

@@ -98,8 +98,8 @@ export default function AnalyticsPage() {
         const hourSales = filteredSales.filter(s => new Date(s.saleDate).getHours() === i)
         return {
           name: `${i}:00`,
-          revenue: hourSales.reduce((sum, s) => sum + (sum.total || 0), 0),
-          profit: hourSales.reduce((sum, s) => sum + (sum.profit || 0), 0)
+          revenue: hourSales.reduce((sum, s) => sum + (s.total || 0), 0),
+          profit: hourSales.reduce((sum, s) => sum + (s.profit || 0), 0)
         }
       })
     }
@@ -109,12 +109,12 @@ export default function AnalyticsPage() {
     else if (timeRange === "month") steps = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) })
     else return eachMonthOfInterval({ start: startOfYear(now), end: endOfYear(now) }).map(m => {
       const monthSales = filteredSales.filter(s => isSameMonth(new Date(s.saleDate), m))
-      return { name: format(m, "MMM"), revenue: monthSales.reduce((sum, s) => sum + (s.total || 0), 0), profit: monthSales.reduce((sum, s) => sum + (sum.profit || 0), 0) }
+      return { name: format(m, "MMM"), revenue: monthSales.reduce((sum, s) => sum + (s.total || 0), 0), profit: monthSales.reduce((sum, s) => sum + (s.profit || 0), 0) }
     })
 
     return steps.map(d => {
       const daySales = filteredSales.filter(s => isSameDay(new Date(s.saleDate), d))
-      return { name: format(d, "MMM dd"), revenue: daySales.reduce((sum, s) => sum + (sum.total || 0), 0), profit: daySales.reduce((sum, s) => sum + (sum.profit || 0), 0) }
+      return { name: format(d, "MMM dd"), revenue: daySales.reduce((sum, s) => sum + (s.total || 0), 0), profit: daySales.reduce((sum, s) => sum + (sum.profit || 0), 0) }
     })
   }, [filteredSales, timeRange])
 
@@ -150,8 +150,6 @@ export default function AnalyticsPage() {
       toast({ variant: "destructive", title: "Invalid Key" })
     }
   }
-
-  const finalSalesList = filteredSales.filter(s => (s.items?.map((i: any) => i.name).join(' ') || "").toLowerCase().includes(search.toLowerCase()))
 
   if (isLoading) return <div className="p-10 text-center animate-pulse text-accent font-bold">{t.loading}</div>
 

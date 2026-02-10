@@ -2,7 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // CRITICAL: output: 'export' removed to allow Server Actions & AI on Netlify/Vercel
+  // CRITICAL: output: 'export' must remain removed to allow Server Actions & AI on Netlify/Vercel
   images: {
     unoptimized: true,
     remotePatterns: [
