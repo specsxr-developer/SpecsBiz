@@ -17,7 +17,8 @@ import {
   Edit2,
   Trash2,
   Calendar,
-  X
+  X,
+  UserEdit
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -74,6 +75,9 @@ export default function CustomersPage() {
   // Edit Record State
   const [editingRecord, setEditingRecord] = useState<any>(null)
   const [isRecordEditOpen, setIsRecordEditOpen] = useState(false)
+
+  // Edit Customer Info State
+  const [isCustomerEditOpen, setIsCustomerEditOpen] = useState(false)
   
   const [newRecord, setNewRecord] = useState({
     productName: "",
@@ -151,6 +155,19 @@ export default function CustomersPage() {
     toast({ title: language === 'en' ? "Customer Saved" : "কাস্টমার সেভ হয়েছে" })
   }
 
+  const handleUpdateCustomer = () => {
+    if (!detailsCustomer || !newCustomer.firstName) return;
+    actions.updateCustomer(detailsCustomer.id, {
+      firstName: newCustomer.firstName,
+      lastName: newCustomer.lastName,
+      phone: newCustomer.phone,
+      address: newCustomer.address
+    });
+    setDetailsCustomer({ ...detailsCustomer, ...newCustomer });
+    setIsCustomerEditOpen(false);
+    toast({ title: language === 'en' ? "Profile Updated" : "প্রোফাইল আপডেট হয়েছে" });
+  }
+
   const handleAddBakiRecordOnly = () => {
     if (!detailsCustomer || !newRecord.productName || !newRecord.amount) {
       toast({ variant: "destructive", title: "Missing Information", description: "Please select a product and amount." })
@@ -192,7 +209,7 @@ export default function CustomersPage() {
     }
   }
 
-  const startEditing = (record: any) => {
+  const startEditingRecord = (record: any) => {
     setEditingRecord(record);
     setNewRecord({
       productName: record.productName,
@@ -203,6 +220,20 @@ export default function CustomersPage() {
       note: record.note || ""
     });
     setIsRecordEditOpen(true);
+  }
+
+  const startEditingCustomer = () => {
+    if (!detailsCustomer) return;
+    setNewCustomer({
+      firstName: detailsCustomer.firstName,
+      lastName: detailsCustomer.lastName || "",
+      phone: detailsCustomer.phone || "",
+      address: detailsCustomer.address || "",
+      email: detailsCustomer.email || "",
+      totalDue: detailsCustomer.totalDue || 0,
+      segment: detailsCustomer.segment || "Baki User"
+    });
+    setIsCustomerEditOpen(true);
   }
 
   const filteredProducts = useMemo(() => {
@@ -290,7 +321,15 @@ export default function CustomersPage() {
       <Sheet open={!!detailsCustomer} onOpenChange={(open) => !open && setDetailsCustomer(null)}>
         <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
           <SheetHeader className="p-4 border-b bg-accent/5">
-            <SheetTitle className="text-xl font-black">{detailsCustomer?.firstName} {detailsCustomer?.lastName}</SheetTitle>
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl font-black flex items-center gap-2">
+                {detailsCustomer?.firstName} {detailsCustomer?.lastName}
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-accent hover:bg-accent/10 rounded-full" onClick={startEditingCustomer}>
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+              </SheetTitle>
+              <p className="text-[10px] font-black text-muted-foreground bg-white px-2 py-1 rounded-lg border">{detailsCustomer?.phone || 'No Phone'}</p>
+            </div>
             <div className="mt-4 flex gap-3">
               <div className="flex-1 bg-white p-3 rounded-xl border-2 border-accent/10 shadow-inner">
                 <p className="text-[8px] font-black uppercase opacity-50">Total Debt</p>
@@ -329,11 +368,11 @@ export default function CustomersPage() {
                           <span className="text-[8px] text-green-600 font-bold uppercase">Paid</span>
                         ) : (
                           <div className="flex items-center gap-1 justify-end mt-1">
-                            <button onClick={() => startEditing(record)} className="p-1 hover:bg-accent/10 rounded text-accent">
-                              <Edit2 className="w-3 h-3" />
+                            <button onClick={() => startEditingRecord(record)} className="p-1.5 hover:bg-accent/10 rounded-lg text-accent transition-colors">
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1 hover:bg-destructive/10 rounded text-destructive">
-                              <Trash2 className="w-3 h-3" />
+                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1.5 hover:bg-destructive/10 rounded-lg text-destructive transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
@@ -382,6 +421,10 @@ export default function CustomersPage() {
                   <Label className="text-[10px] font-black uppercase">{t.phone}</Label>
                   <Input className="h-10" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase">{t.address}</Label>
+                  <Input className="h-10" value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} />
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -427,6 +470,78 @@ export default function CustomersPage() {
             ) : (
               <Button className="w-full bg-primary h-12 font-black uppercase" onClick={handleAddCustomerAndBaki}>Save Customer & Baki</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Existing Baki Record Dialog */}
+      <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Baki Record</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Modify existing entry for {detailsCustomer?.firstName}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-black opacity-60">Product Name</Label>
+              <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-black opacity-60">Quantity</Label>
+                <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-black opacity-60">Unit Price ({currency})</Label>
+                <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="bg-amber-50 p-4 rounded-2xl text-center border border-amber-200 shadow-inner">
+              <Label className="text-[10px] uppercase font-black text-amber-700 tracking-widest">Modified Debt Amount</Label>
+              <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-primary hover:bg-primary/90 h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleUpdateBakiRecord}>
+              Update & Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Customer Profile Dialog */}
+      <Dialog open={isCustomerEditOpen} onOpenChange={setIsCustomerEditOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Customer Profile</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Update personal information for {detailsCustomer?.firstName}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">First Name</Label>
+                <Input value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} className="h-11 rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Last Name</Label>
+                <Input value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} className="h-11 rounded-xl" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase">Phone Number</Label>
+              <Input value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="h-11 rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase">Address</Label>
+              <Input value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="h-11 rounded-xl" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-primary hover:bg-primary/90 h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleUpdateCustomer}>
+              Save Profile Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -486,43 +601,6 @@ export default function CustomersPage() {
           <DialogFooter>
             <Button className="w-full bg-accent hover:bg-accent/90 h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleAddBakiRecordOnly}>
               Confirm & Save Baki
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Existing Baki Record Dialog */}
-      <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Baki Record</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Modify existing entry for {detailsCustomer?.firstName}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-black opacity-60">Product Name</Label>
-              <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black opacity-60">Quantity</Label>
-                <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black opacity-60">Unit Price ({currency})</Label>
-                <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="bg-amber-50 p-4 rounded-2xl text-center border border-amber-200 shadow-inner">
-              <Label className="text-[10px] uppercase font-black text-amber-700 tracking-widest">Modified Debt Amount</Label>
-              <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button className="w-full bg-primary hover:bg-primary/90 h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleUpdateBakiRecord}>
-              Update & Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
