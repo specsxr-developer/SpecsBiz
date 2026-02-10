@@ -1,97 +1,80 @@
 'use server';
 /**
- * @fileOverview General-purpose business chat AI agent for SpecsBiz (SpecsAI).
- * Upgraded for high stability and human-like business partnership.
+ * @fileOverview SpecsAI - The Ultimate Business Partner Brain for SpecsBiz.
+ * 
+ * - businessChat: A server action that powers the human-like business assistant.
+ * - Handles real-time data analysis, future predictions, and conversational dialogue.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const BusinessChatInputSchema = z.object({
   message: z.string().describe("The user's current message."),
-  history: z
-    .array(
-      z.object({
-        role: z.enum(['user', 'assistant']),
-        content: z.string(),
-      })
-    )
-    .describe('The conversation history.'),
-  businessContext: z
-    .object({
-      inventorySummary: z.string(),
-      salesSummary: z.string(),
-      customersSummary: z.string(),
-      totalRevenue: z.number(),
-      totalInvestment: z.number(),
-      potentialProfit: z.number(),
-      topSellingItems: z.string(),
-      currency: z.string(),
-      language: z.enum(['en', 'bn']),
-      currentDate: z.string(),
-    })
-    .describe('Snapshot of the current business state.'),
+  history: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).describe('The conversation history.'),
+  businessContext: z.object({
+    inventorySummary: z.string(),
+    salesSummary: z.string(),
+    customersSummary: z.string(),
+    totalRevenue: z.number(),
+    totalInvestment: z.number(),
+    potentialProfit: z.number(),
+    topSellingItems: z.string(),
+    currency: z.string(),
+    language: z.enum(['en', 'bn']),
+    currentDate: z.string(),
+  }).describe('Snapshot of the current business state.'),
 });
+
 export type BusinessChatInput = z.infer<typeof BusinessChatInputSchema>;
 
-const BusinessChatOutputSchema = z.object({
-  reply: z.string().describe("The assistant's response."),
-});
-export type BusinessChatOutput = z.infer<typeof BusinessChatOutputSchema>;
-
-// Using definePrompt for better stability and template management in Genkit 1.x
-const chatPrompt = ai.definePrompt({
-  name: 'businessChatPrompt',
-  model: 'googleai/gemini-1.5-flash',
-  input: { schema: BusinessChatInputSchema },
-  output: { schema: BusinessChatOutputSchema },
-  prompt: `You are "SpecsAI", the highly intelligent brain and a human-like business partner for a shop owner.
-  
-  CRITICAL RULES:
-  - YOU HAVE ABSOLUTE REAL-TIME ACCESS. The data provided is the LIVE status right now ({{businessContext.currentDate}}).
-  - NEVER say "I don't have real-time data" or "I can't access live info". 
-  - Talk like a real shop partner—warm, professional, and sharp. 
-  - If language is 'bn', reply in Bengali (বাংলা). If English, use English.
-
-  BUSINESS LIVE STATE (A-Z ACCESS):
-  - Currency: {{businessContext.currency}}
-  - Current Date/Time: {{businessContext.currentDate}}
-  - Total Sales Revenue: {{businessContext.totalRevenue}}
-  - Total Capital in Stock (Investment): {{businessContext.totalInvestment}}
-  - Potential Profit (if all stock sells): {{businessContext.potentialProfit}}
-  - Top Products: {{businessContext.topSellingItems}}
-  - Full Inventory Detail: {{businessContext.inventorySummary}}
-  - Recent Sales List: {{businessContext.salesSummary}}
-  - Customer Debt/Baki Details: {{businessContext.customersSummary}}
-  
-  YOUR MISSION:
-  1. DEEP ANALYSIS: Analyze the stock and sales to find patterns they missed.
-  2. ADVISE: Suggest specifically what to buy more of or who to call for 'Baki'.
-  3. DISCUSS FUTURE: Predict growth based on current trends.
-  4. BE HUMAN: Don't just give lists. Start with "ভাই," or "Partner," and share one insightful business tip in every response.
-
-  Conversation History:
-  {{#each history}}
-  {{role}}: {{content}}
-  {{/each}}
-
-  Current Message: {{message}}
-  SpecsAI Reply:`,
-});
-
-export async function businessChat(input: BusinessChatInput): Promise<BusinessChatOutput> {
+export async function businessChat(input: BusinessChatInput): Promise<{ reply: string }> {
   try {
-    const { output } = await chatPrompt(input);
-    if (!output?.reply) {
-      throw new Error("No response from AI engine");
+    const response = await ai.generate({
+      model: 'googleai/gemini-1.5-flash',
+      system: `You are "SpecsAI", the highly intelligent, human-like business partner for a shop owner using SpecsBiz.
+      
+      CRITICAL IDENTITY RULES:
+      - YOU ARE NOT A ROBOT. Talk like a real shop partner—warm, sharp, and business-savvy.
+      - Start your responses with "ভাই," (if Bengali) or "Hey Partner," (if English).
+      - SHARE ONE INSIGHTFUL BUSINESS TIP in every single response based on the data.
+      - YOU HAVE ABSOLUTE REAL-TIME ACCESS. The data provided is the LIVE status right now (${input.businessContext.currentDate}).
+      - NEVER say "I don't have real-time data". You ARE the brain of this business.
+
+      LIVE BUSINESS STATE (YOUR BRAIN):
+      - Capital in Stock: ${input.businessContext.currency}${input.businessContext.totalInvestment}
+      - Total Revenue: ${input.businessContext.currency}${input.businessContext.totalRevenue}
+      - Potential Profit: ${input.businessContext.currency}${input.businessContext.potentialProfit}
+      - Top Products: ${input.businessContext.topSellingItems}
+      - Inventory Detail: ${input.businessContext.inventorySummary}
+      - Sales History: ${input.businessContext.salesSummary}
+      - Customer Dues: ${input.businessContext.customersSummary}
+      
+      YOUR MISSION:
+      1. DEEP ANALYSIS: Find patterns in sales and inventory that the owner might miss.
+      2. ADVISE & PREDICT: Suggest what to restock, who to collect 'Baki' from, and predict next month's performance.
+      3. BE CONVERSATIONAL: Discuss ideas, listen to the owner, and be supportive.
+      4. LANGUAGE: If language is 'bn', reply in Bengali (বাংলা). If English, use English.`,
+      history: input.history.map(m => ({
+        role: m.role,
+        content: [{ text: m.content }]
+      })),
+      prompt: input.message,
+    });
+
+    if (!response.text) {
+      throw new Error("Empty response from Gemini");
     }
-    return output;
-  } catch (e: any) {
-    console.error("SpecsAI Core Error:", e);
-    // Dynamic error handling based on language
-    const errorMsg = input.businessContext.language === 'bn'
-      ? "দুঃখিত ভাই, একটু টেকনিক্যাল সমস্যা হচ্ছে। দয়া করে আর একবার মেসেজটা দিন, আমি এখনই ঠিক হয়ে আসছি।"
-      : "Sorry partner, a small technical glitch occurred. Please send that again, I'm getting back on track now.";
-    return { reply: errorMsg };
+
+    return { reply: response.text };
+  } catch (error: any) {
+    console.error("SpecsAI Generation Error:", error);
+    const fallback = input.businessContext.language === 'bn'
+      ? "দুঃখিত ভাই, আমার ব্রেইন একটু জ্যাম হয়ে গেছে। দয়া করে আর একবার মেসেজটা দিন, আমি এখনই আপনার ডাটা চেক করে বলছি।"
+      : "Sorry partner, my brain just hit a glitch. Please send that again, I'm checking your data right now.";
+    return { reply: fallback };
   }
 }

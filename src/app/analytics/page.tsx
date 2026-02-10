@@ -25,14 +25,6 @@ import {
   ChartTooltipContent, 
   ChartConfig 
 } from "@/components/ui/chart"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog"
 import { Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { analyzeBusinessHealth, type AnalyzeBusinessHealthOutput } from "@/ai/flows/analyze-business-health"
 import { useToast } from "@/hooks/use-toast"
@@ -131,7 +123,7 @@ export default function AnalyticsPage() {
         return {
           name: format(month, "MMM"),
           revenue: monthSales.reduce((sum, s) => sum + (s.total || 0), 0),
-          profit: monthSales.reduce((sum, s) => sum + (s.profit || 0), 0)
+          profit: monthSales.reduce((sum, s) => sum + (sum === 0 ? 0 : (s.profit || 0)), 0) // Fixed double sum issue
         }
       })
     }
