@@ -136,22 +136,23 @@ export default function CustomersPage() {
   const handleAddCustomerAndBaki = () => {
     if (!newCustomer.firstName) return
     
-    // 1. Create unique ID
+    // 1. Create unique ID for both path and object consistency
     const customerId = Date.now().toString()
+    const bakiAmount = parseFloat(newRecord.amount) || 0
     
-    // 2. Register Customer Profile
+    // 2. Register Customer Profile with initial due
     actions.addCustomer({
       ...newCustomer,
       id: customerId,
-      totalDue: 0 // Will be updated by baki record
+      totalDue: bakiAmount // Pre-set the total due to avoid zero-state lag
     })
 
     // 3. Add Baki Record if provided
-    if (newRecord.productName && newRecord.amount) {
+    if (newRecord.productName && bakiAmount > 0) {
       actions.addBakiRecord(customerId, {
         productName: newRecord.productName,
         quantity: parseFloat(newRecord.quantity) || 1,
-        amount: parseFloat(newRecord.amount) || 0,
+        amount: bakiAmount,
         promiseDate: new Date(newRecord.promiseDate).toISOString(),
         note: newRecord.note
       });

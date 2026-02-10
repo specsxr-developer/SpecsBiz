@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { 
-  addDocumentNonBlocking, 
+  setDocumentNonBlocking, 
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
 } from '@/firebase/non-blocking-updates';
@@ -57,14 +57,12 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // State for Local Data
   const [localProducts, setLocalProducts] = useState<any[]>([]);
   const [localSales, setLocalSales] = useState<any[]>([]);
   const [localCustomers, setLocalCustomers] = useState<any[]>([]);
   const [currency, setCurrencyState] = useState('৳');
   const [language, setLanguageState] = useState<'en' | 'bn'>('bn');
 
-  // Load from Local Storage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -85,7 +83,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Firestore Queries (Memoized)
   const productsQuery = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'products'), orderBy('name'));
@@ -105,19 +102,16 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const { data: fbSales, isLoading: sLoading } = useCollection(salesQuery);
   const { data: fbCustomers, isLoading: cLoading } = useCollection(customersQuery);
 
-  // Unified Data
   const products = user ? (fbProducts || []) : localProducts;
   const sales = user ? (fbSales || []) : localSales;
   const customers = user ? (fbCustomers || []) : localCustomers;
   const isLoading = isUserLoading || (user && (pLoading || sLoading || cLoading));
 
-  // --- Actions ---
-
   const addProduct = useCallback((product: any) => {
     const id = product.id || Date.now().toString();
     const data = { ...product, id };
     if (user?.uid && db) {
-      addDocumentNonBlocking(collection(db, 'users', user.uid, 'products'), data);
+      setDocumentNonBlocking(doc(db, 'users', user.uid, 'products', id), data, { merge: true });
     } else {
       setLocalProducts(prev => {
         const updated = [data, ...prev];
@@ -156,7 +150,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     const data = { ...sale, id, saleDate: new Date().toISOString() };
     
     if (user?.uid && db) {
-      addDocumentNonBlocking(collection(db, 'users', user.uid, 'sales'), data);
+      setDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', id), data, { merge: true });
       if (data.items && !data.isBakiPayment) {
         data.items.forEach((item: any) => {
           const productRef = doc(db, 'users', user.uid, 'products', item.id);
@@ -194,7 +188,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     const id = customer.id || Date.now().toString();
     const data = { ...customer, id };
     if (user?.uid && db) {
-      addDocumentNonBlocking(collection(db, 'users', user.uid, 'customers'), data);
+      setDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', id), data, { merge: true });
     } else {
       setLocalCustomers(prev => {
         const updated = [data, ...prev];
@@ -229,11 +223,11 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   }, [user?.uid, db]);
 
   const addBakiRecord = useCallback((customerId: string, record: any) => {
-    const recordId = Date.now().toString();
+    const recordId = record.id || Date.now().toString();
     const data = { ...record, id: recordId, takenDate: new Date().toISOString(), paidAmount: 0, status: 'pending' };
     
     if (user?.uid && db) {
-      addDocumentNonBlocking(collection(db, 'users', user.uid, 'customers', customerId, 'bakiRecords'), data);
+      setDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId, 'bakiRecords', recordId), data, { merge: true });
       const customer = customers.find(c => c.id === customerId);
       if (customer) {
         updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId), {
@@ -262,7 +256,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     const isFullyPaid = newPaidAmount >= currentRecord.amount;
     const remaining = Math.max(0, currentRecord.amount - newPaidAmount);
     
-    // Add to Sales
     const saleData = {
       total: amountToPay,
       profit: 0, 
@@ -276,8 +269,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     addSale(saleData);
 
     if (user?.uid && db) {
-      const recordRef = doc(db, 'users', user.uid, 'customers', customerId, 'bakiRecords', recordId);
-      updateDocumentNonBlocking(recordRef, {
+      updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', customerId, 'bakiRecords', recordId), {
         paidAmount: newPaidAmount,
         status: isFullyPaid ? 'paid' : 'pending'
       });
