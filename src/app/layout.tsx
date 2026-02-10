@@ -30,17 +30,17 @@ export default function RootLayout({
         
         {/* OneSignal SDK */}
         <Script 
-          src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" 
+          src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" 
           strategy="afterInteractive"
         />
         
-        {/* OneSignal Initialization Script */}
+        {/* OneSignal Initialization Script with ID from screenshot */}
         <script dangerouslySetInnerHTML={{
           __html: `
-            window.OneSignal = window.OneSignal || [];
-            OneSignal.push(function() {
-              OneSignal.init({
-                appId: "YOUR_ONESIGNAL_APP_ID", // <-- আপনার কপি করা OneSignal App ID এখানে বসান
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(async function(OneSignal) {
+              await OneSignal.init({
+                appId: "39316530-c197-4734-94f1-e6aac18dc20c",
                 safari_web_id: "web.onesignal.auto.0bc6006c-...", 
                 notifyButton: {
                   enable: false,

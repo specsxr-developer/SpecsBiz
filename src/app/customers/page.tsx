@@ -84,6 +84,7 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
+  // Auto-calculate total amount based on qty and price
   useEffect(() => {
     const qty = parseFloat(newRecord.quantity) || 0
     const price = parseFloat(newRecord.unitPrice) || 0
@@ -246,16 +247,16 @@ export default function CustomersPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label>Qty</Label>
-                        <Input type="number" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                        <Input type="number" step="0.01" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Unit Price</Label>
-                        <Input type="number" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                        <Input type="number" step="0.01" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="font-bold text-destructive">Total Owed</Label>
-                      <Input type="number" className="bg-destructive/5 font-black text-lg" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
+                      <Input type="number" step="0.01" className="bg-destructive/5 font-black text-lg" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
                     </div>
                   </div>
                 )}
@@ -412,10 +413,10 @@ export default function CustomersPage() {
              </div>
              <Input placeholder="Product Name" value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} />
              <div className="grid grid-cols-2 gap-4">
-                <Input type="number" placeholder="Qty" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                <Input type="number" placeholder="Unit Price" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                <Input type="number" step="0.01" placeholder="Qty" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                <Input type="number" step="0.01" placeholder="Unit Price" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
              </div>
-             <Input type="number" className="font-bold text-destructive" placeholder="Total" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
+             <Input type="number" step="0.01" className="font-bold text-destructive" placeholder="Total" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
              <Input type="date" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
           </div>
           <DialogFooter><Button className="w-full bg-accent" onClick={handleAddBakiRecordOnly}>Save Baki</Button></DialogFooter>

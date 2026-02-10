@@ -114,7 +114,7 @@ export default function AnalyticsPage() {
 
     return steps.map(d => {
       const daySales = filteredSales.filter(s => isSameDay(new Date(s.saleDate), d))
-      return { name: format(d, "MMM dd"), revenue: daySales.reduce((sum, s) => sum + (sum.total || 0), 0), profit: daySales.reduce((sum, s) => sum + (sum.profit || 0), 0) }
+      return { name: format(d, "MMM dd"), revenue: daySales.reduce((sum, s) => sum + (s.total || 0), 0), profit: daySales.reduce((sum, s) => sum + (s.profit || 0), 0) }
     })
   }, [filteredSales, timeRange])
 
