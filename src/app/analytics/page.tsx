@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
         const monthSales = filteredSales.filter(s => isSameMonth(new Date(s.saleDate), month))
         return {
           name: format(month, "MMM"),
-          revenue: monthSales.reduce((sum, s) => sum + (sum + (s.total || 0)), 0),
+          revenue: monthSales.reduce((sum, s) => sum + (s.total || 0), 0),
           profit: monthSales.reduce((sum, s) => sum + (s.profit || 0), 0)
         }
       })
