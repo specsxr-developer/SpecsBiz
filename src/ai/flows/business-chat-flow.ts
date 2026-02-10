@@ -73,8 +73,8 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
   } catch (error: any) {
     console.error("SpecsAI Generation Error:", error);
     const fallback = input.businessContext.language === 'bn'
-      ? "দুঃখিত ভাই, আমার ব্রেইন একটু জ্যাম হয়ে গেছে। দয়া করে আর একবার মেসেজটা দিন, আমি এখনই আপনার ডাটা চেক করে বলছি।"
-      : "Sorry partner, my brain just hit a glitch. Please send that again, I'm checking your data right now.";
+      ? "maybe AI er limit shes !"
+      : "maybe AI limit reached !";
     return { reply: fallback };
   }
 }
