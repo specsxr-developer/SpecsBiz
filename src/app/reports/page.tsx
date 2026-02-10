@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -17,7 +18,9 @@ import {
   Loader2,
   Printer,
   Check,
-  Settings2
+  Settings2,
+  Trash2,
+  Lock
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -53,17 +56,23 @@ import { useUser, useFirestore } from "@/firebase"
 import { collection, getDocs } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MasterLedgerPage() {
   const { user } = useUser()
   const db = useFirestore()
-  const { products, sales, customers, currency, isLoading: dataLoading } = useBusinessData()
+  const { toast } = useToast()
+  const { products, sales, customers, currency, isLoading: dataLoading, actions, language } = useBusinessData()
   
   const [search, setSearch] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [allBakiRecords, setAllBakiRecords] = useState<any[]>([])
   const [isBakiLoading, setIsBakiLoading] = useState(false)
   const [generatedDate, setGeneratedDate] = useState("")
+
+  // Deletion State
+  const [deleteItem, setDeleteItem] = useState<{ id: string, type: string, extra?: any } | null>(null)
+  const [deletePass, setDeletePass] = useState("")
 
   // Hydration fix for print date
   useEffect(() => {
@@ -141,13 +150,15 @@ export default function MasterLedgerPage() {
         id: s.id,
         date: new Date(s.saleDate),
         type: s.isBakiPayment ? 'Baki Payment' : 'Direct Sale',
+        rawType: 'sale',
         item: itemName,
         amount: s.total,
         paid: s.total,
         unpaid: 0,
         status: 'Complete',
         color: s.isBakiPayment ? 'text-blue-600' : 'text-green-600',
-        customer: s.customerName || 'Walking Customer'
+        customer: s.customerName || 'Walking Customer',
+        originalData: s
       })
     })
 
@@ -157,13 +168,15 @@ export default function MasterLedgerPage() {
         id: r.id,
         date: new Date(r.takenDate),
         type: 'New Baki',
+        rawType: 'baki',
         item: r.productName,
         amount: r.amount,
         paid: r.paidAmount || 0,
         unpaid: r.amount - (r.paidAmount || 0),
         status: r.status === 'paid' ? 'Paid' : 'Unpaid',
         color: r.status === 'paid' ? 'text-green-600' : 'text-destructive',
-        customer: r.customerName
+        customer: r.customerName,
+        customerId: r.customerId
       })
     })
 
@@ -174,6 +187,7 @@ export default function MasterLedgerPage() {
           id: p.id + '-inv',
           date: new Date(), 
           type: 'Inventory',
+          rawType: 'inventory',
           item: `Stock: ${p.name}`,
           amount: p.purchasePrice * p.stock,
           paid: p.purchasePrice * p.stock,
@@ -203,6 +217,25 @@ export default function MasterLedgerPage() {
     }
   }, [sales, customers, products])
 
+  const handleAuthorizedDelete = () => {
+    if (deletePass === "specsxr") {
+      if (deleteItem) {
+        if (deleteItem.type === 'sale') {
+          actions.deleteSale(deleteItem.id);
+          toast({ title: "Sale Transaction Cancelled", description: "Stock and history reverted." });
+        } else if (deleteItem.type === 'baki') {
+          actions.deleteBakiRecord(deleteItem.extra.customerId, deleteItem.id, deleteItem.extra.remaining);
+          toast({ title: "Baki Record Removed", description: "Customer debt updated." });
+        }
+      }
+      setDeleteItem(null);
+      setDeletePass("");
+    } else {
+      toast({ variant: "destructive", title: "Incorrect Password", description: "Operation cancelled." });
+      setDeletePass("");
+    }
+  }
+
   // Download logic
   const handleDownloadCSV = () => {
     const headers = ["Date", "Type", "Item", "Entity", "Total", "Paid", "Unpaid", "Status"]
@@ -230,13 +263,9 @@ export default function MasterLedgerPage() {
 
   const handlePrint = () => {
     setIsPrintDialogOpen(false);
-    
-    // Unfocus active elements to prevent potential issues
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-
-    // Delay print to allow dialog to close completely
     setTimeout(() => {
       if (typeof window !== 'undefined') {
         window.print();
@@ -308,67 +337,35 @@ export default function MasterLedgerPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-date" 
-                  checked={printColumns.date} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, date: val}))} 
-                />
+                <Switch id="col-date" checked={printColumns.date} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, date: val}))} />
                 <Label htmlFor="col-date">Date</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-type" 
-                  checked={printColumns.type} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, type: val}))} 
-                />
+                <Switch id="col-type" checked={printColumns.type} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, type: val}))} />
                 <Label htmlFor="col-type">Transaction Type</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-item" 
-                  checked={printColumns.item} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, item: val}))} 
-                />
+                <Switch id="col-item" checked={printColumns.item} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, item: val}))} />
                 <Label htmlFor="col-item">Item Name</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-entity" 
-                  checked={printColumns.entity} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, entity: val}))} 
-                />
+                <Switch id="col-entity" checked={printColumns.entity} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, entity: val}))} />
                 <Label htmlFor="col-entity">Customer/Supplier</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-total" 
-                  checked={printColumns.total} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, total: val}))} 
-                />
+                <Switch id="col-total" checked={printColumns.total} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, total: val}))} />
                 <Label htmlFor="col-total">Total Value</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-paid" 
-                  checked={printColumns.paid} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, paid: val}))} 
-                />
+                <Switch id="col-paid" checked={printColumns.paid} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, paid: val}))} />
                 <Label htmlFor="col-paid">Paid Amount</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-unpaid" 
-                  checked={printColumns.unpaid} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, unpaid: val}))} 
-                />
+                <Switch id="col-unpaid" checked={printColumns.unpaid} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, unpaid: val}))} />
                 <Label htmlFor="col-unpaid">Unpaid/Due</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch 
-                  id="col-status" 
-                  checked={printColumns.status} 
-                  onCheckedChange={(val) => setPrintColumns(prev => ({...prev, status: val}))} 
-                />
+                <Switch id="col-status" checked={printColumns.status} onCheckedChange={(val) => setPrintColumns(prev => ({...prev, status: val}))} />
                 <Label htmlFor="col-status">Status</Label>
               </div>
             </div>
@@ -460,7 +457,7 @@ export default function MasterLedgerPage() {
               </TableHeader>
               <TableBody>
                 {filteredLedger.map((entry, idx) => (
-                  <TableRow key={entry.id + idx} className="hover:bg-accent/5">
+                  <TableRow key={entry.id + idx} className="hover:bg-accent/5 group">
                     <TableCell className={cn("pl-6 text-xs font-medium whitespace-nowrap", !printColumns.date && "print:hidden")}>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3 h-3 text-muted-foreground print:hidden" />
@@ -491,9 +488,25 @@ export default function MasterLedgerPage() {
                       {currency}{entry.unpaid.toLocaleString()}
                     </TableCell>
                     <TableCell className={cn("text-right pr-6", !printColumns.status && "print:hidden")}>
-                      <span className={`text-[10px] font-black uppercase ${entry.color}`}>
-                        {entry.status}
-                      </span>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className={`text-[10px] font-black uppercase ${entry.color}`}>
+                          {entry.status}
+                        </span>
+                        {entry.rawType !== 'inventory' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-red-500 print:hidden"
+                            onClick={() => setDeleteItem({
+                              id: entry.id,
+                              type: entry.rawType,
+                              extra: entry.rawType === 'baki' ? { customerId: entry.customerId, remaining: entry.unpaid } : null
+                            })}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -503,6 +516,35 @@ export default function MasterLedgerPage() {
         </CardContent>
       </Card>
       
+      {/* Authorized Delete Dialog */}
+      <Dialog open={!!deleteItem} onOpenChange={(open) => !open && setDeleteItem(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Lock className="w-5 h-5" /> Master Authorization
+            </DialogTitle>
+            <DialogDescription>
+              Deleting an entry from the ledger is a permanent action. All associated stock and financial data will be reverted. Enter secret key.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-xs font-bold uppercase opacity-70">Secret Access Key</Label>
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              className="h-12 text-lg font-bold"
+              value={deletePass}
+              onChange={e => setDeletePass(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleAuthorizedDelete}>
+              Authorize & Wipe Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between text-[10px] text-muted-foreground italic bg-muted/30 p-4 rounded-lg print:bg-white print:border-t">
          <p>* This report combines live data from Inventory, Sales, and Customer Baki Records.</p>
          <p>Total Ledger Entries: {filteredLedger.length}</p>

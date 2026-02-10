@@ -185,6 +185,85 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.uid, db, products]);
 
+  const deleteSale = useCallback((saleId: string) => {
+    const saleToDelete = sales.find(s => s.id === saleId);
+    if (!saleToDelete) return;
+
+    if (user?.uid && db) {
+      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', saleId));
+      
+      if (saleToDelete.isBakiPayment) {
+        // Revert debt for customer
+        if (saleToDelete.customerId && saleToDelete.bakiRecordId) {
+          const customerRef = doc(db, 'users', user.uid, 'customers', saleToDelete.customerId);
+          const recordRef = doc(db, 'users', user.uid, 'customers', saleToDelete.customerId, 'bakiRecords', saleToDelete.bakiRecordId);
+          
+          // We need to fetch current values to be precise, but non-blocking updates usually handle merging.
+          // For simplicity in this logic, we assume we want to re-increase the due amount.
+          const customer = customers.find(c => c.id === saleToDelete.customerId);
+          if (customer) {
+            updateDocumentNonBlocking(customerRef, {
+              totalDue: (customer.totalDue || 0) + saleToDelete.total
+            });
+          }
+          
+          // Also reset the record status if we had it
+          updateDocumentNonBlocking(recordRef, {
+            paidAmount: 0, // In a more complex app, we'd store what it was before, but resetting to 0 is safer than leaving it paid
+            status: 'pending'
+          });
+        }
+      } else if (saleToDelete.items) {
+        // Restore stock
+        saleToDelete.items.forEach((item: any) => {
+          const productRef = doc(db, 'users', user.uid, 'products', item.id);
+          const currentProduct = products.find(p => p.id === item.id);
+          if (currentProduct) {
+            updateDocumentNonBlocking(productRef, {
+              stock: (currentProduct.stock || 0) + item.quantity
+            });
+          }
+        });
+      }
+    } else {
+      // Local Mode
+      setLocalSales(prev => {
+        const updated = prev.filter(s => s.id !== saleId);
+        localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
+        return updated;
+      });
+
+      if (saleToDelete.isBakiPayment) {
+        setLocalCustomers(prev => {
+          return prev.map(c => {
+            if (c.id === saleToDelete.customerId) {
+              const records = (c.bakiRecords || []).map((r: any) => {
+                if (r.id === saleToDelete.bakiRecordId) {
+                  return { ...r, paidAmount: 0, status: 'pending' };
+                }
+                return r;
+              });
+              return { ...c, totalDue: (c.totalDue || 0) + saleToDelete.total, bakiRecords: records };
+            }
+            return c;
+          });
+        });
+      } else {
+        setLocalProducts(prev => {
+          const updatedProducts = prev.map(p => {
+            const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
+            if (saleItem) {
+              return { ...p, stock: (p.stock || 0) + saleItem.quantity };
+            }
+            return p;
+          });
+          localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
+          return updatedProducts;
+        });
+      }
+    }
+  }, [user?.uid, db, sales, products]);
+
   const addCustomer = useCallback((customer: any) => {
     const id = customer.id || Date.now().toString();
     const data = { ...customer, id };
@@ -292,6 +371,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       profit: 0, 
       items: [{ name: `Baki Payment: ${currentRecord.productName}`, quantity: 1, sellingPrice: amountToPay }],
       isBakiPayment: true,
+      bakiRecordId: recordId,
       bakiProductName: currentRecord.productName,
       remainingAmount: remaining,
       customerId: customerId,
@@ -372,45 +452,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     setLanguageState(lang);
     localStorage.setItem(LOCAL_KEYS.LANGUAGE, lang);
   }, []);
-
-  const deleteSale = useCallback((saleId: string) => {
-    const saleToDelete = sales.find(s => s.id === saleId);
-    if (!saleToDelete) return;
-
-    if (user?.uid && db) {
-      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'sales', saleId));
-      if (!saleToDelete.isBakiPayment && saleToDelete.items) {
-        saleToDelete.items.forEach((item: any) => {
-          const productRef = doc(db, 'users', user.uid, 'products', item.id);
-          const currentProduct = products.find(p => p.id === item.id);
-          if (currentProduct) {
-            updateDocumentNonBlocking(productRef, {
-              stock: currentProduct.stock + item.quantity
-            });
-          }
-        });
-      }
-    } else {
-      setLocalSales(prev => {
-        const updated = prev.filter(s => s.id !== saleId);
-        localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
-        return updated;
-      });
-      if (!saleToDelete.isBakiPayment) {
-        setLocalProducts(prev => {
-          const updatedProducts = prev.map(p => {
-            const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
-            if (saleItem) {
-              return { ...p, stock: p.stock + saleItem.quantity };
-            }
-            return p;
-          });
-          localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
-          return updatedProducts;
-        });
-      }
-    }
-  }, [user?.uid, db, sales, products]);
 
   const resetAllData = useCallback(async () => {
     localStorage.removeItem(LOCAL_KEYS.PRODUCTS);

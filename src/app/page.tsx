@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Receipt,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Lock
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,7 +32,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogTrigger
+  DialogTrigger,
+  DialogFooter
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useBusinessData } from "@/hooks/use-business-data"
@@ -47,10 +49,14 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("")
   const [cart, setCart] = useState<any[]>([])
 
+  // Deletion Password Protection
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deletePass, setDeletePass] = useState("")
+
   const totalRevenue = sales.reduce((acc, s) => acc + (s.total || 0), 0)
 
   const stats = [
-    { label: t.revenue, value: `${currency}${totalRevenue.toFixed(2)}`, trend: "up", icon: DollarSign, color: "text-green-600" },
+    { label: t.revenue, value: `${currency}${totalRevenue.toLocaleString()}`, trend: "up", icon: DollarSign, color: "text-green-600" },
     { label: t.products, value: products.length.toString(), trend: "up", icon: Package, color: "text-blue-600" },
     { label: t.customers, value: customers.length.toString(), trend: "up", icon: Users, color: "text-purple-600" },
     { label: t.sales, value: sales.length.toString(), trend: "up", icon: TrendingUp, color: "text-teal-600" },
@@ -90,14 +96,23 @@ export default function DashboardPage() {
       profit: totalProfit,
       items: cart,
     })
-    toast({ title: language === 'en' ? "Sale Successful" : "বিক্রয় সম্পন্ন হয়েছে", description: `${t.finalTotal}: ${currency}${grandTotal.toFixed(2)}` })
+    toast({ title: language === 'en' ? "Sale Successful" : "বিক্রয় সম্পন্ন হয়েছে", description: `${t.finalTotal}: ${currency}${grandTotal.toLocaleString()}` })
     setCart([])
     setIsSaleDialogOpen(false)
   }
 
-  const handleDeleteSale = (saleId: string) => {
-    actions.deleteSale(saleId)
-    toast({ title: language === 'en' ? "Sale Deleted" : "বিক্রয় ডিলিট করা হয়েছে" })
+  const handleDeleteSale = () => {
+    if (deletePass === "specsxr") {
+      if (deleteId) {
+        actions.deleteSale(deleteId)
+        toast({ title: language === 'en' ? "Sale Deleted" : "বিক্রয় ডিলিট করা হয়েছে", description: "Stock and data reverted." })
+      }
+      setDeleteId(null)
+      setDeletePass("")
+    } else {
+      toast({ variant: "destructive", title: "Wrong Password", description: "Access denied." })
+      setDeletePass("")
+    }
   }
 
   return (
@@ -193,9 +208,9 @@ export default function DashboardPage() {
                                  "text-[10px] font-bold px-2 py-0.5 rounded",
                                  isLoss ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
                                )}>
-                                 {isLoss ? 'Loss' : 'Lav'}: {currency}{itemProfit.toFixed(2)}
+                                 {isLoss ? 'Loss' : 'Lav'}: {currency}{itemProfit.toLocaleString()}
                                </div>
-                               <p className="text-sm font-black text-primary">Item Total: {currency}{(item.sellingPrice * item.quantity).toFixed(2)}</p>
+                               <p className="text-sm font-black text-primary">Item Total: {currency}{(item.sellingPrice * item.quantity).toLocaleString()}</p>
                             </div>
                           </div>
                         );
@@ -210,11 +225,11 @@ export default function DashboardPage() {
                       totalProfit < 0 ? "bg-destructive" : "bg-green-600"
                     )}>
                       <p className="text-[8px] md:text-[10px] font-bold uppercase opacity-80">{totalProfit < 0 ? 'Total Loss' : t.totalLav}</p>
-                      <p className="text-base md:text-xl font-black">{currency}{totalProfit.toFixed(2)}</p>
+                      <p className="text-base md:text-xl font-black">{currency}{totalProfit.toLocaleString()}</p>
                     </div>
                     <div className="bg-primary text-white p-2 md:p-3 rounded-xl shadow-inner text-right">
                       <p className="text-[8px] md:text-[10px] font-bold uppercase opacity-80">{t.finalTotal}</p>
-                      <p className="text-base md:text-xl font-black">{currency}{grandTotal.toFixed(2)}</p>
+                      <p className="text-base md:text-xl font-black">{currency}{grandTotal.toLocaleString()}</p>
                     </div>
                   </div>
                   <Button className="w-full h-10 md:h-14 text-sm md:text-lg bg-accent hover:bg-accent/90 font-bold shadow-xl" disabled={cart.length === 0} onClick={handleCheckout}>
@@ -290,17 +305,17 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="text-right">
-                        <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toFixed(2)}</p>
+                        <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toLocaleString()}</p>
                         {!sale.isBakiPayment && (
                           <p className={cn(
                             "text-[9px] md:text-[10px] font-bold",
                             (sale.profit || 0) < 0 ? "text-destructive" : "text-green-600"
                           )}>
-                            {(sale.profit || 0) < 0 ? '-' : '+'}{currency}{Math.abs(sale.profit || 0).toFixed(2)}
+                            {(sale.profit || 0) < 0 ? '-' : '+'}{currency}{Math.abs(sale.profit || 0).toLocaleString()}
                           </p>
                         )}
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => handleDeleteSale(sale.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => setDeleteId(sale.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -311,6 +326,37 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation with Password */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Lock className="w-5 h-5" /> {language === 'en' ? 'History Protection' : 'হিস্ট্রি প্রটেকশন'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Deleting this sale will restore item stock and remove revenue data. Enter secret key to confirm.'
+                : 'এই বিক্রয়টি ডিলিট করলে স্টকে মাল ফিরে যাবে এবং আয় কমে যাবে। নিশ্চিত করতে সিক্রেট কী দিন।'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-xs font-bold uppercase opacity-70">Secret Access Key</Label>
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              className="h-12 text-lg font-bold"
+              value={deletePass}
+              onChange={e => setDeletePass(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleDeleteSale}>
+              {language === 'en' ? 'Authorize & Delete' : 'অথোরাইজ ও ডিলিট করুন'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

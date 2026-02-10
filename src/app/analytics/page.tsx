@@ -16,19 +16,31 @@ import {
   ShoppingCart,
   ArrowUpRight,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  Lock
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { 
   ChartContainer, 
   ChartTooltip, 
   ChartTooltipContent, 
   ChartConfig 
 } from "@/components/ui/chart"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog"
 import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
 import { analyzeBusinessHealth, type AnalyzeBusinessHealthOutput } from "@/ai/flows/analyze-business-health"
 import { useToast } from "@/hooks/use-toast"
@@ -48,10 +60,14 @@ const chartConfig = {
 
 export default function AnalyticsPage() {
   const { toast } = useToast()
-  const { sales, products, isLoading, currency } = useBusinessData()
+  const { sales, products, isLoading, currency, actions, language } = useBusinessData()
   const [timeRange, setTimeRange] = useState<"day" | "week" | "month" | "year">("month")
   const [isAuditing, setIsAuditing] = useState(false)
   const [auditResult, setAuditResult] = useState<AnalyzeBusinessHealthOutput | null>(null)
+
+  // Deletion Password Protection
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deletePass, setDeletePass] = useState("")
 
   // Filter sales based on time range
   const filteredSales = useMemo(() => {
@@ -158,6 +174,20 @@ export default function AnalyticsPage() {
       toast({ title: "Audit Failed", variant: "destructive" })
     } finally {
       setIsAuditing(false)
+    }
+  }
+
+  const handleDeleteSale = () => {
+    if (deletePass === "specsxr") {
+      if (deleteId) {
+        actions.deleteSale(deleteId)
+        toast({ title: "Removed Successfully", description: "History updated and stock returned." })
+      }
+      setDeleteId(null)
+      setDeletePass("")
+    } else {
+      toast({ variant: "destructive", title: "Authorization Failed", description: "Check your secret key." })
+      setDeletePass("")
     }
   }
 
@@ -365,11 +395,16 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-black text-sm">{currency}{sale.total?.toLocaleString()}</div>
-                    <div className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
-                      <ArrowUpRight className="w-3 h-3" /> Profit: {currency}{sale.profit?.toLocaleString()}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-black text-sm">{currency}{sale.total?.toLocaleString()}</div>
+                      <div className="text-[10px] text-green-600 font-bold flex items-center justify-end gap-1">
+                        <ArrowUpRight className="w-3 h-3" /> Profit: {currency}{sale.profit?.toLocaleString()}
+                      </div>
                     </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => setDeleteId(sale.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -383,6 +418,35 @@ export default function AnalyticsPage() {
            </div>
         </CardFooter>
       </Card>
+
+      {/* Delete Confirmation with Password */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Lock className="w-5 h-5" /> History Protection
+            </DialogTitle>
+            <DialogDescription>
+              Authorize deletion of this record. This will undo all database effects associated with this transaction.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-xs font-bold uppercase opacity-70">Secret Password</Label>
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              className="h-12 text-lg font-bold"
+              value={deletePass}
+              onChange={e => setDeletePass(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" className="w-full h-12 text-base font-bold" onClick={handleDeleteSale}>
+              Confirm Authorization
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
