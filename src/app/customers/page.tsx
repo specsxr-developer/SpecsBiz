@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { 
   Users, 
   Search, 
@@ -21,7 +21,9 @@ import {
   CheckCircle2,
   X,
   CreditCard,
-  Receipt
+  Receipt,
+  ArrowRight,
+  ChevronLeft
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -65,15 +67,17 @@ import { useToast } from "@/hooks/use-toast"
 import { useBusinessData } from "@/hooks/use-business-data"
 import { useUser, useFirestore, useMemoFirebase, useCollection } from "@/firebase"
 import { collection, query, orderBy } from "firebase/firestore"
+import { cn } from "@/lib/utils"
 
 export default function CustomersPage() {
   const { toast } = useToast()
   const { user } = useUser()
   const db = useFirestore()
-  const { customers, actions, isLoading, currency, products } = useBusinessData()
+  const { customers, actions, isLoading, currency, products, language } = useBusinessData()
   
   const [search, setSearch] = useState("")
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [addStep, setAddStep] = useState(1) // 1: Profile, 2: Baki Details
   const [editingCustomer, setEditingCustomer] = useState<any>(null)
   
   // Details Sheet States
@@ -81,7 +85,7 @@ export default function CustomersPage() {
   const [isRecordAddOpen, setIsRecordAddOpen] = useState(false)
   const [newRecord, setNewRecord] = useState({
     productName: "",
-    quantity: "",
+    quantity: "1",
     amount: "",
     promiseDate: new Date().toISOString().split('T')[0]
   })
@@ -89,6 +93,26 @@ export default function CustomersPage() {
   // Partial Payment State
   const [paymentDialogRecord, setPaymentDialogRecord] = useState<any>(null)
   const [paymentAmount, setPaymentAmount] = useState("")
+
+  const [newCustomer, setNewCustomer] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    address: "",
+    totalDue: 0,
+    segment: "Baki User"
+  })
+
+  // Reset dialog state when opening
+  const handleOpenAddDialog = (open: boolean) => {
+    setIsAddOpen(open)
+    if (open) {
+      setAddStep(1)
+      setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
+      setNewRecord({ productName: "", quantity: "1", amount: "", promiseDate: new Date().toISOString().split('T')[0] })
+    }
+  }
 
   // Fetch Baki Records for selected customer
   const bakiRecordsQuery = useMemoFirebase(() => {
@@ -101,43 +125,38 @@ export default function CustomersPage() {
 
   const { data: fbBakiRecords } = useCollection(bakiRecordsQuery);
   
-  // Local or FB baki records
   const currentBakiRecords = detailsCustomer 
     ? (user ? (fbBakiRecords || []) : (detailsCustomer.bakiRecords || []))
     : [];
 
-  const [newCustomer, setNewCustomer] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    address: "",
-    totalDue: 0,
-    segment: "Baki User"
-  })
-
-  // Helper functions to open dialogs with delay to prevent pointer-events lock
-  const openEditProfile = (customer: any) => {
-    setTimeout(() => setEditingCustomer(customer), 10);
-  }
-
-  const openAddBaki = () => {
-    setTimeout(() => setIsRecordAddOpen(true), 10);
-  }
-
-  const openPaymentDialog = (record: any) => {
-    setTimeout(() => setPaymentDialogRecord(record), 10);
-  }
-
-  const handleAddCustomer = () => {
+  const handleAddCustomerAndBaki = () => {
     if (!newCustomer.firstName) return
+    
+    // 1. Create unique ID
+    const customerId = Date.now().toString()
+    
+    // 2. Register Customer Profile
     actions.addCustomer({
       ...newCustomer,
-      totalDue: parseFloat(newCustomer.totalDue.toString()) || 0
+      id: customerId,
+      totalDue: 0 // Will be updated by baki record
     })
-    setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
+
+    // 3. Add Baki Record if provided
+    if (newRecord.productName && newRecord.amount) {
+      actions.addBakiRecord(customerId, {
+        productName: newRecord.productName,
+        quantity: parseFloat(newRecord.quantity) || 1,
+        amount: parseFloat(newRecord.amount) || 0,
+        promiseDate: new Date(newRecord.promiseDate).toISOString()
+      });
+    }
+
     setIsAddOpen(false)
-    toast({ title: "Customer Added" })
+    toast({ 
+      title: language === 'en' ? "Customer Registered" : "কাস্টমার রেজিস্টার হয়েছে", 
+      description: language === 'en' ? "Profile and initial baki record saved." : "প্রোফাইল এবং বাকির হিসাব সেভ হয়েছে।" 
+    })
   }
 
   const handleUpdateCustomer = () => {
@@ -150,7 +169,7 @@ export default function CustomersPage() {
     toast({ title: "Profile Updated" })
   }
 
-  const handleAddBakiRecord = () => {
+  const handleAddBakiRecordOnly = () => {
     if (!detailsCustomer || !newRecord.productName || !newRecord.amount) return;
     
     actions.addBakiRecord(detailsCustomer.id, {
@@ -162,7 +181,7 @@ export default function CustomersPage() {
 
     setNewRecord({
       productName: "",
-      quantity: "",
+      quantity: "1",
       amount: "",
       promiseDate: new Date().toISOString().split('T')[0]
     });
@@ -196,38 +215,93 @@ export default function CustomersPage() {
           <p className="text-sm text-muted-foreground">Detailed credit tracking for your customers.</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+          <Dialog open={isAddOpen} onOpenChange={handleOpenAddDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-accent hover:bg-accent/90 gap-2 flex-1 sm:flex-none shadow-lg">
-                <Plus className="w-4 h-4" /> Add New Baki User
+              <Button className="bg-accent hover:bg-accent/90 gap-2 flex-1 sm:flex-none h-12 shadow-lg font-bold text-base">
+                <Plus className="w-5 h-5" /> Add New Baki User
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Register New Customer</DialogTitle>
+            <DialogContent className="w-[95vw] sm:max-w-[500px] overflow-hidden p-0">
+              <DialogHeader className="p-6 pb-0">
+                <DialogTitle className="text-xl font-headline flex items-center gap-2">
+                  {addStep === 1 ? "Register New Customer" : "Initial Baki Details"}
+                  <Badge variant="secondary" className="ml-auto text-[10px] uppercase font-bold">Step {addStep}/2</Badge>
+                </DialogTitle>
+                <DialogDescription>
+                  {addStep === 1 
+                    ? "Start by creating the customer's identity profile." 
+                    : `Now record the products taken on credit by ${newCustomer.firstName}.`
+                  }
+                </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">First Name</Label>
-                    <Input className="h-9" value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} />
+
+              <div className="p-6">
+                {addStep === 1 ? (
+                  <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold uppercase opacity-70">First Name</Label>
+                        <Input className="h-11 border-accent/20" placeholder="e.g. Rahim" value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold uppercase opacity-70">Last Name</Label>
+                        <Input className="h-11 border-accent/20" placeholder="e.g. Uddin" value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold uppercase opacity-70">Phone Number</Label>
+                      <Input className="h-11 border-accent/20" placeholder="01XXX-XXXXXX" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold uppercase opacity-70">Address</Label>
+                      <Input className="h-11 border-accent/20" placeholder="House, Road, Area..." value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Last Name</Label>
-                    <Input className="h-9" value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} />
+                ) : (
+                  <div className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold uppercase opacity-70">Product Name</Label>
+                      <Input className="h-11 border-accent/20" placeholder="e.g. Super Power Battery" value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold uppercase opacity-70">Quantity</Label>
+                        <Input type="number" step="0.01" className="h-11 border-accent/20" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold uppercase opacity-70">Total Owed ({currency})</Label>
+                        <Input type="number" step="0.01" className="h-11 border-accent/20 font-black text-destructive" placeholder="0.00" value={newRecord.amount} onChange={e => setNewRecord({...newRecord, amount: e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold uppercase opacity-70">Payment Promise Date</Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input type="date" className="h-11 pl-10 border-accent/20" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Phone Number</Label>
-                  <Input className="h-9" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Address</Label>
-                  <Input className="h-9" value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} />
-                </div>
+                )}
               </div>
-              <DialogFooter>
-                <Button className="w-full bg-accent" onClick={handleAddCustomer}>Create Profile</Button>
+
+              <DialogFooter className="p-6 bg-muted/20 border-t flex flex-row gap-3">
+                {addStep === 1 ? (
+                  <>
+                    <Button variant="ghost" className="flex-1 h-12" onClick={() => handleAddCustomerAndBaki()} disabled={!newCustomer.firstName}>Skip Baki (Just Save)</Button>
+                    <Button className="flex-1 bg-accent h-12 text-base font-bold shadow-lg" onClick={() => setAddStep(2)} disabled={!newCustomer.firstName}>
+                      Next: Add Baki <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0 border border-accent/10" onClick={() => setAddStep(1)}>
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <Button className="flex-1 bg-primary hover:bg-primary/90 h-12 text-base font-bold shadow-xl" onClick={handleAddCustomerAndBaki} disabled={!newRecord.productName || !newRecord.amount}>
+                      <CheckCircle2 className="mr-2 w-5 h-5 text-accent" /> Save Profile & Baki
+                    </Button>
+                  </>
+                )}
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -319,7 +393,7 @@ export default function CustomersPage() {
                             <Button variant="ghost" size="icon" className="h-9 w-9"><MoreHorizontal className="w-4 h-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => openEditProfile(c)}>
+                            <DropdownMenuItem className="gap-2 text-xs" onClick={() => setEditingCustomer(c)}>
                               <Edit2 className="w-3.5 h-3.5" /> Edit Profile
                             </DropdownMenuItem>
                             <DropdownMenuItem className="gap-2 text-xs text-destructive" onClick={() => actions.deleteCustomer(c.id)}>
@@ -357,7 +431,7 @@ export default function CustomersPage() {
                 <p className="text-[10px] font-bold uppercase opacity-50">Total Owed</p>
                 <p className="text-2xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
               </div>
-              <Button className="h-full bg-accent hover:bg-accent/90 shadow-xl px-6 font-bold" onClick={openAddBaki}>
+              <Button className="h-full bg-accent hover:bg-accent/90 shadow-xl px-6 font-bold" onClick={() => setIsRecordAddOpen(true)}>
                 <Plus className="w-5 h-5 mr-2" /> Add New Baki
               </Button>
             </div>
@@ -426,7 +500,7 @@ export default function CustomersPage() {
                                   variant="outline" 
                                   size="sm" 
                                   className="h-8 text-xs border-accent text-accent hover:bg-accent/5"
-                                  onClick={() => openPaymentDialog(record)}
+                                  onClick={() => setPaymentDialogRecord(record)}
                                 >
                                   <CreditCard className="w-3.5 h-3.5 mr-1" /> Pay Part
                                 </Button>
@@ -496,7 +570,7 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* New Baki Record Dialog */}
+      {/* New Baki Record Dialog (From Sheet) */}
       <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
         <DialogContent className="w-[95vw] max-w-[400px]">
           <DialogHeader>
@@ -516,6 +590,7 @@ export default function CustomersPage() {
                 <Label className="text-xs">Quantity</Label>
                 <Input 
                   type="number" 
+                  step="0.01"
                   value={newRecord.quantity} 
                   onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} 
                 />
@@ -524,6 +599,7 @@ export default function CustomersPage() {
                 <Label className="text-xs">Total Amount ({currency})</Label>
                 <Input 
                   type="number" 
+                  step="0.01"
                   value={newRecord.amount} 
                   onChange={e => setNewRecord({...newRecord, amount: e.target.value})} 
                 />
@@ -539,7 +615,7 @@ export default function CustomersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full bg-accent shadow-xl" onClick={handleAddBakiRecord}>Record This Baki</Button>
+            <Button className="w-full bg-accent shadow-xl" onClick={handleAddBakiRecordOnly}>Record This Baki</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
