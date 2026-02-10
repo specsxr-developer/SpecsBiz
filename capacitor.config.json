@@ -1,6 +1,11 @@
+
 {
   "appId": "com.specsbiz.sbm",
   "appName": "SpecsBiz",
   "webDir": "out",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": ["*"]
+  }
 }

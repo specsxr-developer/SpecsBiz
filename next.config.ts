@@ -2,7 +2,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // Standard Web App mode
+  // Static Export mode is REQUIRED for Capacitor/Mobile Apps
+  output: 'export',
   images: {
     unoptimized: true,
     remotePatterns: [
