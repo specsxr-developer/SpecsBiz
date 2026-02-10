@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { 
   BarChart3, 
   TrendingUp, 
@@ -60,7 +60,12 @@ export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"day" | "week" | "month" | "year">("week")
   const [isAuditing, setIsAuditing] = useState(false)
   const [auditResult, setAuditResult] = useState<AnalyzeBusinessHealthOutput | null>(null)
-  const [search, setSearch] = useState("")
+  const [mounted, setMounted] = useState(false)
+
+  // Hydration safety for charts
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Deletion Password Protection
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -108,7 +113,7 @@ export default function AnalyticsPage() {
     else if (timeRange === "month") steps = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) })
     else return eachMonthOfInterval({ start: startOfYear(now), end: endOfYear(now) }).map(m => {
       const monthSales = filteredSales.filter(s => isSameMonth(new Date(s.saleDate), m))
-      return { name: format(m, "MMM"), revenue: monthSales.reduce((sum, s) => sum + (s.total || 0), 0), profit: monthSales.reduce((sum, s) => sum + (s.profit || 0), 0) }
+      return { name: format(m, "MMM"), revenue: monthSales.reduce((sum, s) => sum + (sum || 0), 0), profit: monthSales.reduce((sum, s) => sum + (s.profit || 0), 0) }
     })
 
     return steps.map(d => {
@@ -196,18 +201,26 @@ export default function AnalyticsPage() {
       </div>
 
       <Card className="p-6">
-        <ChartContainer config={chartConfig} className="h-[350px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-              <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-              <YAxis fontSize={10} axisLine={false} tickLine={false} />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="revenue" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="profit" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+        <div className="h-[350px] w-full">
+          {mounted ? (
+            <ChartContainer config={chartConfig} className="h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart data={chartData} id="analytics-main-chart">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Bar id="revenue-bar" dataKey="revenue" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                  <Bar id="profit-bar" dataKey="profit" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-full w-full bg-muted/10 animate-pulse rounded-lg flex items-center justify-center">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Loading Analytics...</p>
+            </div>
+          )}
+        </div>
       </Card>
 
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
