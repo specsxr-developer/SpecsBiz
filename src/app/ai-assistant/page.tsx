@@ -81,12 +81,19 @@ export default function AIAssistantPage() {
 
   const { data: allFbMessages, isLoading: isHistoryLoading } = useCollection(aiMessagesQuery);
 
-  // Initialize first session if none exists
+  // Initialize first session ONLY ONCE on mount
   useEffect(() => {
     if (!activeSessionId && !isLoading) {
-      setActiveSessionId(Date.now().toString())
+      const savedSid = localStorage.getItem('specsbiz_active_session');
+      if (savedSid) {
+        setActiveSessionId(savedSid);
+      } else {
+        const newSid = Date.now().toString();
+        setActiveSessionId(newSid);
+        localStorage.setItem('specsbiz_active_session', newSid);
+      }
     }
-  }, [activeSessionId])
+  }, []);
 
   // Group messages into sessions
   const sessions = useMemo(() => {
@@ -183,14 +190,18 @@ export default function AIAssistantPage() {
         : "Inventory is currently empty."
         
       const salesSummary = sales.length > 0
-        ? sales.map(s => `Date: ${new Date(s.saleDate).toLocaleDateString()}, Total: ${currency}${s.total}, Profit: ${currency}${s.profit}, Items: ${s.items?.map((i: any) => i.name).join(';')}`).slice(0, 100).join(' || ')
+        ? sales.map(s => `Date: ${new Date(s.saleDate).toLocaleDateString()}, Total: ${currency}${s.total}, Items: ${s.items?.map((i: any) => i.name).join(';')}`).slice(0, 50).join(' || ')
         : "No sales history yet."
         
       const customersSummary = customers.length > 0
         ? customers.map(c => `${c.firstName} ${c.lastName}: Total Due ${currency}${c.totalDue}`).join(' | ')
         : "No customers recorded."
 
-      const history = currentMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })).slice(-20)
+      // Get history for the current session to maintain context
+      const history = currentMessages
+        .filter(m => m.id !== 'welcome')
+        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+        .slice(-10)
 
       const result = await businessChat({
         message: messageText,
@@ -211,10 +222,11 @@ export default function AIAssistantPage() {
 
       await saveMessage('assistant', result.reply);
     } catch (error) {
+      console.error("Chat Error:", error);
       toast({ 
         variant: "destructive", 
         title: language === 'bn' ? "কানেকশন সমস্যা" : "AI Snag", 
-        description: language === 'bn' ? "আমি ডেটা এনালাইজ করতে পারছি না।" : "Memory error or connection lost." 
+        description: language === 'bn' ? "আমি ডেটা এনালাইজ করতে পারছি না। দয়া করে আবার চেষ্টা করুন।" : "Memory error or connection lost. Please try again." 
       })
     } finally {
       setIsLoading(false)
@@ -239,7 +251,9 @@ export default function AIAssistantPage() {
       await batch.commit();
 
       if (deleteTargetId === activeSessionId || deleteTargetId === "all") {
-        setActiveSessionId(Date.now().toString());
+        const newSid = Date.now().toString();
+        setActiveSessionId(newSid);
+        localStorage.setItem('specsbiz_active_session', newSid);
       }
 
       setIsClearOpen(false);
@@ -252,7 +266,9 @@ export default function AIAssistantPage() {
   }
 
   const startNewChat = () => {
-    setActiveSessionId(Date.now().toString());
+    const newSid = Date.now().toString();
+    setActiveSessionId(newSid);
+    localStorage.setItem('specsbiz_active_session', newSid);
     setInput("");
   }
 
@@ -311,7 +327,6 @@ export default function AIAssistantPage() {
                   </CardDescription>
                 </div>
               </div>
-              {/* Back to Session List on Mobile toggle could go here if needed */}
             </div>
           </CardHeader>
           

@@ -99,7 +99,11 @@ const businessChatFlow = ai.defineFlow(
       return output;
     } catch (e) {
       console.error("AI Flow Error:", e);
-      return { reply: input.businessContext.language === 'bn' ? "আমার সিস্টেমটি এই মুহূর্তে একটু ব্যস্ত। একটু পরে ট্রাই করুন।" : "I'm a bit overwhelmed right now. Give me a second and try again!" };
+      // More contextual error message based on the exception type if possible, or just refined text
+      const errorMessage = input.businessContext.language === 'bn' 
+        ? "আমার সিস্টেমটি এই মুহূর্তে একটু ব্যস্ত। সার্ভারের সাথে কানেকশন চেক করুন বা একটু পর আবার চেষ্টা করুন।" 
+        : "My intelligence core is a bit overwhelmed. Please check your connection or try again in a moment!";
+      return { reply: errorMessage };
     }
   }
 );
