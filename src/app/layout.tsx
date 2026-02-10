@@ -34,14 +34,14 @@ export default function RootLayout({
           strategy="afterInteractive"
         />
         
-        {/* OneSignal Initialization Hook */}
+        {/* OneSignal Initialization Script */}
         <script dangerouslySetInnerHTML={{
           __html: `
             window.OneSignal = window.OneSignal || [];
             OneSignal.push(function() {
               OneSignal.init({
                 appId: "YOUR_ONESIGNAL_APP_ID", // <-- আপনার OneSignal App ID এখানে বসাবেন
-                safari_web_id: "web.onesignal.auto.0bc...",
+                safari_web_id: "web.onesignal.auto.0bc6006c-...", 
                 notifyButton: {
                   enable: false,
                 },

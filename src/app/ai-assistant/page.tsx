@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
@@ -49,7 +50,7 @@ export default function AIAssistantPage() {
   const [isLoading, setIsLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Real-time chat messages from Firestore
+  // Real-time chat messages from Firestore (Permanent Brain Memory)
   const aiMessagesQuery = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'aiMessages'), orderBy('timestamp', 'asc'), limit(50));
@@ -95,7 +96,7 @@ export default function AIAssistantPage() {
     try {
       await saveMessage('user', messageText);
 
-      // Construct powerful business context for the AI
+      // Construct powerful business context for the AI (A to Z Access)
       const inventorySummary = products.length > 0 
         ? products.map(p => `[Name: ${p.name}, Stock: ${p.stock}${p.unit}, Cost: ${p.purchasePrice}, Price: ${p.sellingPrice}, Category: ${p.category}]`).join('\n')
         : "No products in inventory."
@@ -131,7 +132,7 @@ export default function AIAssistantPage() {
 
       await saveMessage('assistant', result.reply);
     } catch (error) {
-      await saveMessage('assistant', language === 'bn' ? "দুঃখিত ভাই, সার্ভারে একটু সমস্যা হচ্ছে। দয়া করে আবার চেষ্টা করুন।" : "Sorry Partner, I'm having trouble connecting to my brain. Please try again.");
+      await saveMessage('assistant', language === 'bn' ? "দুঃখিত ভাই, সার্ভারের সাথে যোগাযোগ করতে পারছি না। এপিআই কি অথবা কানেকশনে সমস্যা হচ্ছে।" : "Sorry Partner, I'm having trouble connecting to my brain. Please check connection.");
     } finally {
       setIsLoading(false)
     }
