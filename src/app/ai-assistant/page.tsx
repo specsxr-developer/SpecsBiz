@@ -27,20 +27,18 @@ import { useToast } from "@/hooks/use-toast"
 import { translations } from "@/lib/translations"
 
 const QUICK_ACTIONS = [
+  "Who took credit today?",
   "Future profit prediction",
   "Summarize my business health",
   "Which items should I restock?",
-  "Who owes me the most money?",
-  "Analyze my sales trends",
   "Suggest ways to increase profit"
 ]
 
 const QUICK_ACTIONS_BN = [
+  "আজকে কে কে বাকিতে নিসে?",
   "ভবিষ্যৎ লাভের সম্ভাবনা কেমন?",
   "আমার ব্যবসার বর্তমান অবস্থা জানাও",
   "কোন কোন মাল কেনা দরকার?",
-  "কার কাছে সবচেয়ে বেশি টাকা বাকি?",
-  "বিক্রির ট্রেন্ড অ্যানালাইজ করো",
   "লাভ বাড়ানোর বুদ্ধি দাও"
 ]
 
@@ -108,7 +106,7 @@ export default function AIAssistantPage() {
         : "Inventory is currently empty."
         
       const salesSummary = sales.length > 0
-        ? sales.map(s => `Date: ${new Date(s.saleDate).toLocaleDateString()}, Total: ${currency}${s.total}, Profit: ${currency}${s.profit}, Items: ${s.items?.map((i: any) => i.name).join(';')}`).slice(0, 50).join(' || ')
+        ? sales.map(s => `Date: ${new Date(s.saleDate).toISOString()}, Total: ${currency}${s.total}, Profit: ${currency}${s.profit}, Items: ${s.items?.map((i: any) => i.name).join(';')}`).slice(0, 100).join(' || ')
         : "No sales history yet."
         
       const customersSummary = customers.length > 0
@@ -129,7 +127,8 @@ export default function AIAssistantPage() {
           potentialProfit: businessMetrics.potentialProfit,
           topSellingItems: businessMetrics.topItems || "None yet",
           currency,
-          language
+          language,
+          currentDate: new Date().toLocaleString()
         }
       })
 
