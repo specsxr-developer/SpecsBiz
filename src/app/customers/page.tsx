@@ -83,7 +83,7 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
-  // Auto-calculate total amount based on qty and unit price
+  // Auto-calculate total amount based on qty and unit price (A to Z Style)
   useEffect(() => {
     const qty = parseFloat(newRecord.quantity) || 0
     const price = parseFloat(newRecord.unitPrice) || 0
