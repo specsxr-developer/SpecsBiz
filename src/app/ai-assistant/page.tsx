@@ -7,17 +7,16 @@ import {
   Send, 
   Sparkles, 
   History, 
-  Store,
   MessageSquare,
-  TrendingUp,
-  AlertCircle,
   Loader2,
   Zap,
   Trash2,
   Lock,
   ChevronRight,
   BrainCircuit,
-  Clock
+  Clock,
+  Plus,
+  ArrowLeft
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -39,7 +38,7 @@ import { businessChat } from "@/ai/flows/business-chat-flow"
 import { useToast } from "@/hooks/use-toast"
 import { translations } from "@/lib/translations"
 import { useUser, useFirestore, useMemoFirebase, useCollection } from "@/firebase"
-import { collection, query, orderBy, addDoc, serverTimestamp, deleteDoc, getDocs, writeBatch } from "firebase/firestore"
+import { collection, query, orderBy, addDoc, serverTimestamp, getDocs, writeBatch, where } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 
 const QUICK_ACTIONS = [
@@ -58,8 +57,6 @@ const QUICK_ACTIONS_BN = [
   "লাভ বাড়ানোর বুদ্ধি দাও"
 ]
 
-const LOCAL_STORAGE_KEY = "specsbiz_ai_chat_v2"
-
 export default function AIAssistantPage() {
   const { toast } = useToast()
   const { user } = useUser()
@@ -69,42 +66,66 @@ export default function AIAssistantPage() {
   
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [localMessages, setLocalMessages] = useState<any[]>([])
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   
-  // Clear Memory Dialog State
+  // Deletion Dialog State
   const [isClearOpen, setIsClearOpen] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | "all">("all")
   const [password, setPassword] = useState("")
 
-  // Real-time Firestore History
+  // Fetch all messages for current user
   const aiMessagesQuery = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
     return query(collection(db, 'users', user.uid, 'aiMessages'), orderBy('timestamp', 'asc'));
   }, [user?.uid, db]);
 
-  const { data: fbMessages, isLoading: isHistoryLoading } = useCollection(aiMessagesQuery);
+  const { data: allFbMessages, isLoading: isHistoryLoading } = useCollection(aiMessagesQuery);
 
-  // Sync Local Storage on mount
+  // Initialize first session if none exists
   useEffect(() => {
-    if (!user && typeof window !== 'undefined') {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
-      if (saved) setLocalMessages(JSON.parse(saved))
+    if (!activeSessionId && !isLoading) {
+      setActiveSessionId(Date.now().toString())
     }
-  }, [user])
+  }, [activeSessionId])
 
-  // Unified persistent messages
-  const messages = useMemo(() => {
-    const list = user ? (fbMessages || []) : localMessages;
+  // Group messages into sessions
+  const sessions = useMemo(() => {
+    if (!allFbMessages) return [];
+    const grouped: Record<string, any[]> = {};
+    allFbMessages.forEach(m => {
+      const sid = m.sessionId || 'legacy';
+      if (!grouped[sid]) grouped[sid] = [];
+      grouped[sid].push(m);
+    });
+    
+    return Object.entries(grouped)
+      .map(([id, msgs]) => ({
+        id,
+        title: msgs.find(m => m.role === 'user')?.content || (language === 'bn' ? 'পুরনো চ্যাট' : 'Previous Chat'),
+        timestamp: msgs[0]?.timestamp,
+        messages: msgs
+      }))
+      .sort((a, b) => {
+        const timeA = a.timestamp?.seconds || 0;
+        const timeB = b.timestamp?.seconds || 0;
+        return timeB - timeA;
+      });
+  }, [allFbMessages, language]);
+
+  // Current session messages
+  const currentMessages = useMemo(() => {
+    const list = (allFbMessages || []).filter(m => m.sessionId === activeSessionId);
     if (list.length === 0) {
       return [{ 
         id: 'welcome', 
         role: "assistant" as const, 
         content: language === 'bn' 
-          ? "হ্যালো! আমি SpecsAI। আমি আপনার ব্যবসার প্রতিটি ডেটা জানি—ইনভেন্টরি থেকে শুরু করে কার কাছে কত বাকি সব। আপনার ব্যবসার ভবিষ্যৎ বা বর্তমান নিয়ে যেকোনো কিছু জিজ্ঞেস করুন, আমি আপনার পার্টনার হিসেবে আছি!" 
-          : "Hi! I'm SpecsAI. I know your business inside out—from stock levels to every penny of debt. Ask me anything about your business trends, future, or daily ops. I'm here as your smart partner!" 
+          ? "হ্যালো ভাই! আমি SpecsAI। আমি আপনার ব্যবসার সব হিসাব জানি। নতুন চ্যাট শুরু করতে পারেন অথবা আগেরগুলো ডান দিক থেকে দেখতে পারেন। আজ কি সাহায্য করতে পারি?" 
+          : "Hi there! I'm SpecsAI. I know your business inside out. You can start a new discussion or explore previous ones from the history. How can I help today?" 
       }];
     }
     return list;
-  }, [user, fbMessages, localMessages, language]);
+  }, [allFbMessages, activeSessionId, language]);
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -112,7 +133,7 @@ export default function AIAssistantPage() {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, isLoading])
+  }, [currentMessages, isLoading])
 
   // Context calculations
   const businessMetrics = useMemo(() => {
@@ -137,18 +158,14 @@ export default function AIAssistantPage() {
   }, [products, sales])
 
   const saveMessage = async (role: 'user' | 'assistant', content: string) => {
-    const msg = { role, content, timestamp: new Date().toISOString(), id: Date.now().toString() };
+    if (!user?.uid || !db || !activeSessionId) return;
     
-    if (user?.uid && db) {
-      await addDoc(collection(db, 'users', user.uid, 'aiMessages'), {
-        ...msg,
-        timestamp: serverTimestamp()
-      });
-    } else {
-      const updated = [...localMessages, msg];
-      setLocalMessages(updated);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
-    }
+    await addDoc(collection(db, 'users', user.uid, 'aiMessages'), {
+      role,
+      content,
+      sessionId: activeSessionId,
+      timestamp: serverTimestamp()
+    });
   }
 
   const handleSend = async (text?: string) => {
@@ -159,10 +176,8 @@ export default function AIAssistantPage() {
     setIsLoading(true)
 
     try {
-      // 1. Save User Message
       await saveMessage('user', messageText);
 
-      // 2. Gather LIVE Context
       const inventorySummary = products.length > 0 
         ? products.map(p => `${p.name}: ${p.stock} ${p.unit} (Buy: ${currency}${p.purchasePrice}, Sell: ${currency}${p.sellingPrice})`).join(' | ')
         : "Inventory is currently empty."
@@ -175,9 +190,8 @@ export default function AIAssistantPage() {
         ? customers.map(c => `${c.firstName} ${c.lastName}: Total Due ${currency}${c.totalDue}`).join(' | ')
         : "No customers recorded."
 
-      const history = messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })).slice(-20)
+      const history = currentMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })).slice(-20)
 
-      // 3. Call AI
       const result = await businessChat({
         message: messageText,
         history,
@@ -195,7 +209,6 @@ export default function AIAssistantPage() {
         }
       })
 
-      // 4. Save Assistant Message
       await saveMessage('assistant', result.reply);
     } catch (error) {
       toast({ 
@@ -208,23 +221,39 @@ export default function AIAssistantPage() {
     }
   }
 
-  const handleClearHistory = async () => {
+  const handleAuthorizedDelete = async () => {
     if (password === "specsxr") {
-      if (user?.uid && db) {
-        const snap = await getDocs(collection(db, 'users', user.uid, 'aiMessages'));
-        const batch = writeBatch(db);
-        snap.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
+      if (!user?.uid || !db) return;
+      
+      const collRef = collection(db, 'users', user.uid, 'aiMessages');
+      let q;
+      if (deleteTargetId === "all") {
+        q = query(collRef);
       } else {
-        setLocalMessages([]);
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        q = query(collRef, where('sessionId', '==', deleteTargetId));
       }
+
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      snap.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
+      if (deleteTargetId === activeSessionId || deleteTargetId === "all") {
+        setActiveSessionId(Date.now().toString());
+      }
+
       setIsClearOpen(false);
       setPassword("");
-      toast({ title: language === 'en' ? "Memory Wiped" : "মেমোরি মুছে ফেলা হয়েছে" });
+      setDeleteTargetId("all");
+      toast({ title: language === 'en' ? "History Wiped" : "হিস্ট্রি মুছে ফেলা হয়েছে" });
     } else {
       toast({ variant: "destructive", title: "Wrong Password" });
     }
+  }
+
+  const startNewChat = () => {
+    setActiveSessionId(Date.now().toString());
+    setInput("");
   }
 
   const actions = language === 'bn' ? QUICK_ACTIONS_BN : QUICK_ACTIONS
@@ -239,46 +268,57 @@ export default function AIAssistantPage() {
           <p className="text-[10px] md:text-xs text-muted-foreground truncate italic">Real-time business memory activated.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-8 text-[10px] gap-2 border-destructive text-destructive hover:bg-destructive/5 font-bold" onClick={() => setIsClearOpen(true)}>
+          <Button 
+            className="h-9 bg-accent hover:bg-accent/90 gap-2 font-bold shadow-md"
+            onClick={startNewChat}
+          >
+            <Plus className="w-4 h-4" /> {language === 'bn' ? 'নতুন চ্যাট' : 'New Chat'}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-9 text-[10px] gap-2 border-destructive text-destructive hover:bg-destructive/5 font-bold" 
+            onClick={() => { setDeleteTargetId("all"); setIsClearOpen(true); }}
+          >
             <Trash2 className="w-3 h-3" /> {t.clearChat}
           </Button>
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 px-3 py-1 flex items-center shrink-0">
-            <Zap className="w-3 h-3 mr-1 text-yellow-500" /> {language === 'bn' ? 'ফুল ডাটা কানেক্টেড' : 'Full Sync'}
-          </Badge>
         </div>
       </div>
 
       <div className="flex-1 grid lg:grid-cols-4 gap-6 min-h-0 w-full">
         <Card className="lg:col-span-3 flex flex-col min-h-0 shadow-2xl border-accent/20 w-full overflow-hidden bg-white rounded-3xl">
           <CardHeader className="border-b bg-accent/5 p-3 md:p-4 py-3 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Avatar className="h-10 w-10 border-2 border-accent shrink-0 shadow-md">
-                  <AvatarFallback className="bg-primary text-white"><Bot className="w-5 h-5" /></AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Avatar className="h-10 w-10 border-2 border-accent shrink-0 shadow-md">
+                    <AvatarFallback className="bg-primary text-white"><Bot className="w-5 h-5" /></AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm md:text-base font-black text-primary">SpecsAI</CardTitle>
+                  <CardDescription className="text-[10px] truncate flex items-center gap-1">
+                    {isLoading ? (
+                      <span className="flex items-center gap-1 font-bold text-accent animate-pulse">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> {language === 'bn' ? 'ডাটা এনালাইজ করছি...' : 'Thinking...'}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-green-600 font-bold uppercase tracking-widest">
+                        <MessageSquare className="w-2.5 h-2.5" /> Live Analysis Mode
+                      </span>
+                    )}
+                  </CardDescription>
+                </div>
               </div>
-              <div className="min-w-0">
-                <CardTitle className="text-base font-black text-primary">SpecsAI</CardTitle>
-                <CardDescription className="text-[10px] truncate flex items-center gap-1">
-                  {isLoading ? (
-                    <span className="flex items-center gap-1 font-bold text-accent animate-pulse">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> {language === 'bn' ? 'ডাটা এনালাইজ করছি...' : 'Thinking...'}
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-green-600 font-bold uppercase tracking-widest">
-                      <MessageSquare className="w-2.5 h-2.5" /> {messages.length} Memory Fragments
-                    </span>
-                  )}
-                </CardDescription>
-              </div>
+              {/* Back to Session List on Mobile toggle could go here if needed */}
             </div>
           </CardHeader>
           
-          <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative bg-[url('https://picsum.photos/seed/bg/1000/1000')] bg-opacity-5">
+          <CardContent className="flex-1 min-h-0 p-0 overflow-hidden relative bg-[url('https://picsum.photos/seed/chatbg/1000/1000')] bg-opacity-5">
             <ScrollArea className="h-full w-full">
               <div className="p-4 space-y-6">
-                {messages.map((msg, idx) => (
+                {currentMessages.map((msg, idx) => (
                   <div key={msg.id || idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
                     <div className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl break-words shadow-md transition-all ${
                       msg.role === 'user' 
@@ -288,7 +328,8 @@ export default function AIAssistantPage() {
                       <p className="text-xs md:text-sm font-medium leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       {msg.timestamp && (
                         <div className={`text-[8px] mt-2 opacity-50 flex items-center gap-1 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <Clock className="w-2 h-2" /> {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          <Clock className="w-2 h-2" /> 
+                          {msg.timestamp?.toDate ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
                         </div>
                       )}
                     </div>
@@ -316,16 +357,14 @@ export default function AIAssistantPage() {
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-2 pb-2">
                   {actions.map((action, i) => (
-                    <Button 
+                    <button 
                       key={i} 
-                      variant="outline" 
-                      size="sm"
-                      className="text-[10px] h-8 rounded-full border-accent/20 bg-white hover:border-accent hover:bg-accent/5 shrink-0 transition-all font-bold"
+                      className="text-[10px] h-8 px-3 rounded-full border border-accent/20 bg-white hover:border-accent hover:bg-accent/5 shrink-0 transition-all font-bold flex items-center gap-1.5 shadow-sm"
                       onClick={() => handleSend(action)}
                       disabled={isLoading}
                     >
-                      <Zap className="w-3 h-3 mr-1 text-yellow-500" /> {action}
-                    </Button>
+                      <Zap className="w-3 h-3 text-yellow-500" /> {action}
+                    </button>
                   ))}
                 </div>
                 <ScrollBar orientation="horizontal" />
@@ -335,7 +374,7 @@ export default function AIAssistantPage() {
             <CardFooter className="p-3 md:p-4 w-full bg-white">
               <div className="flex w-full gap-2 items-center bg-muted/10 p-1 rounded-2xl border">
                 <Input 
-                  placeholder={language === 'bn' ? "যেকোনো কিছু জিজ্ঞেস করুন, আমি মনে রাখব..." : "Ask me anything, I'll remember..."}
+                  placeholder={language === 'bn' ? "যেকোনো কিছু জিজ্ঞেস করুন..." : "Ask me anything..."}
                   className="flex-1 text-sm h-12 border-none bg-transparent focus-visible:ring-0 shadow-none"
                   value={input}
                   onChange={e => setInput(e.target.value)}
@@ -354,26 +393,49 @@ export default function AIAssistantPage() {
           </div>
         </Card>
 
-        <div className="hidden lg:flex flex-col gap-6 overflow-y-auto pr-1">
-          <Card className="border-accent/10 shadow-lg bg-primary text-white overflow-hidden">
-            <CardHeader className="p-4 bg-white/5 border-b border-white/5">
+        {/* Unified History Sidebar */}
+        <div className="hidden lg:flex flex-col gap-6 overflow-hidden pr-1">
+          <Card className="flex-1 border-accent/10 shadow-lg bg-primary text-white overflow-hidden flex flex-col">
+            <CardHeader className="p-4 bg-white/5 border-b border-white/5 shrink-0">
               <CardTitle className="text-xs uppercase tracking-widest font-black flex items-center gap-2">
                 <History className="w-4 h-4 text-accent" /> {t.chatHistory}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[250px]">
-                {messages.filter(m => m.id !== 'welcome').length === 0 ? (
+            <CardContent className="p-0 flex-1 overflow-hidden">
+              <ScrollArea className="h-full">
+                {sessions.length === 0 ? (
                   <div className="p-8 text-center text-[10px] opacity-40 italic">No previous chats.</div>
                 ) : (
                   <div className="divide-y divide-white/5">
-                    {messages.filter(m => m.id !== 'welcome').slice().reverse().map((msg, i) => (
-                      <div key={i} className="p-3 hover:bg-white/5 transition-colors cursor-default">
-                        <div className="flex items-center justify-between mb-1">
-                          <Badge variant="ghost" className={cn("h-4 px-1 text-[8px] uppercase", msg.role === 'user' ? "text-accent" : "text-white")}>{msg.role}</Badge>
-                          <span className="text-[8px] opacity-40">{msg.timestamp ? new Date(msg.timestamp).toLocaleDateString() : 'Now'}</span>
+                    {sessions.map((session) => (
+                      <div 
+                        key={session.id} 
+                        className={cn(
+                          "p-3 transition-colors cursor-pointer group/item flex justify-between items-start gap-2",
+                          activeSessionId === session.id ? "bg-white/10" : "hover:bg-white/5"
+                        )}
+                        onClick={() => setActiveSessionId(session.id)}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[8px] opacity-40">
+                              {session.timestamp?.toDate ? new Date(session.timestamp.toDate()).toLocaleDateString() : 'Now'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-bold line-clamp-2 opacity-90 leading-relaxed">{session.title}</p>
                         </div>
-                        <p className="text-[10px] line-clamp-2 opacity-80">{msg.content}</p>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-white/30 hover:text-red-400 hover:bg-white/10 opacity-0 group-hover/item:opacity-100 transition-all shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTargetId(session.id);
+                            setIsClearOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -382,7 +444,7 @@ export default function AIAssistantPage() {
             </CardContent>
           </Card>
           
-          <Card className="bg-accent text-white border-none shadow-xl relative overflow-hidden group">
+          <Card className="bg-accent text-white border-none shadow-xl relative overflow-hidden group shrink-0">
             <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-125 transition-transform duration-500">
                <BrainCircuit className="w-24 h-24" />
             </div>
@@ -394,30 +456,41 @@ export default function AIAssistantPage() {
             <CardContent className="p-4 pt-0 relative">
               <p className="text-[11px] font-medium leading-relaxed italic">
                 {language === 'bn' 
-                  ? "আমি আপনার ব্যবসার গত কয়েক মাসের ডাটা এবং আমাদের চ্যাট হিস্ট্রি এক করে এনালাইজ করছি। আপনি চ্যাট বন্ধ করলেও আমার কাছে সব তথ্য নিরাপদ থাকবে।" 
-                  : "I'm merging your business data with our conversation history. Your context is preserved even if you close the app."}
+                  ? "আমি আপনার ব্যবসার প্রতিটি সেশন আলাদাভাবে মনে রাখছি। আপনি চাইলে আগের যেকোনো কথা আবার বের করে দেখতে পারেন।" 
+                  : "I'm storing each discussion session separately. You can revisit or delete specific conversations as needed."}
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Clear Memory Dialog */}
+      {/* Auth-Delete Dialog */}
       <Dialog open={isClearOpen} onOpenChange={setIsClearOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Lock className="w-5 h-5" /> {t.clearChat}
+              <Lock className="w-5 h-5" /> {language === 'bn' ? 'হিস্ট্রি মুছুন' : 'Wipe History'}
             </DialogTitle>
-            <DialogDescription>{t.clearHistoryDesc}</DialogDescription>
+            <DialogDescription>
+              {deleteTargetId === "all" 
+                ? (language === 'bn' ? "সব চ্যাট মুছতে সিক্রেট পাসওয়ার্ড দিন।" : "Enter secret password to wipe ALL conversation history.")
+                : (language === 'bn' ? "এই চ্যাটটি মুছতে সিক্রেট পাসওয়ার্ড দিন।" : "Enter secret password to delete this specific conversation.")}
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
             <Label className="text-xs font-bold uppercase opacity-70">{t.secretKey}</Label>
-            <Input type="password" placeholder="••••••••" className="h-12 text-lg font-bold" value={password} onChange={e => setPassword(e.target.value)} />
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              className="h-12 text-lg font-bold" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              onKeyDown={e => e.key === 'Enter' && handleAuthorizedDelete()}
+            />
           </div>
           <DialogFooter>
-            <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleClearHistory}>
-              {language === 'en' ? 'Authorize & Wipe Memory' : 'অথোরাইজ ও মেমোরি মুছুন'}
+            <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleAuthorizedDelete}>
+              {language === 'en' ? 'Authorize & Delete' : 'অথোরাইজ ও মুছুন'}
             </Button>
           </DialogFooter>
         </DialogContent>
