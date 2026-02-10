@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -8,6 +9,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { BusinessProvider } from '@/hooks/use-business-data';
 import { SplashScreen } from '@/components/splash-screen';
 import { NotificationBell } from '@/components/notification-bell';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'SpecsBiz | Smart Business Manager',
@@ -25,9 +27,30 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        
+        {/* OneSignal SDK */}
+        <Script 
+          src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" 
+          strategy="afterInteractive"
+        />
+        
+        {/* Median.co JS Bridge Handler */}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.OneSignal = window.OneSignal || [];
+            OneSignal.push(function() {
+              OneSignal.init({
+                appId: "YOUR_ONESIGNAL_APP_ID", // Replace this with your actual ID from OneSignal Dashboard
+                safari_web_id: "web.onesignal.auto.0bc...",
+                notifyButton: {
+                  enable: false,
+                },
+              });
+            });
+          `
+        }} />
       </head>
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
-        {/* SplashScreen is placed here to be the first thing rendered in the body */}
         <SplashScreen />
         
         <FirebaseClientProvider>

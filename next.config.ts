@@ -2,7 +2,7 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // output: 'export' removed to allow Server Actions (Required for SpecsAI on Netlify)
+  // CRITICAL: output: 'export' removed to allow Server Actions & AI on Netlify/Vercel
   images: {
     unoptimized: true,
     remotePatterns: [
