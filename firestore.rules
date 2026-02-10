@@ -33,6 +33,12 @@ service cloud.firestore {
         allow update, delete: if isExistingOwner(userId);
       }
 
+      match /aiMessages/{messageId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+
       match /customers/{customerId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId);

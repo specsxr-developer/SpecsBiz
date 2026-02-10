@@ -7,45 +7,16 @@
       "type": "object",
       "description": "Represents a product in the inventory.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Product entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the product."
-        },
-        "description": {
-          "type": "string",
-          "description": "Detailed description of the product."
-        },
-        "sku": {
-          "type": "string",
-          "description": "Stock Keeping Unit, a unique identifier for the product."
-        },
-        "barcode": {
-          "type": "string",
-          "description": "Barcode of the product for easy scanning."
-        },
-        "price": {
-          "type": "number",
-          "description": "Price of the product."
-        },
-        "stockQuantity": {
-          "type": "number",
-          "description": "Current stock quantity of the product."
-        },
-        "alertThreshold": {
-          "type": "number",
-          "description": "Minimum stock quantity before an alert is triggered."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "sku": { "type": "string" },
+        "barcode": { "type": "string" },
+        "price": { "type": "number" },
+        "stockQuantity": { "type": "number" },
+        "alertThreshold": { "type": "number" }
       },
-      "required": [
-        "id",
-        "name",
-        "price",
-        "stockQuantity"
-      ]
+      "required": ["id", "name", "price", "stockQuantity"]
     },
     "Sale": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -53,37 +24,13 @@
       "type": "object",
       "description": "Represents a sale transaction.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Sale entity."
-        },
-        "customerId": {
-          "type": "string",
-          "description": "Reference to Customer. (Relationship: Customer 1:N Sale)"
-        },
-        "saleDate": {
-          "type": "string",
-          "description": "Date and time of the sale.",
-          "format": "date-time"
-        },
-        "totalAmount": {
-          "type": "number",
-          "description": "Total amount of the sale."
-        },
-        "productIds": {
-          "type": "array",
-          "description": "References to Products. (Relationship: Sale 1:N Product)",
-          "items": {
-            "type": "string"
-          }
-        }
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "saleDate": { "type": "string", "format": "date-time" },
+        "totalAmount": { "type": "number" },
+        "productIds": { "type": "array", "items": { "type": "string" } }
       },
-      "required": [
-        "id",
-        "customerId",
-        "saleDate",
-        "totalAmount"
-      ]
+      "required": ["id", "customerId", "saleDate", "totalAmount"]
     },
     "Customer": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -91,45 +38,16 @@
       "type": "object",
       "description": "Represents a customer with credit/baki management.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Customer entity."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "First name of the customer."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "Last name of the customer."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the customer.",
-          "format": "email"
-        },
-        "phone": {
-          "type": "string",
-          "description": "Phone number of the customer."
-        },
-        "address": {
-          "type": "string",
-          "description": "Address of the customer."
-        },
-        "totalDue": {
-          "type": "number",
-          "description": "Total amount of credit/baki the customer currently has."
-        },
-        "segment": {
-          "type": "string",
-          "description": "Customer segment for categorization."
-        }
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "totalDue": { "type": "number" },
+        "segment": { "type": "string" }
       },
-      "required": [
-        "id",
-        "firstName",
-        "email"
-      ]
+      "required": ["id", "firstName", "email"]
     },
     "BakiRecord": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -141,12 +59,25 @@
         "productName": { "type": "string" },
         "quantity": { "type": "number" },
         "amount": { "type": "number" },
-        "paidAmount": { "type": "number", "description": "How much the customer has paid for this specific item so far." },
+        "paidAmount": { "type": "number" },
         "takenDate": { "type": "string", "format": "date-time" },
         "promiseDate": { "type": "string", "format": "date-time" },
-        "note": { "type": "string", "description": "Additional remarks or notes for this record." },
+        "note": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "paid"] }
       }
+    },
+    "AiMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AiMessage",
+      "type": "object",
+      "description": "A persistent message in the AI conversation history.",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "role", "content", "timestamp"]
     },
     "Note": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -170,93 +101,42 @@
       "type": "object",
       "description": "Represents a user of the application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "username": {
-          "type": "string",
-          "description": "Username of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "Role of the user (e.g., admin, staff)."
-        }
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string" }
       },
-      "required": [
-        "id",
-        "username",
-        "email",
-        "role"
-      ]
+      "required": ["id", "username", "email", "role"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          }
-        }
+        "definition": { "entityName": "User", "schema": { "$ref": "#/backend/entities/User" } }
       },
       {
         "path": "/users/{userId}/products/{productId}",
-        "definition": {
-          "entityName": "Product",
-          "schema": {
-            "$ref": "#/backend/entities/Product"
-          }
-        }
+        "definition": { "entityName": "Product", "schema": { "$ref": "#/backend/entities/Product" } }
       },
       {
         "path": "/users/{userId}/customers/{customerId}",
-        "definition": {
-          "entityName": "Customer",
-          "schema": {
-            "$ref": "#/backend/entities/Customer"
-          }
-        }
+        "definition": { "entityName": "Customer", "schema": { "$ref": "#/backend/entities/Customer" } }
       },
       {
-        "path": "/users/{userId}/customers/{customerId}/bakiRecords/{recordId}",
-        "definition": {
-          "entityName": "BakiRecord",
-          "schema": {
-            "$ref": "#/backend/entities/BakiRecord"
-          }
-        }
+        "path": "/users/{userId}/aiMessages/{messageId}",
+        "definition": { "entityName": "AiMessage", "schema": { "$ref": "#/backend/entities/AiMessage" } }
       },
       {
         "path": "/users/{userId}/notes/{noteId}",
-        "definition": {
-          "entityName": "Note",
-          "schema": {
-            "$ref": "#/backend/entities/Note"
-          }
-        }
+        "definition": { "entityName": "Note", "schema": { "$ref": "#/backend/entities/Note" } }
       },
       {
         "path": "/users/{userId}/sales/{saleId}",
-        "definition": {
-          "entityName": "Sale",
-          "schema": {
-            "$ref": "#/backend/entities/Sale"
-          }
-        }
+        "definition": { "entityName": "Sale", "schema": { "$ref": "#/backend/entities/Sale" } }
       }
     ]
   }

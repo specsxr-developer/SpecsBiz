@@ -129,6 +129,9 @@ export const translations = {
     thinking: "Thinking and analyzing...",
     readyToHelp: "Ready to help",
     online: "Always Active",
+    chatHistory: "Chat History",
+    clearChat: "Clear Memory",
+    clearHistoryDesc: "Wiping memory will delete all previous conversations. Enter secret key.",
 
     // Notebook
     notesPlaceholder: "Write your ideas here...",
@@ -285,6 +288,9 @@ export const translations = {
     thinking: "ডেটা এনালাইজ করছি...",
     readyToHelp: "অনলাইনে আছে",
     online: "সক্রিয়",
+    chatHistory: "চ্যাট মেমোরি",
+    clearChat: "মেমোরি মুছুন",
+    clearHistoryDesc: "মেমোরি মুছলে SpecsAI আপনার আগের সব কথা ভুলে যাবে। সিক্রেট কী দিন।",
 
     // Notebook
     notesPlaceholder: "এখানে আপনার আইডিয়া লিখুন...",
