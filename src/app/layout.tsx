@@ -40,7 +40,7 @@ export default function RootLayout({
             window.OneSignal = window.OneSignal || [];
             OneSignal.push(function() {
               OneSignal.init({
-                appId: "YOUR_ONESIGNAL_APP_ID", // <-- আপনার OneSignal App ID এখানে বসাবেন
+                appId: "YOUR_ONESIGNAL_APP_ID", // <-- এখানে আপনার OneSignal App ID বসাবেন
                 safari_web_id: "web.onesignal.auto.0bc6006c-...", 
                 notifyButton: {
                   enable: false,

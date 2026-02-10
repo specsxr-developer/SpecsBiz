@@ -4,7 +4,7 @@
  * @fileOverview SpecsAI - The Ultimate Master Brain Partner for SpecsBiz.
  * 
  * - businessChat: A server action that powers the human-like business partner.
- * - Handles real-time data analysis, future predictions, and proactive advice.
+ * - Directly accesses inventory, sales, and debt data to provide expert advice.
  */
 
 import { ai } from '@/ai/genkit';
