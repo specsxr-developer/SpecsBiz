@@ -80,6 +80,7 @@ export default function CustomersPage() {
   const [isCustomerEditOpen, setIsCustomerEditOpen] = useState(false)
   
   const [newRecord, setNewRecord] = useState({
+    productId: "",
     productName: "",
     quantity: "1",
     unitPrice: "",
@@ -109,6 +110,7 @@ export default function CustomersPage() {
   const selectProduct = (p: any) => {
     setNewRecord(prev => ({
       ...prev,
+      productId: p.id,
       productName: p.name,
       unitPrice: p.sellingPrice.toString(),
     }))
@@ -132,7 +134,7 @@ export default function CustomersPage() {
     if (open) {
       setAddStep(1)
       setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
-      setNewRecord({ productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+      setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
       setProductSearch("")
     }
   }
@@ -144,6 +146,7 @@ export default function CustomersPage() {
     actions.addCustomer({ ...newCustomer, id: customerId, totalDue: bakiAmount })
     if (newRecord.productName && bakiAmount > 0) {
       actions.addBakiRecord(customerId, {
+        productId: newRecord.productId,
         productName: newRecord.productName,
         quantity: parseFloat(newRecord.quantity) || 1,
         amount: bakiAmount,
@@ -152,7 +155,7 @@ export default function CustomersPage() {
       });
     }
     setIsAddOpen(false)
-    toast({ title: language === 'en' ? "Customer Saved" : "কাস্টমার সেভ হয়েছে" })
+    toast({ title: language === 'en' ? "Customer & Baki Saved" : "কাস্টমার ও বাকির হিসাব সেভ হয়েছে" })
   }
 
   const handleUpdateCustomer = () => {
@@ -174,6 +177,7 @@ export default function CustomersPage() {
       return;
     }
     actions.addBakiRecord(detailsCustomer.id, {
+      productId: newRecord.productId,
       productName: newRecord.productName,
       quantity: parseFloat(newRecord.quantity) || 1,
       amount: parseFloat(newRecord.amount) || 0,
@@ -181,8 +185,8 @@ export default function CustomersPage() {
       note: newRecord.note
     });
     setIsRecordAddOpen(false);
-    setNewRecord({ productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
-    toast({ title: "Baki Recorded Successfully" });
+    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+    toast({ title: "Baki Recorded & Stock Updated" });
   }
 
   const handleUpdateBakiRecord = () => {
@@ -193,7 +197,7 @@ export default function CustomersPage() {
       quantity: parseFloat(newRecord.quantity) || 1,
       amount: parseFloat(newRecord.amount) || 0,
       note: newRecord.note
-    }, editingRecord.amount);
+    }, editingRecord.amount, editingRecord.productId, editingRecord.quantity);
     
     setIsRecordEditOpen(false);
     setEditingRecord(null);
@@ -202,16 +206,17 @@ export default function CustomersPage() {
 
   const handleDeleteBakiRecord = (record: any) => {
     if (!detailsCustomer) return;
-    const confirmDelete = window.confirm("Are you sure you want to delete this record? This will reduce customer's total debt.");
+    const confirmDelete = window.confirm("Are you sure? This will restore product stock and reduce debt.");
     if (confirmDelete) {
-      actions.deleteBakiRecord(detailsCustomer.id, record.id, record.amount - (record.paidAmount || 0));
-      toast({ title: "Record Deleted" });
+      actions.deleteBakiRecord(detailsCustomer.id, record.id, record.amount - (record.paidAmount || 0), record.productId, record.quantity);
+      toast({ title: "Record Deleted & Stock Restored" });
     }
   }
 
   const startEditingRecord = (record: any) => {
     setEditingRecord(record);
     setNewRecord({
+      productId: record.productId || "",
       productName: record.productName,
       quantity: record.quantity.toString(),
       unitPrice: (record.amount / record.quantity).toString(),
@@ -338,7 +343,7 @@ export default function CustomersPage() {
               <Button 
                 className="bg-accent h-auto font-black uppercase text-[10px] px-4" 
                 onClick={() => {
-                  setNewRecord({ productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" });
+                  setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" });
                   setIsRecordAddOpen(true);
                 }}
               >
@@ -440,7 +445,10 @@ export default function CustomersPage() {
                         {filteredProducts.map(p => (
                           <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/10 border-b text-xs flex justify-between items-center transition-colors">
                             <span className="font-bold">{p.name}</span>
-                            <span className="font-black text-accent">{currency}{p.sellingPrice}</span>
+                            <div className="text-right">
+                              <span className="font-black text-accent">{currency}{p.sellingPrice}</span>
+                              <span className="text-[8px] opacity-50 block uppercase">Stock: {p.stock}</span>
+                            </div>
                           </button>
                         ))}
                       </ScrollArea>
@@ -479,12 +487,12 @@ export default function CustomersPage() {
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Baki Record</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Modify existing entry for {detailsCustomer?.firstName}</DialogDescription>
+            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Modify entry for {detailsCustomer?.firstName} (Stock will adjust)</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase font-black opacity-60">Product Name</Label>
-              <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" />
+              <Input value={newRecord.productName} readOnly className="h-11 rounded-xl bg-muted/30" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -505,7 +513,7 @@ export default function CustomersPage() {
           </div>
           <DialogFooter>
             <Button className="w-full bg-primary hover:bg-primary/90 h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleUpdateBakiRecord}>
-              Update & Save Changes
+              Update & Adjust Stock
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -551,7 +559,7 @@ export default function CustomersPage() {
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-primary font-black uppercase tracking-tighter">Add New Baki Record</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Adding debt to: {detailsCustomer?.firstName} {detailsCustomer?.lastName}</DialogDescription>
+            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Adding debt to: {detailsCustomer?.firstName} (Stock will decrease)</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="relative">
@@ -579,7 +587,7 @@ export default function CustomersPage() {
 
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase font-black opacity-60">Product Name</Label>
-              <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" />
+              <Input value={newRecord.productName} readOnly className="h-11 rounded-xl bg-muted/30" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
