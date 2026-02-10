@@ -59,7 +59,7 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
       3. BE CONVERSATIONAL: Discuss ideas, listen to the owner, and be supportive.
       4. LANGUAGE: If language is 'bn', reply in Bengali (বাংলা). If English, use English.`,
       history: input.history.map(m => ({
-        role: m.role,
+        role: m.role === 'assistant' ? 'model' : 'user',
         content: [{ text: m.content }]
       })),
       prompt: input.message,
