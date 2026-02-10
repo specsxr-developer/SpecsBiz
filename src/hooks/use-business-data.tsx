@@ -49,6 +49,7 @@ interface BusinessContextType {
     payBakiRecord: (customerId: string, recordId: string, amountToPay: number, currentRecord: any) => void;
     deleteBakiRecord: (customerId: string, recordId: string, remainingAmount: number) => void;
     addRestock: (productId: string, qty: number, buyPrice: number) => void;
+    syncInventoryToProcurement: () => Promise<void>;
     setCurrency: (val: string) => void;
     setLanguage: (lang: 'en' | 'bn') => void;
     resetAllData: () => Promise<void>;
@@ -124,14 +125,40 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const addProduct = useCallback((product: any) => {
     const id = product.id || Date.now().toString();
     const data = { ...product, id };
+    
+    // Record initial stock entry
+    const procId = 'init-' + id;
+    const qty = parseFloat(product.stock) || 0;
+    const bPrice = parseFloat(product.purchasePrice) || 0;
+    const procData = {
+      id: procId,
+      productId: id,
+      productName: product.name,
+      quantity: qty,
+      buyPrice: bPrice,
+      totalCost: qty * bPrice,
+      date: new Date().toISOString(),
+      type: 'initial'
+    };
+
     if (user?.uid && db) {
       setDocumentNonBlocking(doc(db, 'users', user.uid, 'products', id), data, { merge: true });
+      if (qty > 0) {
+        setDocumentNonBlocking(doc(db, 'users', user.uid, 'procurements', procId), procData, { merge: true });
+      }
     } else {
       setLocalProducts(prev => {
         const updated = [data, ...prev];
         localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
         return updated;
       });
+      if (qty > 0) {
+        setLocalProcurements(prev => {
+          const updated = [procData, ...prev];
+          localStorage.setItem(LOCAL_KEYS.PROCUREMENTS, JSON.stringify(updated));
+          return updated;
+        });
+      }
     }
   }, [user?.uid, db]);
 
@@ -148,7 +175,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       quantity: qty,
       buyPrice: buyPrice,
       totalCost: qty * buyPrice,
-      date: new Date().toISOString()
+      date: new Date().toISOString(),
+      type: 'restock'
     };
 
     if (user?.uid && db) {
@@ -170,6 +198,43 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [user?.uid, db, products]);
+
+  const syncInventoryToProcurement = useCallback(async () => {
+    // This creates history for products that were added before this system existed
+    const batchData: any[] = [];
+    products.forEach(p => {
+      const exists = procurements.find(pr => pr.productId === p.id);
+      if (!exists && p.stock > 0) {
+        batchData.push({
+          id: 'sync-' + p.id,
+          productId: p.id,
+          productName: p.name,
+          quantity: p.stock,
+          buyPrice: p.purchasePrice || 0,
+          totalCost: (p.stock * (p.purchasePrice || 0)),
+          date: new Date().toISOString(),
+          type: 'sync'
+        });
+      }
+    });
+
+    if (batchData.length === 0) return;
+
+    if (user?.uid && db) {
+      const batch = writeBatch(db);
+      batchData.forEach(item => {
+        const ref = doc(db, 'users', user.uid, 'procurements', item.id);
+        batch.set(ref, item);
+      });
+      await batch.commit();
+    } else {
+      setLocalProcurements(prev => {
+        const updated = [...batchData, ...prev];
+        localStorage.setItem(LOCAL_KEYS.PROCUREMENTS, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [user?.uid, db, products, procurements]);
 
   const updateProduct = useCallback((productId: string, data: any) => {
     if (user?.uid && db) {
@@ -510,6 +575,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       payBakiRecord,
       deleteBakiRecord,
       addRestock,
+      syncInventoryToProcurement,
       setCurrency,
       setLanguage,
       resetAllData

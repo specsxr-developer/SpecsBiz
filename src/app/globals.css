@@ -53,34 +53,38 @@
 /* Fix for extremely small screens */
 @media (max-width: 480px) {
   html {
-    font-size: 12px;
+    font-size: 11px; /* Smaller base font */
   }
   .container {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
   }
-  h1 { font-size: 1.4rem !important; }
-  h2 { font-size: 1.2rem !important; }
-  .p-4 { padding: 0.6rem !important; }
-  .p-6 { padding: 0.8rem !important; }
+  h1 { font-size: 1.3rem !important; }
+  h2 { font-size: 1.1rem !important; }
+  .p-4 { padding: 0.5rem !important; }
+  .p-6 { padding: 0.7rem !important; }
   
   /* Make buttons more compact on tiny screens */
   button, .btn {
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-    height: 2.25rem !important;
-    font-size: 0.85rem !important;
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+    height: 2.1rem !important;
+    font-size: 0.8rem !important;
   }
 
   /* Compact Cards */
-  .card-header { padding: 0.75rem !important; }
-  .card-content { padding: 0.75rem !important; }
+  .card-header { padding: 0.6rem !important; }
+  .card-content { padding: 0.6rem !important; }
+  
+  /* Input height adjustment */
+  input { height: 2.4rem !important; font-size: 0.9rem !important; }
 }
 
 @media (max-width: 350px) {
   html {
-    font-size: 11px;
+    font-size: 10px;
   }
+  .p-4 { padding: 0.4rem !important; }
 }
 
 @keyframes tada {
@@ -95,10 +99,10 @@
   animation: tada 1.5s ease infinite;
 }
 
-/* Custom Scrollbar for better visibility on small screens */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
 }
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--accent));
