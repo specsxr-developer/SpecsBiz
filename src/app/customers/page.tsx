@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -54,6 +53,8 @@ import { useUser, useFirestore, useMemoFirebase, useCollection } from "@/firebas
 import { collection, query, orderBy } from "firebase/firestore"
 import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
+
+const COMMON_UNITS = ["KG", "PCS", "GM", "LTR", "BOX", "PKT", "DZ"]
 
 export default function CustomersPage() {
   const { toast } = useToast()
@@ -482,7 +483,16 @@ export default function CustomersPage() {
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
                 <div className="flex gap-2">
                   <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                  <Input placeholder="Unit" className="h-12 rounded-xl font-bold w-20 bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <Input placeholder="Unit" className="h-12 rounded-xl font-bold bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                    <div className="flex flex-wrap gap-1">
+                      {COMMON_UNITS.map(u => (
+                        <button key={u} onClick={() => setNewRecord({...newRecord, unit: u})} className="px-1.5 py-0.5 text-[8px] font-black bg-accent/10 text-accent rounded border border-accent/20 hover:bg-accent hover:text-white transition-colors uppercase">
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -561,7 +571,16 @@ export default function CustomersPage() {
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
                 <div className="flex gap-2">
                   <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                  <Input placeholder="Unit" className="h-12 rounded-xl font-bold w-20 bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <Input placeholder="Unit" className="h-12 rounded-xl font-bold bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                    <div className="flex flex-wrap gap-1">
+                      {COMMON_UNITS.map(u => (
+                        <button key={u} onClick={() => setNewRecord({...newRecord, unit: u})} className="px-1.5 py-0.5 text-[8px] font-black bg-accent/10 text-accent rounded border border-accent/20 hover:bg-accent hover:text-white transition-colors uppercase">
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -664,7 +683,16 @@ export default function CustomersPage() {
                     <Label className="text-[10px] uppercase font-black text-muted-foreground">Qty</Label>
                     <div className="flex gap-2">
                       <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                      <Input placeholder="Unit" className="h-12 rounded-xl font-bold w-20 bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                      <div className="flex flex-col gap-1.5 flex-1">
+                        <Input placeholder="Unit" className="h-12 rounded-xl font-bold bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                        <div className="flex flex-wrap gap-1">
+                          {COMMON_UNITS.map(u => (
+                            <button key={u} onClick={() => setNewRecord({...newRecord, unit: u})} className="px-1.5 py-0.5 text-[8px] font-black bg-accent/10 text-accent rounded border border-accent/20 hover:bg-accent hover:text-white transition-colors uppercase">
+                              {u}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-1.5">
