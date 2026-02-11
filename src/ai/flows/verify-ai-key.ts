@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview Universal AI Key Verification & Model Detection Flow.
- * Detects the provider (Google/OpenAI/etc) and fetches available models.
+ * Detects Google AI or OpenAI keys and identifies the best model.
  */
 
 import { ai } from '@/ai/genkit';
@@ -36,27 +36,20 @@ const verifyAiKeyFlow = ai.defineFlow(
       return { success: false, message: 'দয়া করে একটি সঠিক এপিআই কি দিন।' };
     }
 
-    // 1. Identify Provider
+    // Identify Provider
     let provider = 'unknown';
     if (cleanKey.startsWith('AIzaSy')) provider = 'google';
     else if (cleanKey.startsWith('sk-')) provider = 'openai';
 
     try {
       if (provider === 'google') {
-        // Fetch models from Google
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`,
-          { 
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            next: { revalidate: 0 } // Bypass cache
-          }
+          { method: 'GET', headers: { 'Content-Type': 'application/json' }, next: { revalidate: 0 } }
         );
-
         const data = await response.json();
 
         if (response.ok && data.models) {
-          // Find the best available model
           const modelNames = data.models
             .map((m: any) => m.name.split('/').pop())
             .filter((name: string) => name.includes('gemini'));
@@ -66,39 +59,40 @@ const verifyAiKeyFlow = ai.defineFlow(
 
           return {
             success: true,
-            provider: 'Google AI',
+            provider: 'google',
             detectedModel: bestModel,
-            message: `অভিনন্দন ভাই! আপনার কি-টি ভেরিফাইড। আমরা "${bestModel}" মডেলটি আপনার জন্য সেট করেছি।`
+            message: `অভিনন্দন স্যার! আপনার Google Gemini কি-টি ভেরিফাইড। মডেল: "${bestModel}"`
           };
         }
-
-        return { 
-          success: false, 
-          message: data.error?.message || 'গুগল সার্ভার কি-টি গ্রহণ করছে না।' 
-        };
+        return { success: false, message: data.error?.message || 'গুগল সার্ভার কি-টি গ্রহণ করছে না।' };
       } 
       
       if (provider === 'openai') {
-        // Placeholder for OpenAI - in this specific environment we focus on Genkit/GoogleAI
-        // but we allow the UI to show it's detected.
-        return {
-          success: true,
-          provider: 'OpenAI (Limited Support)',
-          detectedModel: 'gpt-4o-mini',
-          message: 'ওপেনএআই কি ডিটেক্ট করা হয়েছে। তবে জেমিনি কি দিলে সেরা পারফরম্যান্স পাবেন।'
-        };
+        const response = await fetch(
+          `https://api.openai.com/v1/models`,
+          { method: 'GET', headers: { 'Authorization': `Bearer ${cleanKey}` }, next: { revalidate: 0 } }
+        );
+        const data = await response.json();
+
+        if (response.ok && data.data) {
+          const modelNames = data.data.map((m: any) => m.id);
+          const preferred = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+          const bestModel = preferred.find(p => modelNames.includes(p)) || modelNames[0];
+
+          return {
+            success: true,
+            provider: 'openai',
+            detectedModel: bestModel,
+            message: `অভিনন্দন স্যার! আপনার OpenAI কি-টি ভেরিফাইড। মডেল: "${bestModel}"`
+          };
+        }
+        return { success: false, message: data.error?.message || 'ওপেনএআই সার্ভার কি-টি গ্রহণ করছে না।' };
       }
 
-      return { 
-        success: false, 
-        message: 'এই কি-টি আমাদের সিস্টেমে পরিচিত নয়। দয়া করে জেমিনি কি ব্যবহার করুন।' 
-      };
+      return { success: false, message: 'এই কি-টি আমাদের সিস্টেমে পরিচিত নয়। দয়া করে জেমিনি বা ওপেনএআই কি ব্যবহার করুন।' };
 
     } catch (error: any) {
-      return {
-        success: false,
-        message: 'সার্ভারের সাথে কানেক্ট হতে পারছি না। আপনার ইন্টারনেট সংযোগ বা ফায়ারওয়াল চেক করুন।'
-      };
+      return { success: false, message: 'সার্ভারের সাথে কানেক্ট হতে পারছি না। আপনার ইন্টারনেট চেক করুন।' };
     }
   }
 );

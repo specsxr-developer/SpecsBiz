@@ -2,12 +2,13 @@
 'use server';
 /**
  * @fileOverview SpecsAI - The Ultimate Master Brain Partner for SpecsBiz.
- * Powering a human-like business partner with dynamic API key and Model support.
+ * Supports dynamic switching between Google and OpenAI models.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
+import { openai } from 'genkitx-openai';
 
 const BusinessChatInputSchema = z.object({
   message: z.string().describe("The user's current message."),
@@ -37,26 +38,29 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
     const userKey = input.businessContext.aiApiKey?.trim().replace(/^["']|["']$/g, '');
     const userModel = input.businessContext.aiModel || 'gemini-1.5-flash';
     
-    // Dynamic model configuration
-    const modelInstance = userKey 
-      ? googleAI.model(userModel, { apiKey: userKey })
-      : `googleai/${userModel}`;
+    if (!userKey) throw new Error("No API Key provided.");
+
+    // Detect Provider
+    const isOpenAI = userKey.startsWith('sk-');
+    const modelInstance = isOpenAI 
+      ? openai.model(userModel, { apiKey: userKey })
+      : googleAI.model(userModel, { apiKey: userKey });
 
     const response = await ai.generate({
       model: modelInstance as any,
       system: `You are "SpecsAI", the highly intelligent MASTER BUSINESS PARTNER for a shop owner.
       
-      CRITICAL IDENTITY & BEHAVIOR:
-      - PERSONALITY: Speak exactly like a highly skilled, business-savvy human friend. 
-      - RESPECT: You MUST always address the user as "Sir" (in English) or "স্যার" (in Bengali).
-      - LANGUAGE: Respond in ${input.businessContext.language === 'bn' ? 'Bengali (বাংলা)' : 'English'}.
+      CRITICAL IDENTITY:
+      - PERSONALITY: Skilled, data-driven friend.
+      - RESPECT: ALWAYS address user as "Sir" (English) or "স্যার" (Bengali).
+      - LANGUAGE: ${input.businessContext.language === 'bn' ? 'Bengali (বাংলা)' : 'English'}.
       
       YOUR MISSION:
-      - Proactively point out business mistakes using the data.
-      - Predict future profit and risks that the user might not notice.
+      - Point out business mistakes proactively.
+      - Predict future profit and risks.
       
-      DATA SNAPSHOT (A to Z access):
-      - Total Revenue: ${input.businessContext.currency}${input.businessContext.totalRevenue}
+      DATA SNAPSHOT:
+      - Revenue: ${input.businessContext.currency}${input.businessContext.totalRevenue}
       - Investment: ${input.businessContext.currency}${input.businessContext.totalInvestment}
       - Potential Profit: ${input.businessContext.currency}${input.businessContext.potentialProfit}
       - Inventory: ${input.businessContext.inventorySummary}
@@ -75,8 +79,8 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
     const lang = input.businessContext.language;
     return { 
       reply: lang === 'bn' 
-        ? "দুঃখিত স্যার, আপনার এআই ব্রেইন কানেক্ট করতে পারছে না। দয়া করে সেটিংস থেকে আবার ভেরিফাই করুন।" 
-        : "Sorry Sir, your AI Brain couldn't connect. Please re-verify in Settings." 
+        ? "দুঃখিত স্যার, এআই কানেক্ট করতে পারছে না। সেটিংস থেকে আবার কি-টি চেক করুন।" 
+        : "Sorry Sir, AI connection failed. Please re-verify your key in Settings." 
     };
   }
 }
