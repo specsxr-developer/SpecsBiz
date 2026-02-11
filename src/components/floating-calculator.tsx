@@ -70,10 +70,17 @@ export function FloatingCalculator() {
 
   return (
     <>
-      {/* Floating Toggle Button - Moved Up to bottom-24 to avoid Bottom Nav overlap */}
-      <div className="fixed bottom-24 right-6 z-[9999] print:hidden">
+      {/* Floating Toggle Button - Extremely high Z-index and stopPropagation to prevent closing existing dialogs */}
+      <div 
+        className="fixed bottom-24 right-6 z-[10000] print:hidden"
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <Button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
           className="h-14 w-14 rounded-full shadow-[0_15px_45px_rgba(0,128,128,0.6)] bg-accent hover:bg-accent/90 border-4 border-white animate-in zoom-in duration-300"
           size="icon"
         >
@@ -81,15 +88,16 @@ export function FloatingCalculator() {
         </Button>
       </div>
 
-      {/* Custom Calculator Popup - Independent of Shadcn Dialog to prevent auto-closing other popups */}
+      {/* Custom Calculator Popup - Truly top-level dual popup */}
       {isOpen && (
         <div 
-          className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setIsOpen(false)}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div 
             className="w-full max-w-[340px] p-6 rounded-[2.5rem] bg-white shadow-[0_30px_90px_rgba(0,0,0,0.3)] border-2 border-accent/10 animate-in zoom-in-95 duration-300 relative"
-            onClick={(e) => e.stopPropagation()} // Prevents closing when clicking inside calculator
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
@@ -104,7 +112,6 @@ export function FloatingCalculator() {
             </div>
 
             <div className="space-y-5">
-              {/* Display Area */}
               <div className="bg-muted/30 p-5 rounded-2xl border-2 border-accent/5 text-right overflow-hidden shadow-inner">
                 <p className="text-[11px] font-bold text-accent uppercase tracking-widest h-5 truncate opacity-60">
                   {equation || "Ready"}
@@ -114,7 +121,6 @@ export function FloatingCalculator() {
                 </p>
               </div>
 
-              {/* Buttons Grid - Improved visibility for operators */}
               <div className="grid grid-cols-4 gap-2.5">
                 <CalcButton onClick={handleClear} variant="ghost" className="text-destructive bg-red-50 hover:bg-red-100 border-none">C</CalcButton>
                 <CalcButton onClick={handleBackspace} variant="ghost" className="bg-muted/50 border-none"><Eraser className="w-5 h-5" /></CalcButton>
