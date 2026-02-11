@@ -330,7 +330,7 @@ export default function CustomersPage() {
                 {displayCustomers.map((c) => (
                   <TableRow key={c.id} className="hover:bg-accent/5">
                     <TableCell className="pl-4 py-3 font-bold text-xs text-primary">
-                      {c.firstName || c.lastName ? `${c.firstName || ''} ${c.lastName || ''}` : (language === 'bn' ? 'Untitled Customer' : 'Untitled Customer')}
+                      {c.firstName || c.lastName ? `${c.firstName || ''} ${c.lastName || ''}` : 'Untitled Customer'}
                     </TableCell>
                     <TableCell>
                       <span className={cn(
@@ -372,13 +372,14 @@ export default function CustomersPage() {
                 <p className="text-[8px] font-black uppercase opacity-50">Total Debt</p>
                 <p className="text-xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
               </div>
-              <Button className="bg-accent h-auto font-black uppercase text-[10px] px-4" onClick={() => setIsRecordAddOpen(true)}>
+              <Button className="bg-accent h-auto font-black uppercase text-[10px] px-4 shadow-xl" onClick={() => setIsRecordAddOpen(true)}>
                 <Plus className="w-4 h-4 mr-1" /> Add Baki
               </Button>
             </div>
           </SheetHeader>
+          
           <ScrollArea className="flex-1 p-4 bg-muted/5">
-            <div className="space-y-3">
+            <div className="space-y-4">
               {currentBakiRecords.length === 0 ? (
                 <div className="py-20 text-center opacity-30 italic flex flex-col items-center gap-3">
                   <CheckCircle2 className="w-10 h-10" />
@@ -386,29 +387,40 @@ export default function CustomersPage() {
                 </div>
               ) : (
                 currentBakiRecords.map((record: any) => (
-                  <Card key={record.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <p className="font-bold text-xs text-primary">{record.productName}</p>
+                  <Card key={record.id} className="border border-accent/10 shadow-sm bg-white hover:shadow-md transition-all rounded-[1.5rem] overflow-hidden">
+                    <CardContent className="p-5">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="space-y-2">
+                          <h4 className="font-black text-sm text-primary leading-tight">{record.productName}</h4>
                           <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-[8px] h-4 font-black">Qty: {record.quantity}</Badge>
-                            <span className="text-[8px] text-muted-foreground font-bold flex items-center gap-1">
-                              <Calendar className="w-2.5 h-2.5" /> {new Date(record.takenDate).toLocaleDateString()}
+                            <Badge className="bg-accent text-white border-none text-[10px] font-black px-2.5 h-6 rounded-lg uppercase">
+                              Qty: {record.quantity}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-lg">
+                              <Calendar className="w-3 h-3 text-accent" /> {new Date(record.takenDate).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-black text-sm text-primary">{currency}{record.amount.toLocaleString()}</p>
-                          <div className="flex items-center gap-1 justify-end mt-1">
-                            <button onClick={() => startEditingRecord(record)} className="p-1 text-accent"><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1 text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                          <p className="font-black text-xl text-primary">{currency}{record.amount.toLocaleString()}</p>
+                          <div className="flex items-center gap-1 justify-end mt-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/10 rounded-full" onClick={() => startEditingRecord(record)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full" onClick={() => handleDeleteBakiRecord(record)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 flex justify-end">
-                         <Button size="sm" variant="outline" className="h-7 text-[9px] font-black uppercase text-accent border-accent/30" onClick={() => actions.payBakiRecord(activeCustomerId!, record.id, record.amount - (record.paidAmount || 0), record)}>
-                           <CheckCircle2 className="w-3 h-3 mr-1" /> Mark Paid
+                      
+                      <div className="flex justify-end pt-3 border-t border-accent/5">
+                         <Button 
+                           variant="outline" 
+                           className="h-9 text-[10px] font-black uppercase text-accent border-accent hover:bg-accent hover:text-white px-5 rounded-xl transition-all shadow-sm" 
+                           onClick={() => actions.payBakiRecord(activeCustomerId!, record.id, record.amount - (record.paidAmount || 0), record)}
+                         >
+                           <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Mark Paid
                          </Button>
                       </div>
                     </CardContent>
@@ -457,7 +469,7 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Record Edit Dialog (Matched styling with provided screenshot) */}
+      {/* Record Edit Dialog */}
       <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
