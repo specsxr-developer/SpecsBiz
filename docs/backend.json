@@ -70,6 +70,17 @@
       },
       "required": ["id", "firstName"]
     },
+    "AIMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AIMessage",
+      "type": "object",
+      "description": "Represents a chat message between user and AI.",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
@@ -108,6 +119,14 @@
       {
         "path": "/users/{userId}/sales/{saleId}",
         "definition": { "entityName": "Sale", "schema": { "$ref": "#/backend/entities/Sale" } }
+      },
+      {
+        "path": "/users/{userId}/aiMessages/{messageId}",
+        "definition": { "entityName": "AIMessage", "schema": { "$ref": "#/backend/entities/AIMessage" } }
+      },
+      {
+        "path": "/users/{userId}/advisorMessages/{messageId}",
+        "definition": { "entityName": "AIMessage", "schema": { "$ref": "#/backend/entities/AIMessage" } }
       }
     ]
   }

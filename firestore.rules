@@ -45,6 +45,12 @@ service cloud.firestore {
         allow update, delete: if isExistingOwner(userId);
       }
 
+      match /advisorMessages/{messageId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update, delete: if isExistingOwner(userId);
+      }
+
       match /customers/{customerId} {
         allow get, list: if isOwner(userId);
         allow create: if isOwner(userId);
