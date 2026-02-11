@@ -83,6 +83,7 @@ export default function CustomersPage() {
     productId: "",
     productName: "",
     quantity: "1",
+    unit: "",
     unitPrice: "",
     amount: "0",
     promiseDate: new Date().toISOString().split('T')[0],
@@ -136,6 +137,7 @@ export default function CustomersPage() {
       productId: p.id,
       productName: p.name,
       unitPrice: p.sellingPrice.toString(),
+      unit: p.unit || ""
     }))
     setProductSearch("")
   }
@@ -167,6 +169,7 @@ export default function CustomersPage() {
         productId: newRecord.productId,
         productName: newRecord.productName || (language === 'bn' ? "নতুন বাকি" : "New Debt"),
         quantity: parseFloat(newRecord.quantity) || 1,
+        unit: newRecord.unit,
         amount: bakiAmount,
         promiseDate: new Date(newRecord.promiseDate).toISOString(),
         note: newRecord.note
@@ -176,7 +179,7 @@ export default function CustomersPage() {
     setIsAddOpen(false)
     setAddStep(1)
     setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
-    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+    setNewRecord({ productId: "", productName: "", quantity: "1", unit: "", unitPrice: "", amount: "0", promiseDate: new Date().toISOString().split('T')[0], note: "" })
     toast({ title: "Customer & Baki Saved" })
   }
 
@@ -202,12 +205,13 @@ export default function CustomersPage() {
       productId: newRecord.productId,
       productName: newRecord.productName || (language === 'bn' ? "নতুন বাকি" : "New Debt"),
       quantity: parseFloat(newRecord.quantity) || 1,
+      unit: newRecord.unit,
       amount: parseFloat(newRecord.amount) || 0,
       promiseDate: new Date(newRecord.promiseDate).toISOString(),
       note: newRecord.note
     });
     setIsRecordAddOpen(false);
-    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+    setNewRecord({ productId: "", productName: "", quantity: "1", unit: "", unitPrice: "", amount: "0", promiseDate: new Date().toISOString().split('T')[0], note: "" })
   }
 
   const handleUpdateBakiRecord = () => {
@@ -215,6 +219,7 @@ export default function CustomersPage() {
     actions.updateBakiRecord(activeCustomerId, editingRecord.id, {
       productName: newRecord.productName,
       quantity: parseFloat(newRecord.quantity) || 1,
+      unit: newRecord.unit,
       amount: parseFloat(newRecord.amount) || 0,
       note: newRecord.note
     }, editingRecord.amount, editingRecord.productId, editingRecord.quantity);
@@ -236,6 +241,7 @@ export default function CustomersPage() {
       productId: record.productId || "",
       productName: record.productName,
       quantity: record.quantity.toString(),
+      unit: record.unit || "",
       unitPrice: unitPrice.toString(),
       amount: record.amount.toString(),
       promiseDate: record.promiseDate ? new Date(record.promiseDate).toISOString().split('T')[0] : "",
@@ -394,7 +400,7 @@ export default function CustomersPage() {
                           <h4 className="font-black text-sm text-primary leading-tight">{record.productName}</h4>
                           <div className="flex items-center gap-2">
                             <Badge className="bg-accent text-white border-none text-[10px] font-black px-2.5 h-6 rounded-lg uppercase">
-                              Qty: {record.quantity}
+                              Qty: {record.quantity} {record.unit || ''}
                             </Badge>
                             <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-lg">
                               <Calendar className="w-3 h-3 text-accent" /> {new Date(record.takenDate).toLocaleDateString()}
@@ -493,7 +499,10 @@ export default function CustomersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Qty</Label>
-                <Input type="number" step="0.01" className="h-12 rounded-xl font-black" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                <div className="flex gap-2">
+                  <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                  <Input placeholder="Unit" className="h-12 rounded-xl font-bold w-20 bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Price ({currency})</Label>
@@ -553,7 +562,10 @@ export default function CustomersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
-                <Input type="number" step="0.01" className="h-12 rounded-xl font-black" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                <div className="flex gap-2">
+                  <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                  <Input placeholder="Unit" className="h-12 rounded-xl font-bold w-20 bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price ({currency})</Label>
@@ -653,7 +665,10 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black text-muted-foreground">Qty</Label>
-                    <Input type="number" step="0.01" className="h-12 rounded-xl font-black" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                    <div className="flex gap-2">
+                      <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                      <Input placeholder="Unit" className="h-12 rounded-xl font-bold w-20 bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price</Label>
