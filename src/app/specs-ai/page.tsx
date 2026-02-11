@@ -11,19 +11,30 @@ import {
   ChevronRight, 
   Target, 
   Cpu,
-  X
+  X,
+  AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useBusinessData } from "@/hooks/use-business-data"
 import { growthExpertChat } from "@/ai/flows/growth-expert-flow"
 import { useToast } from "@/hooks/use-toast"
 import { translations } from "@/lib/translations"
 import { useUser, useFirestore, useMemoFirebase, useCollection } from "@/firebase"
-import { collection, query, orderBy, addDoc, serverTimestamp, getDocs, writeBatch, limit, doc, deleteDoc } from "firebase/firestore"
+import { collection, query, orderBy, addDoc, serverTimestamp, getDocs, writeBatch, limit } from "firebase/firestore"
 import { cn } from "@/lib/utils"
 
 export default function SpecsAIAdvisorPage() {
@@ -35,6 +46,7 @@ export default function SpecsAIAdvisorPage() {
   
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Real-time Firestore messages
@@ -130,32 +142,34 @@ export default function SpecsAIAdvisorPage() {
     }
   }
 
-  const clearMemory = async () => {
+  const handleClearConfirm = async () => {
+    if (user?.uid && db) {
+      setIsLoading(true);
+      try {
+        const snap = await getDocs(collection(db, 'users', user.uid, 'advisorMessages'));
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        toast({ title: language === 'bn' ? "মেমোরি পরিষ্কার করা হয়েছে" : "Memory Wiped" });
+      } catch (e) {
+        toast({ variant: "destructive", title: "Failed to clear cloud memory" });
+      } finally {
+        setIsLoading(false);
+        setIsClearDialogOpen(false);
+      }
+    } else {
+      setLocalMessages([]);
+      toast({ title: language === 'bn' ? "মেমোরি পরিষ্কার করা হয়েছে" : "Memory Wiped" });
+      setIsClearDialogOpen(false);
+    }
+  }
+
+  const openClearDialog = () => {
     if (messages.length <= 1 && messages[0]?.id === 'welcome') {
       toast({ title: language === 'bn' ? "মেমোরি অলরেডি খালি স্যার" : "Memory is already empty, Sir" });
       return;
     }
-
-    const ok = confirm(language === 'bn' ? "সব চ্যাট ডিলিট করবেন, স্যার?" : "Clear all growth advisor history, Sir?");
-    if (ok) {
-      if (user?.uid && db) {
-        setIsLoading(true);
-        try {
-          const snap = await getDocs(collection(db, 'users', user.uid, 'advisorMessages'));
-          const batch = writeBatch(db);
-          snap.docs.forEach(d => batch.delete(d.ref));
-          await batch.commit();
-          toast({ title: language === 'bn' ? "মেমোরি পরিষ্কার করা হয়েছে" : "Memory Wiped" });
-        } catch (e) {
-          toast({ variant: "destructive", title: "Failed to clear cloud memory" });
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setLocalMessages([]);
-        toast({ title: language === 'bn' ? "মেমোরি পরিষ্কার করা হয়েছে" : "Memory Wiped" });
-      }
-    }
+    setIsClearDialogOpen(true);
   }
 
   return (
@@ -176,7 +190,7 @@ export default function SpecsAIAdvisorPage() {
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={clearMemory} 
+          onClick={openClearDialog} 
           className="text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
           disabled={isLoading}
         >
@@ -265,6 +279,33 @@ export default function SpecsAIAdvisorPage() {
           </div>
         </div>
       </Card>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent className="rounded-[2rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              {language === 'bn' ? 'মেমোরি পরিষ্কার করুন' : 'Clear AI Memory'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'bn' 
+                ? 'স্যার, আপনি কি নিশ্চিত যে আপনি এই চ্যাট হিস্ট্রি চিরস্থায়ীভাবে মুছে ফেলতে চান?' 
+                : 'Sir, are you sure you want to permanently delete this chat history?'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="rounded-xl border-accent/20">
+              {language === 'bn' ? 'না, থাক' : 'No, Keep it'}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleClearConfirm}
+              className="bg-destructive hover:bg-destructive/90 rounded-xl"
+            >
+              {language === 'bn' ? 'হ্যাঁ, মুছে ফেলুন' : 'Yes, Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
