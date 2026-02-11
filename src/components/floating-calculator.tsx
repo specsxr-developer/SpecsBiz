@@ -44,6 +44,7 @@ export function FloatingCalculator() {
         setExpression(lastResult)
       } else {
         const lastChar = expression.slice(-1)
+        // If last char is a number, multiply it with Ans automatically for convenience
         if (!["+", "-", "*", "/"].includes(lastChar)) {
           setExpression(expression + "*" + lastResult)
         } else {
@@ -68,13 +69,18 @@ export function FloatingCalculator() {
 
   const calculate = () => {
     try {
-      if (expression === "0" || !expression) return
+      if (expression === "0" || !expression || expression === "Error") return
       
-      const result = new Function(`return ${expression.replace(/[^-()\d/*+.]/g, '')}`)()
+      // Basic validation to prevent invalid eval
+      const cleanExpression = expression.replace(/[^-()\d/*+.]/g, '')
+      const result = new Function(`return ${cleanExpression}`)()
       const formattedResult = Number(result.toFixed(4)).toString()
       
-      setHistory(expression + " =")
-      setExpression(formattedResult)
+      // Logic: Move calculation + result to history line
+      setHistory(`${expression} = ${formattedResult}`)
+      // Clear main display for new input
+      setExpression("0")
+      // Store result for 'Ans' button
       setLastResult(formattedResult)
     } catch (e) {
       setExpression("Error")
@@ -92,7 +98,7 @@ export function FloatingCalculator() {
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       className={cn(
-        "h-14 sm:h-16 text-xl sm:text-2xl font-black rounded-2xl transition-all active:scale-90 floating-calc-element shadow-sm",
+        "h-16 sm:h-18 text-xl sm:text-2xl font-black rounded-2xl transition-all active:scale-90 floating-calc-element shadow-sm border-none",
         className
       )}
     >
@@ -133,83 +139,83 @@ export function FloatingCalculator() {
           }}
         >
           <div 
-            className="w-full max-w-[360px] flex flex-col p-5 rounded-[2.5rem] bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-accent/10 animate-in zoom-in-95 duration-300 relative pointer-events-auto floating-calc-element"
+            className="w-full max-w-[360px] flex flex-col p-5 rounded-[3rem] bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-accent/10 animate-in zoom-in-95 duration-300 relative pointer-events-auto floating-calc-element min-h-[600px]"
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-accent/10 rounded-xl">
                   <CalcIcon className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <h3 className="text-[9px] font-black uppercase tracking-widest text-primary">SpecsBiz Intelligence</h3>
-                  <p className="text-[7px] font-bold text-accent uppercase opacity-60">Professional Calculator</p>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">SpecsBiz Partner</h3>
+                  <p className="text-[8px] font-bold text-accent uppercase opacity-60">Intelligence Calc</p>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="rounded-full h-8 w-8 hover:bg-red-50 hover:text-red-500 transition-colors" 
+                className="rounded-full h-10 w-10 hover:bg-red-50 hover:text-red-500 transition-colors" 
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsOpen(false);
                 }}
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </Button>
             </div>
 
-            {/* Display Area */}
-            <div className="bg-muted/30 p-6 rounded-3xl border border-accent/5 text-right overflow-hidden shadow-inner flex flex-col justify-end min-h-[140px] mb-4 relative">
-              <div className="absolute top-4 right-6 left-6 overflow-x-auto scrollbar-none">
-                <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-tighter animate-in slide-in-from-top-1 duration-300">
-                  {history || "No History"}
+            {/* Display Area - Significantly Taller */}
+            <div className="bg-muted/30 p-8 rounded-[2rem] border border-accent/5 text-right overflow-hidden shadow-inner flex flex-col justify-end min-h-[180px] mb-6 relative">
+              <div className="absolute top-6 right-8 left-8 overflow-x-auto scrollbar-none">
+                <p className="text-sm font-bold text-accent uppercase tracking-tighter animate-in slide-in-from-top-1 duration-300">
+                  {history || "Start Calculation"}
                 </p>
               </div>
               
-              <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-none mt-4">
+              <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-none mt-6">
                 <p className={cn(
                   "font-black text-primary tracking-tighter leading-none transition-all",
-                  expression.length > 10 ? "text-3xl" : "text-4xl"
+                  expression.length > 10 ? "text-4xl" : "text-5xl"
                 )}>
                   {expression}
                 </p>
               </div>
             </div>
 
-            {/* Buttons Grid - Tighter Spacing */}
-            <div className="grid grid-cols-4 gap-2.5">
-              <CalcButton onClick={handleClear} variant="ghost" className="text-destructive bg-red-50 hover:bg-red-100 border-none">C</CalcButton>
-              <CalcButton onClick={handleBackspace} variant="ghost" className="bg-muted/50 border-none"><Eraser className="w-5 h-5" /></CalcButton>
-              <CalcButton onClick={handleAns} variant="ghost" className="bg-accent/5 text-accent border-none text-sm">Ans</CalcButton>
-              <CalcButton onClick={() => handleOperator("/")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-xl">÷</CalcButton>
+            {/* Buttons Grid - Compact & Solid */}
+            <div className="grid grid-cols-4 gap-2 flex-1">
+              <CalcButton onClick={handleClear} className="text-destructive bg-red-50 hover:bg-red-100">C</CalcButton>
+              <CalcButton onClick={handleBackspace} className="bg-muted/50"><Eraser className="w-6 h-6" /></CalcButton>
+              <CalcButton onClick={handleAns} className="bg-accent/5 text-accent text-lg">Ans</CalcButton>
+              <CalcButton onClick={() => handleOperator("/")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white text-2xl">÷</CalcButton>
 
               {[7, 8, 9].map(n => (
                 <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-black/5 text-primary shadow-sm">{n}</CalcButton>
               ))}
-              <CalcButton onClick={() => handleOperator("*")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-xl">×</CalcButton>
+              <CalcButton onClick={() => handleOperator("*")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white text-2xl">×</CalcButton>
 
               {[4, 5, 6].map(n => (
                 <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-black/5 text-primary shadow-sm">{n}</CalcButton>
               ))}
-              <CalcButton onClick={() => handleOperator("-")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-2xl">−</CalcButton>
+              <CalcButton onClick={() => handleOperator("-")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white text-3xl">−</CalcButton>
 
               {[1, 2, 3].map(n => (
                 <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-black/5 text-primary shadow-sm">{n}</CalcButton>
               ))}
-              <CalcButton onClick={() => handleOperator("+")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-xl">+</CalcButton>
+              <CalcButton onClick={() => handleOperator("+")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white text-2xl">+</CalcButton>
 
               <CalcButton onClick={() => handleNumber("0")} className="bg-white border-black/5 text-primary shadow-sm">0</CalcButton>
               <CalcButton onClick={() => handleNumber(".")} className="bg-white border-black/5 text-primary shadow-sm">.</CalcButton>
-              <CalcButton onClick={calculate} className="col-span-2 bg-primary hover:bg-primary/90 text-white text-3xl border-none shadow-xl active:scale-95">=</CalcButton>
+              <CalcButton onClick={calculate} className="col-span-2 bg-primary hover:bg-primary/90 text-white text-4xl shadow-xl active:scale-95">=</CalcButton>
             </div>
             
             {/* Bottom Decoration */}
-            <div className="mt-4 flex justify-center">
-              <div className="h-1 w-12 bg-muted rounded-full" />
+            <div className="mt-6 flex justify-center">
+              <div className="h-1.5 w-16 bg-muted rounded-full" />
             </div>
           </div>
         </div>
