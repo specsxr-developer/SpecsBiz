@@ -42,19 +42,22 @@ const DialogContent = React.forwardRef<
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 sm:rounded-lg",
         className
       )}
-      // Allow dual popup interactions by preventing auto-dismiss on outside interaction
+      // Allow interactions with the floating calculator even when a dialog is open
       onPointerDownOutside={(e) => {
         const target = e.target as HTMLElement;
-        // If the click is on the calculator toggle or within the calculator, don't close this dialog
         if (target?.closest('.z-\\[10000\\]') || target?.closest('.z-\\[10001\\]')) {
           e.preventDefault();
         } else {
-          // Keep prevention as default per user request to only close via X button
           e.preventDefault();
         }
       }}
       onInteractOutside={(e) => {
-        e.preventDefault();
+        const target = e.target as HTMLElement;
+        if (target?.closest('.z-\\[10000\\]') || target?.closest('.z-\\[10001\\]')) {
+          e.preventDefault();
+        } else {
+          e.preventDefault();
+        }
       }}
       {...props}
     >

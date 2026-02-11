@@ -59,9 +59,11 @@ export function FloatingCalculator() {
     <Button
       variant={variant}
       onClick={(e) => {
+        e.preventDefault();
         e.stopPropagation();
         onClick();
       }}
+      onPointerDown={(e) => e.stopPropagation()}
       className={cn("h-12 w-full text-xl font-black rounded-xl transition-all active:scale-95", className)}
     >
       {children}
@@ -70,12 +72,11 @@ export function FloatingCalculator() {
 
   return (
     <>
-      {/* Floating Toggle Button - Higher offset (bottom-32) to avoid nav overlap */}
+      {/* Floating Toggle Button - Extremely High Z-Index to stay above Dialogs */}
       <div 
-        className="fixed bottom-32 right-6 z-[10000] print:hidden"
+        className="fixed bottom-32 right-6 z-[10000] print:hidden pointer-events-auto"
         onPointerDown={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
       >
         <Button
           onClick={(e) => {
@@ -90,20 +91,18 @@ export function FloatingCalculator() {
         </Button>
       </div>
 
-      {/* Custom Calculator Popup - Dual Mode Support */}
+      {/* Custom Calculator Popup - Top Layer Priority */}
       {isOpen && (
         <div 
           className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={(e) => {
-            e.preventDefault();
+          onPointerDown={(e) => {
             e.stopPropagation();
             setIsOpen(false);
           }}
-          onPointerDown={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
         >
           <div 
-            className="w-full max-w-[340px] p-6 rounded-[2.5rem] bg-white shadow-[0_30px_90px_rgba(0,0,0,0.3)] border-2 border-accent/10 animate-in zoom-in-95 duration-300 relative"
+            className="w-full max-w-[340px] p-6 rounded-[2.5rem] bg-white shadow-[0_30px_90px_rgba(0,0,0,0.3)] border-2 border-accent/10 animate-in zoom-in-95 duration-300 relative pointer-events-auto"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
@@ -113,7 +112,15 @@ export function FloatingCalculator() {
                 </div>
                 <h3 className="text-base font-black uppercase tracking-tight text-primary">SpecsBiz Calc</h3>
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 hover:bg-red-50 hover:text-red-500" onClick={() => setIsOpen(false)}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full h-8 w-8 hover:bg-red-50 hover:text-red-500" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
+              >
                 <X className="w-5 h-5" />
               </Button>
             </div>
