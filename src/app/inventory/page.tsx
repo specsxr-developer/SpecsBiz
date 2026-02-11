@@ -21,7 +21,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Check,
-  PackagePlus
+  PackagePlus,
+  Lock,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,11 +74,17 @@ export default function InventoryPage() {
   const { products, actions, isLoading, currency, language } = useBusinessData()
   const t = translations[language]
   
-  const [isGenerating, setIsGenerating] = useState(false)
   const [search, setSearch] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [isAddOpen, setIsAddOpen] = useState(false)
   
+  // Edit State
+  const [editingProduct, setEditingProduct] = useState<any>(null)
+  
+  // Delete State
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deletePass, setDeletePass] = useState("")
+
   // Restock State
   const [restockProduct, setRestockProduct] = useState<any>(null)
   const [restockQty, setRestockQty] = useState("")
@@ -116,7 +124,33 @@ export default function InventoryPage() {
     })
     setNewProduct({ name: "", category: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs" })
     setIsAddOpen(false)
-    toast({ title: "Product Added" })
+    toast({ title: "Product Added Successfully" })
+  }
+
+  const handleUpdateProduct = () => {
+    if (!editingProduct || !editingProduct.name) return;
+    actions.updateProduct(editingProduct.id, {
+      ...editingProduct,
+      stock: parseFloat(editingProduct.stock) || 0,
+      purchasePrice: parseFloat(editingProduct.purchasePrice) || 0,
+      sellingPrice: parseFloat(editingProduct.sellingPrice) || 0,
+    });
+    setEditingProduct(null);
+    toast({ title: "Product Updated" });
+  }
+
+  const handleAuthorizedDelete = () => {
+    if (deletePass === "specsxr") {
+      if (deleteId) {
+        actions.deleteProduct(deleteId);
+        toast({ title: "Product Permanently Removed" });
+      }
+      setDeleteId(null);
+      setDeletePass("");
+    } else {
+      toast({ variant: "destructive", title: "Access Denied", description: "Wrong secret password." });
+      setDeletePass("");
+    }
   }
 
   const handleRestock = () => {
@@ -128,11 +162,20 @@ export default function InventoryPage() {
     toast({ title: "Stock Updated & Recorded" });
   }
 
+  const startEditing = (p: any) => {
+    setEditingProduct({
+      ...p,
+      purchasePrice: p.purchasePrice.toString(),
+      sellingPrice: p.sellingPrice.toString(),
+      stock: p.stock.toString()
+    });
+  }
+
   if (isLoading) return <div className="p-10 text-center animate-pulse text-accent font-bold">{t.loading}</div>
 
   return (
     <div className="space-y-4 md:space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-10 max-w-full overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
         <div>
           <h2 className="text-xl md:text-2xl font-bold font-headline text-primary flex items-center gap-2">
             <Package className="w-5 h-5 md:w-6 md:h-6 text-accent" /> {t.inventory}
@@ -152,12 +195,12 @@ export default function InventoryPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">{t.language === 'en' ? 'Name' : 'নাম'}</Label>
+                <Label className="text-[10px] font-black uppercase">{language === 'en' ? 'Name' : 'নাম'}</Label>
                 <Input value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="h-11 rounded-xl" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase">{t.language === 'en' ? 'Category' : 'ক্যাটাগরি'}</Label>
+                  <Label className="text-[10px] font-black uppercase">{language === 'en' ? 'Category' : 'ক্যাটাগরি'}</Label>
                   <Input value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="h-11 rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
@@ -188,7 +231,7 @@ export default function InventoryPage() {
         </Dialog>
       </div>
 
-      <Card className="shadow-sm border-accent/10 overflow-hidden bg-white/50 backdrop-blur-sm">
+      <Card className="shadow-sm border-accent/10 overflow-hidden bg-white/50 backdrop-blur-sm mx-1">
         <CardHeader className="p-3 md:p-4 border-b flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -204,19 +247,19 @@ export default function InventoryPage() {
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="w-full">
-            <div className="min-w-[600px]">
+            <div className="min-w-[700px]">
               <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="text-[9px] md:text-[10px] uppercase font-black pl-4">{t.productNameCat}</TableHead>
                     <TableHead className="text-[9px] md:text-[10px] uppercase font-black">{t.pricing}</TableHead>
                     <TableHead className="text-[9px] md:text-[10px] uppercase font-black">{t.stockLevel}</TableHead>
-                    <TableHead className="text-right pr-4 font-black text-[9px] md:text-[10px] uppercase">Action</TableHead>
+                    <TableHead className="text-right pr-4 font-black text-[9px] md:text-[10px] uppercase">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredProducts.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-accent/5 transition-all">
+                    <TableRow key={p.id} className="hover:bg-accent/5 transition-all group">
                       <TableCell className="p-3 pl-4">
                         <p className="text-xs font-black text-primary leading-tight">{p.name}</p>
                         <p className="text-[8px] md:text-[9px] text-accent uppercase font-bold mt-0.5">{p.category || 'N/A'}</p>
@@ -234,12 +277,20 @@ export default function InventoryPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right pr-4">
-                        <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase border-accent text-accent hover:bg-accent hover:text-white rounded-lg transition-all active:scale-95" onClick={() => {
-                          setRestockProduct(p);
-                          setRestockPrice(p.purchasePrice.toString());
-                        }}>
-                          <PackagePlus className="w-3.5 h-3.5 mr-1" /> {t.restock}
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase border-accent text-accent hover:bg-accent hover:text-white rounded-lg transition-all active:scale-95" onClick={() => {
+                            setRestockProduct(p);
+                            setRestockPrice(p.purchasePrice.toString());
+                          }}>
+                            <PackagePlus className="w-3.5 h-3.5 mr-1" /> {t.restock}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-lg" onClick={() => startEditing(p)}>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5 rounded-lg" onClick={() => setDeleteId(p.id)}>
+                            <Trash className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -250,6 +301,84 @@ export default function InventoryPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Product Details</DialogTitle>
+            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Modify A to Z information for {editingProduct?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase">Product Name</Label>
+              <Input value={editingProduct?.name || ""} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="h-11 rounded-xl" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Category</Label>
+                <Input value={editingProduct?.category || ""} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="h-11 rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Unit Type</Label>
+                <Select value={editingProduct?.unit || "pcs"} onValueChange={(val) => setEditingProduct({...editingProduct, unit: val})}>
+                  <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>{units.map(u => <SelectItem key={u} value={u}>{u.toUpperCase()}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Purchase Price ({currency})</Label>
+                <Input type="number" value={editingProduct?.purchasePrice || ""} onChange={e => setEditingProduct({...editingProduct, purchasePrice: e.target.value})} className="h-11 rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Selling Price ({currency})</Label>
+                <Input type="number" value={editingProduct?.sellingPrice || ""} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase">Manual Stock Adjust ({editingProduct?.unit})</Label>
+              <Input type="number" value={editingProduct?.stock || ""} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} className="h-11 rounded-xl border-orange-200 focus:ring-orange-500" />
+              <p className="text-[9px] text-orange-600 font-bold uppercase italic">* Changing stock here will not be recorded in procurement history.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleUpdateProduct}>
+              Save All Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Authorized Delete Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive font-black uppercase">
+              <Lock className="w-5 h-5" /> Permanent Deletion
+            </DialogTitle>
+            <DialogDescription>
+              This product will be removed from your database forever. Enter secret key to confirm.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-xs font-bold uppercase opacity-70">Secret Access Key</Label>
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              className="h-12 text-lg font-bold rounded-xl"
+              value={deletePass}
+              onChange={e => setDeletePass(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" className="w-full h-12 text-base font-black uppercase rounded-xl shadow-lg" onClick={handleAuthorizedDelete}>
+              Authorize & Wipe Product
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Restock Dialog */}
       <Dialog open={!!restockProduct} onOpenChange={(open) => !open && setRestockProduct(null)}>
