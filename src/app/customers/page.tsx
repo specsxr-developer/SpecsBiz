@@ -129,7 +129,7 @@ export default function CustomersPage() {
   useEffect(() => {
     const qty = parseFloat(newRecord.quantity) || 0;
     const price = parseFloat(newRecord.unitPrice) || 0;
-    setNewRecord(prev => ({ ...prev, amount: (qty * price).toString() }));
+    setNewRecord(prev => ({ ...prev, amount: (qty * price).toFixed(2) }));
   }, [newRecord.quantity, newRecord.unitPrice]);
 
   const selectProduct = (p: any) => {
@@ -245,7 +245,7 @@ export default function CustomersPage() {
       productName: record.productName,
       quantity: record.quantity.toString(),
       unit: record.unit || "",
-      unitPrice: unitPrice.toString(),
+      unitPrice: unitPrice.toFixed(2),
       amount: record.amount.toString(),
       promiseDate: record.promiseDate ? new Date(record.promiseDate).toISOString().split('T')[0] : "",
       note: record.note || ""
@@ -410,7 +410,6 @@ export default function CustomersPage() {
                             </span>
                           </div>
                           
-                          {/* A to Z: Show Note and Promise Date if they exist */}
                           <div className="space-y-1.5 mt-2">
                             {record.note && (
                               <div className="flex items-start gap-2 bg-muted/20 p-2 rounded-lg border border-black/5">
@@ -457,44 +456,7 @@ export default function CustomersPage() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={isCustomerEditOpen} onOpenChange={setIsCustomerEditOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription className="text-xs">Update info or wipe profile.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">First Name</Label><Input value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} className="h-11 rounded-xl" /></div>
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Last Name</Label><Input value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} className="h-11 rounded-xl" /></div>
-            </div>
-            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Phone</Label><Input value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="h-11 rounded-xl" /></div>
-            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Address</Label><Input value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="h-11 rounded-xl" /></div>
-            <div className="pt-4 border-t">
-              <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center justify-between">
-                <div className="flex-1 pr-4">
-                  <p className="text-[10px] font-black uppercase opacity-60">Delete Customer</p>
-                  <p className="text-xs font-medium mt-1">Permanently remove this customer and all history?</p>
-                </div>
-                <Button variant="destructive" size="icon" className="rounded-xl shadow-lg" onClick={() => setIsDeleteConfirmOpen(true)}><Trash2 className="w-5 h-5" /></Button>
-              </div>
-            </div>
-          </div>
-          <DialogFooter><Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase" onClick={handleUpdateCustomer}>Update Profile</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive"><Lock className="w-5 h-5" /> Master Delete</DialogTitle>
-            <DialogDescription>Enter secret key 'specsxr' to permanently wipe this customer.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter><Button variant="destructive" className="w-full h-12 rounded-xl font-bold" onClick={handleDeleteCustomer}>Confirm Wipe</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Record Edit Dialog - A to Z Editing Enabled */}
+      {/* Edit Record Dialog */}
       <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
@@ -529,7 +491,6 @@ export default function CustomersPage() {
               </div>
             </div>
 
-            {/* A to Z Editing: Note and Promise Date */}
             <div className="space-y-4 pt-2">
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Debt Remark / Note</Label>
@@ -554,7 +515,7 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Record Add Dialog (Detailed) */}
+      {/* Record Add Dialog */}
       <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
@@ -581,8 +542,13 @@ export default function CustomersPage() {
                   <ScrollArea className="h-full">
                     {filteredProducts.map(p => (
                       <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b last:border-0 text-xs flex justify-between items-center group">
-                        <span className="font-bold group-hover:text-accent transition-colors">{p.name}</span>
-                        <Badge variant="outline" className="font-black text-accent border-accent/20 bg-accent/5">{currency}{p.sellingPrice}</Badge>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold group-hover:text-accent transition-colors truncate">{p.name}</p>
+                          <p className="text-[9px] text-muted-foreground uppercase">{p.category || 'General'}</p>
+                        </div>
+                        <Badge variant="outline" className="font-black text-accent border-accent/20 bg-accent/5 shrink-0">
+                          {currency}{p.sellingPrice} / {p.unit || 'pcs'}
+                        </Badge>
                       </button>
                     ))}
                   </ScrollArea>
@@ -627,7 +593,7 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Customer Flow (Full Detail) */}
+      {/* Add Customer Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[550px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-primary text-white border-b shrink-0">
@@ -685,7 +651,7 @@ export default function CustomersPage() {
                         {filteredProducts.map(p => (
                           <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b last:border-0 text-xs flex justify-between items-center group">
                             <span className="font-bold group-hover:text-accent">{p.name}</span>
-                            <span className="font-black text-accent">{currency}{p.sellingPrice}</span>
+                            <span className="font-black text-accent">{currency}{p.sellingPrice} / {p.unit || 'pcs'}</span>
                           </button>
                         ))}
                       </ScrollArea>
@@ -739,6 +705,43 @@ export default function CustomersPage() {
               </div>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCustomerEditOpen} onOpenChange={setIsCustomerEditOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription className="text-xs">Update info or wipe profile.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">First Name</Label><Input value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} className="h-11 rounded-xl" /></div>
+              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Last Name</Label><Input value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} className="h-11 rounded-xl" /></div>
+            </div>
+            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Phone</Label><Input value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="h-11 rounded-xl" /></div>
+            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Address</Label><Input value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="h-11 rounded-xl" /></div>
+            <div className="pt-4 border-t">
+              <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex-1 pr-4">
+                  <p className="text-[10px] font-black uppercase opacity-60">Delete Customer</p>
+                  <p className="text-xs font-medium mt-1">Permanently remove this customer and all history?</p>
+                </div>
+                <Button variant="destructive" size="icon" className="rounded-xl shadow-lg" onClick={() => setIsDeleteConfirmOpen(true)}><Trash2 className="w-5 h-5" /></Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter><Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase" onClick={handleUpdateCustomer}>Update Profile</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive"><Lock className="w-5 h-5" /> Master Delete</DialogTitle>
+            <DialogDescription>Enter secret key 'specsxr' to permanently wipe this customer.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter><Button variant="destructive" className="w-full h-12 rounded-xl font-bold" onClick={handleDeleteCustomer}>Confirm Wipe</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -141,11 +141,14 @@ export default function MasterLedgerPage() {
     const entries: any[] = []
 
     sales.forEach(s => {
-      const itemName = s.isBakiPayment 
-        ? `Payment: ${s.bakiProductName}` 
-        : (s.items && s.items.length > 0 
-            ? (s.items.length === 1 ? s.items[0].name : `${s.items[0].name} (+${s.items.length - 1})`)
-            : `Sale #${s.id?.slice(-4)}`);
+      let itemName = "";
+      if (s.isBakiPayment) {
+        itemName = `Payment: ${s.bakiProductName}`;
+      } else if (s.items && s.items.length > 0) {
+        itemName = s.items.map((i: any) => `${i.name} (${i.quantity} ${i.unit || 'pcs'})`).join(', ');
+      } else {
+        itemName = `Sale #${s.id?.slice(-4)}`;
+      }
 
       entries.push({
         id: s.id,
@@ -169,7 +172,7 @@ export default function MasterLedgerPage() {
         date: new Date(r.takenDate),
         type: 'New Baki',
         rawType: 'baki',
-        item: r.productName,
+        item: `${r.productName} (${r.quantity} ${r.unit || 'pcs'})`,
         amount: r.amount,
         paid: r.paidAmount || 0,
         unpaid: r.amount - (r.paidAmount || 0),
@@ -187,7 +190,7 @@ export default function MasterLedgerPage() {
           date: new Date(), 
           type: 'Inventory',
           rawType: 'inventory',
-          item: `Stock: ${p.name}`,
+          item: `Initial Stock: ${p.name} (${p.stock} ${p.unit || 'pcs'})`,
           amount: p.purchasePrice * p.stock,
           paid: p.purchasePrice * p.stock,
           unpaid: 0,
@@ -235,7 +238,7 @@ export default function MasterLedgerPage() {
   }
 
   const handleDownloadCSV = () => {
-    const headers = ["Date", "Type", "Item", "Entity", "Total", "Paid", "Unpaid", "Status"]
+    const headers = ["Date", "Type", "Item Description", "Entity", "Total", "Paid", "Unpaid", "Status"]
     const rows = filteredLedger.map(e => [
       e.date.toLocaleDateString(),
       e.type,
@@ -280,7 +283,6 @@ export default function MasterLedgerPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 max-w-full overflow-hidden">
-      {/* Print Only Header */}
       <div className="hidden print:flex flex-col items-center justify-center mb-6 border-b pb-4 w-full text-center">
         <div className="flex items-center gap-3 mb-2">
           {logoUrl && <img src={logoUrl} alt="Logo" className="h-14 w-14 object-contain" />}
@@ -374,7 +376,7 @@ export default function MasterLedgerPage() {
                 <TableRow>
                   <TableHead className={cn("text-[10px] uppercase font-bold pl-6", !printColumns.date && "print:hidden")}>{t.date}</TableHead>
                   <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.type && "print:hidden")}>{t.type}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.item && "print:hidden")}>{t.itemDescription}</TableHead>
+                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.item && "print:hidden")}>Item & Qty</TableHead>
                   <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.entity && "print:hidden")}>{t.entity}</TableHead>
                   <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.total && "print:hidden")}>{t.totalVal}</TableHead>
                   <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.paid && "print:hidden")}>{t.paid}</TableHead>
@@ -393,7 +395,7 @@ export default function MasterLedgerPage() {
                         {entry.type}
                       </Badge>
                     </TableCell>
-                    <TableCell className={cn("text-xs font-bold text-primary truncate max-w-[150px]", !printColumns.item && "print:hidden")}>
+                    <TableCell className={cn("text-xs font-bold text-primary truncate max-w-[200px]", !printColumns.item && "print:hidden")}>
                       {entry.item}
                     </TableCell>
                     <TableCell className={cn("text-xs", !printColumns.entity && "print:hidden")}>
@@ -424,7 +426,6 @@ export default function MasterLedgerPage() {
         </CardContent>
       </Card>
       
-      {/* Authorized Delete Dialog */}
       <Dialog open={!!deleteItem} onOpenChange={(open) => !open && setDeleteItem(null)}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -432,7 +433,7 @@ export default function MasterLedgerPage() {
               <Lock className="w-5 h-5" /> Master Authorization
             </DialogTitle>
             <DialogDescription>
-              {t.language === 'en' ? 'Deleting an entry from the ledger is a permanent action.' : 'লেজার থেকে এই তথ্য ডিলিট করা একটি স্থায়ী পদক্ষেপ।'}
+              {language === 'en' ? 'Deleting an entry from the ledger is a permanent action.' : 'লেজার থেকে এই তথ্য ডিলিট করা একটি স্থায়ী পদক্ষেপ।'}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -441,7 +442,7 @@ export default function MasterLedgerPage() {
           </div>
           <DialogFooter>
             <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleAuthorizedDelete}>
-              {t.language === 'en' ? 'Authorize & Wipe Entry' : 'অথোরাইজ ও ডিলিট করুন'}
+              {language === 'en' ? 'Authorize & Wipe Entry' : 'অথোরাইজ ও ডিলিট করুন'}
             </Button>
           </DialogFooter>
         </DialogContent>
