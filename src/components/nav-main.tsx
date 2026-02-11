@@ -17,7 +17,8 @@ import {
   FileSpreadsheet,
   PieChart,
   BookOpen,
-  PackageSearch
+  PackageSearch,
+  Sparkles
 } from "lucide-react"
 import { useUser } from "@/firebase"
 import { useBusinessData } from "@/hooks/use-business-data"
@@ -61,7 +62,10 @@ export function NavMain() {
     { title: t.masterLedger, icon: FileSpreadsheet, href: "/reports" },
     { title: t.biAnalytics, icon: PieChart, href: "/business-intelligence" },
     { title: t.analytics, icon: BarChart3, href: "/analytics" },
-    { title: t.aiAssistant, icon: Bot, href: "/ai-assistant" },
+    // NEW AI SYSTEM - Visible
+    { title: t.specsAiNew || "SpecsAI Advisor", icon: Sparkles, href: "/specs-ai" },
+    // OLD AI SYSTEM - Hidden (but path exists)
+    // { title: t.aiAssistant, icon: Bot, href: "/ai-assistant" },
   ]
 
   const checkActive = (href: string) => {
