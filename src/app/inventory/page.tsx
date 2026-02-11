@@ -23,7 +23,8 @@ import {
   Check,
   PackagePlus,
   Lock,
-  X
+  X,
+  AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -106,6 +107,38 @@ export default function InventoryPage() {
     unit: "pcs"
   })
 
+  // --- REAL-TIME DUPLICATE WARNING ---
+  const duplicateWarning = useMemo(() => {
+    if (!newProduct.name.trim()) return null;
+    const currentName = newProduct.name.toLowerCase().trim();
+    const match = products.find(p => {
+      const pName = p.name.toLowerCase().trim();
+      return pName === currentName || pName.includes(currentName) || currentName.includes(pName);
+    });
+    if (match) {
+      return language === 'bn' 
+        ? `'${match.name}' নামে মিল পাওয়া গেছে! একই পণ্য দুবার যোগ করবেন না।` 
+        : `A similar product '${match.name}' already exists!`;
+    }
+    return null;
+  }, [newProduct.name, products, language]);
+
+  const editDuplicateWarning = useMemo(() => {
+    if (!editingProduct?.name?.trim()) return null;
+    const currentName = editingProduct.name.toLowerCase().trim();
+    const match = products.find(p => {
+      if (p.id === editingProduct.id) return false;
+      const pName = p.name.toLowerCase().trim();
+      return pName === currentName || pName.includes(currentName) || currentName.includes(pName);
+    });
+    if (match) {
+      return language === 'bn' 
+        ? `'${match.name}' নামে মিল পাওয়া গেছে!` 
+        : `A similar product '${match.name}' already exists!`;
+    }
+    return null;
+  }, [editingProduct?.name, products, language, editingProduct?.id]);
+
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase())
@@ -114,7 +147,6 @@ export default function InventoryPage() {
     })
   }, [products, search, filterCategory])
 
-  // --- ADVANCED VALIDATION LOGIC ---
   const validateProduct = (prod: any, isUpdate = false, originalId?: string) => {
     const name = prod.name.trim();
     const buyPrice = parseFloat(prod.purchasePrice) || 0;
@@ -126,11 +158,12 @@ export default function InventoryPage() {
       return false;
     }
 
-    // 1. Duplicate Name Check (Smart - ignores case and extra spaces)
-    const normalizedName = name.toLowerCase().replace(/\s+/g, ' ');
+    // Strict Duplicate Check
+    const normalizedName = name.toLowerCase().trim();
     const isDuplicate = products.some(p => {
-      const matchesName = p.name.toLowerCase().replace(/\s+/g, ' ') === normalizedName;
-      return isUpdate ? (matchesName && p.id !== originalId) : matchesName;
+      const pName = p.name.toLowerCase().trim();
+      const match = pName === normalizedName || pName.includes(normalizedName) || normalizedName.includes(pName);
+      return isUpdate ? (match && p.id !== originalId) : match;
     });
 
     if (isDuplicate) {
@@ -138,33 +171,18 @@ export default function InventoryPage() {
         variant: "destructive",
         title: language === 'bn' ? "ডুপ্লিকেট পণ্য!" : "Duplicate Product!",
         description: language === 'bn' 
-          ? `'${name}' নামে পণ্যটি অলরেডি আছে। অন্য নাম দিন।` 
-          : `'${name}' already exists. Please use a unique name.`,
+          ? `'${name}' নামে মিল পাওয়া গেছে। অনুগ্রহ করে আলাদা নাম দিন।` 
+          : `'${name}' is too similar to an existing product.`,
       });
       return false;
     }
 
-    // 2. Loss Prevention Check
     if (sellPrice > 0 && sellPrice < buyPrice) {
       toast({
         variant: "destructive",
         title: language === 'bn' ? "সাবধান: লোকসান হচ্ছে!" : "Warning: Potential Loss!",
-        description: language === 'bn' 
-          ? "বিক্রয় মূল্য কেনা দামের চেয়ে কম! দয়া করে ঠিক করুন।" 
-          : "Selling price is lower than purchase price. Fix to avoid loss.",
+        description: language === 'bn' ? "বিক্রয় মূল্য কেনা দামের চেয়ে কম!" : "Selling price is lower than purchase price.",
       });
-      return false;
-    }
-
-    // 3. Price Validity
-    if (sellPrice <= 0) {
-      toast({ variant: "destructive", title: language === 'bn' ? "সঠিক বিক্রয় মূল্য দিন!" : "Invalid selling price!" });
-      return false;
-    }
-
-    // 4. Stock Validity (Negative check)
-    if (stock < 0) {
-      toast({ variant: "destructive", title: language === 'bn' ? "স্টক নেগেটিভ হতে পারে না!" : "Stock cannot be negative!" });
       return false;
     }
 
@@ -257,14 +275,24 @@ export default function InventoryPage() {
               <Plus className="w-4 h-4 mr-2" /> {t.addProduct}
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-3xl">
+          <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-[2rem]">
             <DialogHeader>
               <DialogTitle className="text-primary font-black uppercase tracking-tighter">{t.addProduct}</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase">{language === 'en' ? 'Name' : 'নাম'}</Label>
-                <Input value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="h-11 rounded-xl" />
+                <Input 
+                  value={newProduct.name} 
+                  onChange={e => setNewProduct({...newProduct, name: e.target.value})} 
+                  className={cn("h-11 rounded-xl", duplicateWarning && "border-red-500 focus-visible:ring-red-500")}
+                  placeholder={language === 'bn' ? "পণ্যের নাম লিখুন..." : "Enter product name..."}
+                />
+                {duplicateWarning && (
+                  <p className="text-[10px] font-bold text-red-600 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" /> {duplicateWarning}
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -294,7 +322,15 @@ export default function InventoryPage() {
                 <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="h-11 rounded-xl" />
               </div>
             </div>
-            <DialogFooter><Button className="bg-accent w-full h-12 rounded-xl font-black uppercase" onClick={handleAddProduct}>{t.saveProduct}</Button></DialogFooter>
+            <DialogFooter>
+              <Button 
+                className="bg-accent w-full h-12 rounded-xl font-black uppercase" 
+                onClick={handleAddProduct}
+                disabled={!!duplicateWarning || !newProduct.name.trim()}
+              >
+                {t.saveProduct}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -372,15 +408,23 @@ export default function InventoryPage() {
 
       {/* Edit Product Dialog */}
       <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-3xl">
+        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-[2rem]">
           <DialogHeader>
             <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Product Details</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase text-accent">Modify A to Z information for {editingProduct?.name}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase">Product Name</Label>
-              <Input value={editingProduct?.name || ""} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="h-11 rounded-xl" />
+              <Input 
+                value={editingProduct?.name || ""} 
+                onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} 
+                className={cn("h-11 rounded-xl", editDuplicateWarning && "border-red-500 focus-visible:ring-red-500")} 
+              />
+              {editDuplicateWarning && (
+                <p className="text-[10px] font-bold text-red-600 flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" /> {editDuplicateWarning}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -408,11 +452,14 @@ export default function InventoryPage() {
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase">Manual Stock Adjust ({editingProduct?.unit})</Label>
               <Input type="number" value={editingProduct?.stock || ""} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} className="h-11 rounded-xl border-orange-200 focus:ring-orange-500" />
-              <p className="text-[9px] text-orange-600 font-bold uppercase italic">* Changing stock here will not be recorded in procurement history.</p>
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleUpdateProduct}>
+            <Button 
+              className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" 
+              onClick={handleUpdateProduct}
+              disabled={!!editDuplicateWarning || !editingProduct?.name?.trim()}
+            >
               Save All Changes
             </Button>
           </DialogFooter>
@@ -421,13 +468,13 @@ export default function InventoryPage() {
 
       {/* Authorized Delete Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[400px] rounded-3xl">
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive font-black uppercase">
               <Lock className="w-5 h-5" /> Permanent Deletion
             </DialogTitle>
             <DialogDescription>
-              This product will be removed from your database forever. Enter secret key to confirm.
+              Enter secret key 'specsxr' to confirm deletion.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
@@ -450,7 +497,7 @@ export default function InventoryPage() {
 
       {/* Restock Dialog */}
       <Dialog open={!!restockProduct} onOpenChange={(open) => !open && setRestockProduct(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-[400px] rounded-3xl">
+        <DialogContent className="w-[95vw] sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary font-black uppercase tracking-tighter">
               <PackagePlus className="w-5 h-5 text-accent" /> {t.newStockEntry}
