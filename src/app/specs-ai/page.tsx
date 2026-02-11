@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useRef, useEffect, useMemo } from "react"
@@ -28,7 +29,7 @@ export default function SpecsAIAdvisorPage() {
   const { toast } = useToast()
   const { user } = useUser()
   const db = useFirestore()
-  const { products, sales, currency, language, aiApiKey, aiModel } = useBusinessData()
+  const { products, sales, customers, currency, language, aiApiKey, aiModel } = useBusinessData()
   const t = translations[language]
   
   const [input, setInput] = useState("")
@@ -48,8 +49,8 @@ export default function SpecsAIAdvisorPage() {
         id: 'welcome', 
         role: "assistant" as const, 
         content: language === 'bn' 
-          ? "নমস্কার ভাই! আমি আপনার SpecsAI অ্যাডভাইজর। আমি আপনার দোকানের প্রতিটি ট্রানজ্যাকশন স্টাডি করেছি। ব্যবসা বড় করার জন্য কোনো বিশেষ পরামর্শ চান?" 
-          : "Greetings Partner! I'm your SpecsAI Advisor. I've analyzed every transaction in your shop. Ready to discuss growth strategies?" 
+          ? "নমস্কার স্যার! আমি আপনার SpecsAI অ্যাডভাইজর। আমি আপনার দোকানের ইনভেন্টরি, সেলস এবং বাকির প্রতিটি তথ্য স্টাডি করেছি। ব্যবসা বড় করার জন্য কোনো বিশেষ পরামর্শ চান?" 
+          : "Greetings Sir! I'm your SpecsAI Advisor. I've analyzed your inventory, sales, and debt records. Ready to discuss growth strategies?" 
       }];
     }
     return fbMessages;
@@ -76,14 +77,25 @@ export default function SpecsAIAdvisorPage() {
     try {
       await saveMsg('user', message);
 
-      const inventorySummary = products.map(p => `${p.name}: ${p.stock}${p.unit}`).join(', ')
-      const salesPerformance = `Total Sales: ${sales.length}, Last Revenue: ${sales[0]?.total || 0}`
-      const topProducts = sales.slice(0, 5).map(s => s.items?.map((i: any) => i.name).join(',')).join('; ')
+      // Construct A to Z context for the AI
+      const inventorySummary = products.length > 0
+        ? products.map(p => `[Product: ${p.name}, Stock: ${p.stock}${p.unit}, Buy: ${p.purchasePrice}, Sell: ${p.sellingPrice}, Cat: ${p.category}]`).join('\n')
+        : "Inventory is empty."
+
+      const salesPerformance = sales.length > 0
+        ? sales.slice(0, 20).map(s => `Date: ${new Date(s.saleDate).toLocaleDateString()}, Total: ${s.total}, Profit: ${s.profit}, Type: ${s.isBakiPayment ? 'Baki Payment' : 'Regular Sale'}`).join('\n')
+        : "No sales records yet."
+
+      const customersSummary = customers.length > 0
+        ? customers.map(c => `Customer: ${c.firstName} ${c.lastName}, Owed: ${currency}${c.totalDue}, Phone: ${c.phone}`).join('\n')
+        : "No debtors found."
+
+      const financialSummary = `Total Revenue: ${sales.reduce((acc, s) => acc + (s.total || 0), 0)}, Potential Profit in Warehouse: ${products.reduce((acc, p) => acc + (((p.sellingPrice || 0) - (p.purchasePrice || 0)) * (p.stock || 0)), 0)}`
 
       const history = messages
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
-        .slice(-6)
+        .slice(-8)
 
       const result = await growthExpertChat({
         message,
@@ -91,7 +103,8 @@ export default function SpecsAIAdvisorPage() {
         context: {
           inventorySummary,
           salesPerformance,
-          topProducts,
+          customersSummary,
+          financialSummary,
           currentLanguage: language,
           currency,
           aiApiKey: aiApiKey,
@@ -129,7 +142,7 @@ export default function SpecsAIAdvisorPage() {
           <div>
             <h2 className="text-xl font-black text-primary uppercase tracking-tighter">SpecsAI Advisor</h2>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-bold text-accent uppercase tracking-[0.3em]">Growth & Strategy Engine</span>
+              <span className="text-[9px] font-bold text-accent uppercase tracking-[0.3em]">Master Business Partner</span>
               {aiModel && <Badge variant="outline" className="text-[8px] h-4 py-0 px-1 border-accent/20 text-accent font-black">{aiModel}</Badge>}
             </div>
           </div>
@@ -165,7 +178,7 @@ export default function SpecsAIAdvisorPage() {
                       : 'bg-accent/5 border border-accent/10 rounded-tl-none text-primary'
                   )}>
                     <div className="flex items-center gap-2 mb-2 opacity-40">
-                       <span className="text-[8px] font-black uppercase tracking-widest">{m.role === 'user' ? 'Owner' : 'Growth Expert'}</span>
+                       <span className="text-[8px] font-black uppercase tracking-widest">{m.role === 'user' ? 'Owner' : 'Growth Partner'}</span>
                     </div>
                     <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap font-medium">
                       {m.content}
@@ -177,7 +190,7 @@ export default function SpecsAIAdvisorPage() {
                 <div className="flex justify-start">
                   <div className="bg-accent/5 p-6 rounded-[2rem] rounded-tl-none border border-accent/10 flex items-center gap-3">
                     <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Thinking with {aiModel}...</span>
+                    <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Analyzing your business, Sir...</span>
                   </div>
                 </div>
               )}
@@ -190,7 +203,7 @@ export default function SpecsAIAdvisorPage() {
           <div className="flex gap-3 items-center">
             <div className="flex-1 relative">
               <Input 
-                placeholder={language === 'bn' ? "ব্যবসা নিয়ে পরামর্শ চান..." : "Ask for growth advice..."}
+                placeholder={language === 'bn' ? "ব্যবসা নিয়ে পরামর্শ চান, স্যার..." : "Ask for business advice, Sir..."}
                 className="h-14 md:h-16 pl-6 pr-12 rounded-[1.5rem] bg-white border-primary/10 shadow-inner text-base font-medium focus-visible:ring-primary"
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -207,7 +220,7 @@ export default function SpecsAIAdvisorPage() {
             </div>
           </div>
           <div className="flex gap-2 mt-4 overflow-x-auto pb-2 no-scrollbar">
-            {["Analyze last month", "Predict next week", "Slow items", "Profit tips"].map((tag, i) => (
+            {["Hidden mistakes?", "Predict next month profit", "Who owes me most?", "Restock advice"].map((tag, i) => (
               <button 
                 key={i} 
                 onClick={() => handleSend(tag)}

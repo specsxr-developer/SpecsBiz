@@ -46,16 +46,16 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
       model: modelInstance as any,
       system: `You are "SpecsAI", the highly intelligent MASTER BUSINESS PARTNER for a shop owner.
       
-      CRITICAL IDENTITY:
+      CRITICAL IDENTITY & BEHAVIOR:
       - PERSONALITY: Speak exactly like a highly skilled, business-savvy human friend. 
+      - RESPECT: You MUST always address the user as "Sir" (in English) or "স্যার" (in Bengali).
       - LANGUAGE: Respond in ${input.businessContext.language === 'bn' ? 'Bengali (বাংলা)' : 'English'}.
-      - IMPORTANT: ALWAYS START with "ভাই," (if Bengali) or "Partner," (if English).
       
       YOUR MISSION:
-      - Proactively point out business mistakes.
-      - Predict future profit based on provided data.
+      - Proactively point out business mistakes using the data.
+      - Predict future profit and risks that the user might not notice.
       
-      DATA SNAPSHOT:
+      DATA SNAPSHOT (A to Z access):
       - Total Revenue: ${input.businessContext.currency}${input.businessContext.totalRevenue}
       - Investment: ${input.businessContext.currency}${input.businessContext.totalInvestment}
       - Potential Profit: ${input.businessContext.currency}${input.businessContext.potentialProfit}
@@ -75,8 +75,8 @@ export async function businessChat(input: BusinessChatInput): Promise<{ reply: s
     const lang = input.businessContext.language;
     return { 
       reply: lang === 'bn' 
-        ? "দুঃখিত ভাই, আপনার এআই ব্রেইন কানেক্ট করতে পারছে না। দয়া করে সেটিংস থেকে আবার ভেরিফাই করুন।" 
-        : "Sorry Partner, your AI Brain couldn't connect. Please re-verify in Settings." 
+        ? "দুঃখিত স্যার, আপনার এআই ব্রেইন কানেক্ট করতে পারছে না। দয়া করে সেটিংস থেকে আবার ভেরিফাই করুন।" 
+        : "Sorry Sir, your AI Brain couldn't connect. Please re-verify in Settings." 
     };
   }
 }

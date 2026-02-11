@@ -18,7 +18,8 @@ const GrowthExpertInputSchema = z.object({
   context: z.object({
     inventorySummary: z.string(),
     salesPerformance: z.string(),
-    topProducts: z.string(),
+    customersSummary: z.string(),
+    financialSummary: z.string(),
     currentLanguage: z.enum(['en', 'bn']),
     currency: z.string(),
     aiApiKey: z.string().optional(),
@@ -48,18 +49,22 @@ const advisorFlow = ai.defineFlow(
     try {
       const response = await ai.generate({
         model: modelInstance as any,
-        system: `You are "SpecsAI Advisor", a world-class Strategic Business Growth Expert for shop owners.
+        system: `You are "SpecsAI Advisor", a world-class Strategic Business Growth Expert and Master Partner for shop owners.
         
-        YOUR PERSONALITY:
-        - Sharp, data-driven, and highly professional.
-        - LANGUAGE: ${input.context.currentLanguage === 'bn' ? 'Bengali (বাংলা)' : 'English'}.
-        - IMPORTANT: ALWAYS START with "নমস্কার ভাই," (if Bengali) or "Greetings Partner," (if English).
+        CRITICAL IDENTITY & BEHAVIOR:
+        - PERSONALITY: Speak exactly like a highly skilled, data-driven, and loyal human partner.
+        - RESPECT: You MUST always address the user as "Sir" (in English) or "স্যার" (in Bengali). 
+        - LANGUAGE: Respond in ${input.context.currentLanguage === 'bn' ? 'Bengali (বাংলা)' : 'English'}.
+        - DATA MASTERY: You have full access to the shop's database. Use it to find hidden patterns, mistakes, and growth opportunities that the user might not know.
         
-        DATA CONTEXT:
+        DATA CONTEXT (A to Z Shop Info):
         - Inventory: ${input.context.inventorySummary}
         - Sales Stats: ${input.context.salesPerformance}
-        - Top Performers: ${input.context.topProducts}
-        - Currency: ${input.context.currency}`,
+        - Customer Debts (Baki): ${input.context.customersSummary}
+        - Financial Snapshot: ${input.context.financialSummary}
+        - Currency: ${input.context.currency}
+        
+        Your goal is to make this business successful. Be proactive, respectful, and sharp.`,
         history: input.history.map(m => ({
           role: m.role === 'assistant' ? 'model' : 'user',
           content: [{ text: m.content }]
@@ -68,7 +73,7 @@ const advisorFlow = ai.defineFlow(
       });
 
       return { 
-        reply: response.text || "আমি আপনার দোকানের তথ্য অ্যানালাইসিস করছি...",
+        reply: response.text || "আমি আপনার দোকানের তথ্য অ্যানালাইসিস করছি, স্যার...",
         detectedModel: userModel
       };
     } catch (error: any) {
@@ -86,8 +91,8 @@ export async function growthExpertChat(input: z.infer<typeof GrowthExpertInputSc
     const lang = input.context.currentLanguage;
     return { 
       reply: lang === 'bn' 
-        ? `দুঃখিত ভাই, আপনার এআই সিস্টেমে সমস্যা হচ্ছে। ভুল কি বা নেটওয়ার্ক এরর হতে পারে। (${error.message?.substring(0, 50)})` 
-        : `Sorry Partner, there's an issue with your AI. (${error.message?.substring(0, 50)})` 
+        ? `দুঃখিত স্যার, আপনার এআই সিস্টেমে কানেকশন সমস্যা হচ্ছে। (${error.message?.substring(0, 50)})` 
+        : `Sorry Sir, there's a connection issue with your AI. (${error.message?.substring(0, 50)})` 
     };
   }
 }
