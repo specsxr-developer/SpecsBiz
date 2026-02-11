@@ -11,6 +11,7 @@ export function FloatingCalculator() {
   const [isOpen, setIsOpen] = useState(false)
   const [expression, setExpression] = useState("0")
   const [history, setHistory] = useState("")
+  const [lastResult, setLastResult] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -20,10 +21,7 @@ export function FloatingCalculator() {
   if (!mounted) return null
 
   const handleNumber = (num: string) => {
-    // If a result was just calculated, start fresh
-    if (expression === "Error") {
-      setExpression(num)
-    } else if (expression === "0") {
+    if (expression === "Error" || expression === "0") {
       setExpression(num)
     } else {
       setExpression(expression + num)
@@ -33,11 +31,25 @@ export function FloatingCalculator() {
   const handleOperator = (op: string) => {
     if (expression === "Error") return
     const lastChar = expression.slice(-1)
-    // Avoid double operators
     if (["+", "-", "*", "/"].includes(lastChar)) {
       setExpression(expression.slice(0, -1) + op)
     } else {
       setExpression(expression + op)
+    }
+  }
+
+  const handleAns = () => {
+    if (lastResult) {
+      if (expression === "0" || expression === "Error") {
+        setExpression(lastResult)
+      } else {
+        const lastChar = expression.slice(-1)
+        if (!["+", "-", "*", "/"].includes(lastChar)) {
+          setExpression(expression + "*" + lastResult)
+        } else {
+          setExpression(expression + lastResult)
+        }
+      }
     }
   }
 
@@ -58,12 +70,12 @@ export function FloatingCalculator() {
     try {
       if (expression === "0" || !expression) return
       
-      // Save current expression to history before calculating
-      setHistory(expression)
-      
-      // Use Function constructor for a safer alternative to eval
       const result = new Function(`return ${expression.replace(/[^-()\d/*+.]/g, '')}`)()
-      setExpression(Number(result.toFixed(4)).toString())
+      const formattedResult = Number(result.toFixed(4)).toString()
+      
+      setHistory(expression + " =")
+      setExpression(formattedResult)
+      setLastResult(formattedResult)
     } catch (e) {
       setExpression("Error")
     }
@@ -80,7 +92,7 @@ export function FloatingCalculator() {
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       className={cn(
-        "h-16 sm:h-20 text-xl sm:text-2xl font-black rounded-3xl transition-all active:scale-90 floating-calc-element shadow-sm",
+        "h-14 sm:h-16 text-xl sm:text-2xl font-black rounded-2xl transition-all active:scale-90 floating-calc-element shadow-sm",
         className
       )}
     >
@@ -110,7 +122,7 @@ export function FloatingCalculator() {
         </Button>
       </div>
 
-      {/* Calculator Popup - Optimized for Portrait Mobile (Extra Tall) */}
+      {/* Calculator Popup */}
       {isOpen && (
         <div 
           className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 floating-calc-element"
@@ -121,90 +133,83 @@ export function FloatingCalculator() {
           }}
         >
           <div 
-            className="w-full max-w-[360px] min-h-[650px] sm:min-h-[700px] flex flex-col p-6 sm:p-8 rounded-[3rem] bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] border-2 border-accent/20 animate-in zoom-in-95 duration-300 relative pointer-events-auto floating-calc-element"
+            className="w-full max-w-[360px] flex flex-col p-5 rounded-[2.5rem] bg-white shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-accent/10 animate-in zoom-in-95 duration-300 relative pointer-events-auto floating-calc-element"
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-accent/10 rounded-2xl">
-                  <CalcIcon className="w-6 h-6 text-accent" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-accent/10 rounded-xl">
+                  <CalcIcon className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">SpecsBiz Intelligence</h3>
-                  <p className="text-[8px] font-bold text-accent uppercase opacity-60">Smart Pocket Calculator</p>
+                  <h3 className="text-[9px] font-black uppercase tracking-widest text-primary">SpecsBiz Intelligence</h3>
+                  <p className="text-[7px] font-bold text-accent uppercase opacity-60">Professional Calculator</p>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="rounded-full h-10 w-10 hover:bg-red-50 hover:text-red-500 transition-colors" 
+                className="rounded-full h-8 w-8 hover:bg-red-50 hover:text-red-500 transition-colors" 
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsOpen(false);
                 }}
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
 
-            {/* Display Area - Extra Tall & Integrated History */}
-            <div className="bg-muted/40 p-8 rounded-[2.5rem] border-2 border-accent/5 text-right overflow-hidden shadow-inner flex flex-col justify-end min-h-[180px] mb-8 relative">
-              {history ? (
-                <p className="text-sm font-bold text-muted-foreground/40 uppercase tracking-widest mb-2 animate-in slide-in-from-top-2 duration-500 truncate">
-                  {history} =
+            {/* Display Area */}
+            <div className="bg-muted/30 p-6 rounded-3xl border border-accent/5 text-right overflow-hidden shadow-inner flex flex-col justify-end min-h-[140px] mb-4 relative">
+              <div className="absolute top-4 right-6 left-6 overflow-x-auto scrollbar-none">
+                <p className="text-xs font-bold text-muted-foreground/50 uppercase tracking-tighter animate-in slide-in-from-top-1 duration-300">
+                  {history || "No History"}
                 </p>
-              ) : (
-                <div className="absolute top-6 right-8 flex items-center gap-1.5 opacity-20">
-                  <History className="w-3 h-3" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">No History</span>
-                </div>
-              )}
+              </div>
               
-              <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-none">
+              <div className="w-full overflow-x-auto whitespace-nowrap scrollbar-none mt-4">
                 <p className={cn(
                   "font-black text-primary tracking-tighter leading-none transition-all",
-                  expression.length > 10 ? "text-4xl" : "text-5xl"
+                  expression.length > 10 ? "text-3xl" : "text-4xl"
                 )}>
                   {expression}
                 </p>
               </div>
-              <div className="mt-2 flex justify-end">
-                <span className="h-1 w-12 bg-accent/20 rounded-full" />
-              </div>
             </div>
 
-            {/* Buttons Grid - Flex-1 to fill the tall container */}
-            <div className="grid grid-cols-4 gap-4 flex-1">
+            {/* Buttons Grid - Tighter Spacing */}
+            <div className="grid grid-cols-4 gap-2.5">
               <CalcButton onClick={handleClear} variant="ghost" className="text-destructive bg-red-50 hover:bg-red-100 border-none">C</CalcButton>
-              <CalcButton onClick={handleBackspace} variant="ghost" className="bg-muted/50 border-none"><Eraser className="w-6 h-6" /></CalcButton>
-              <CalcButton onClick={() => handleOperator("/")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-2xl">÷</CalcButton>
-              <CalcButton onClick={() => handleOperator("*")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-2xl">×</CalcButton>
+              <CalcButton onClick={handleBackspace} variant="ghost" className="bg-muted/50 border-none"><Eraser className="w-5 h-5" /></CalcButton>
+              <CalcButton onClick={handleAns} variant="ghost" className="bg-accent/5 text-accent border-none text-sm">Ans</CalcButton>
+              <CalcButton onClick={() => handleOperator("/")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-xl">÷</CalcButton>
 
               {[7, 8, 9].map(n => (
-                <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-2 border-muted/20 text-primary shadow-sm">{n}</CalcButton>
+                <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-black/5 text-primary shadow-sm">{n}</CalcButton>
               ))}
-              <CalcButton onClick={() => handleOperator("-")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-3xl">−</CalcButton>
+              <CalcButton onClick={() => handleOperator("*")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-xl">×</CalcButton>
 
               {[4, 5, 6].map(n => (
-                <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-2 border-muted/20 text-primary shadow-sm">{n}</CalcButton>
+                <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-black/5 text-primary shadow-sm">{n}</CalcButton>
               ))}
-              <CalcButton onClick={() => handleOperator("+")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-2xl">+</CalcButton>
+              <CalcButton onClick={() => handleOperator("-")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-2xl">−</CalcButton>
 
               {[1, 2, 3].map(n => (
-                <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-2 border-muted/20 text-primary shadow-sm">{n}</CalcButton>
+                <CalcButton key={n} onClick={() => handleNumber(n.toString())} className="bg-white border-black/5 text-primary shadow-sm">{n}</CalcButton>
               ))}
-              <CalcButton onClick={calculate} className="bg-primary hover:bg-primary/90 text-white row-span-2 h-full text-4xl border-none shadow-xl active:scale-95">=</CalcButton>
+              <CalcButton onClick={() => handleOperator("+")} className="bg-accent/10 text-accent hover:bg-accent hover:text-white border-none text-xl">+</CalcButton>
 
-              <CalcButton onClick={() => handleNumber("0")} className="col-span-2 bg-white border-2 border-muted/20 text-primary shadow-sm">0</CalcButton>
-              <CalcButton onClick={() => handleNumber(".")} className="bg-white border-2 border-muted/20 text-primary shadow-sm">.</CalcButton>
+              <CalcButton onClick={() => handleNumber("0")} className="bg-white border-black/5 text-primary shadow-sm">0</CalcButton>
+              <CalcButton onClick={() => handleNumber(".")} className="bg-white border-black/5 text-primary shadow-sm">.</CalcButton>
+              <CalcButton onClick={calculate} className="col-span-2 bg-primary hover:bg-primary/90 text-white text-3xl border-none shadow-xl active:scale-95">=</CalcButton>
             </div>
             
             {/* Bottom Decoration */}
-            <div className="mt-6 flex justify-center">
-              <div className="h-1.5 w-20 bg-muted rounded-full" />
+            <div className="mt-4 flex justify-center">
+              <div className="h-1 w-12 bg-muted rounded-full" />
             </div>
           </div>
         </div>
