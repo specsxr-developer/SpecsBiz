@@ -24,7 +24,8 @@ import {
   PackagePlus,
   Lock,
   X,
-  AlertCircle
+  AlertCircle,
+  BellRing
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -104,7 +105,8 @@ export default function InventoryPage() {
     purchasePrice: "",
     sellingPrice: "",
     stock: "",
-    unit: "pcs"
+    unit: "pcs",
+    alertThreshold: "5" // Default threshold
   })
 
   // --- REAL-TIME DUPLICATE WARNING (NON-BLOCKING) ---
@@ -163,8 +165,9 @@ export default function InventoryPage() {
       stock: parseFloat(newProduct.stock) || 0,
       purchasePrice: parseFloat(newProduct.purchasePrice) || 0,
       sellingPrice: parseFloat(newProduct.sellingPrice) || 0,
+      alertThreshold: parseFloat(newProduct.alertThreshold) || 5
     })
-    setNewProduct({ name: "", category: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs" })
+    setNewProduct({ name: "", category: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs", alertThreshold: "5" })
     setIsAddOpen(false)
     toast({ title: language === 'en' ? "Product Added" : "পণ্য যোগ করা হয়েছে" })
   }
@@ -178,6 +181,7 @@ export default function InventoryPage() {
       stock: parseFloat(editingProduct.stock) || 0,
       purchasePrice: parseFloat(editingProduct.purchasePrice) || 0,
       sellingPrice: parseFloat(editingProduct.sellingPrice) || 0,
+      alertThreshold: parseFloat(editingProduct.alertThreshold) || 5
     });
     setEditingProduct(null);
     toast({ title: language === 'en' ? "Product Updated" : "আপডেট করা হয়েছে" });
@@ -214,7 +218,8 @@ export default function InventoryPage() {
       ...p,
       purchasePrice: p.purchasePrice.toString(),
       sellingPrice: p.sellingPrice.toString(),
-      stock: p.stock.toString()
+      stock: p.stock.toString(),
+      alertThreshold: (p.alertThreshold || 5).toString()
     });
   }
 
@@ -281,9 +286,18 @@ export default function InventoryPage() {
                   <Input type="number" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl" />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">{t.stock} ({newProduct.unit})</Label>
-                <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="h-11 rounded-xl" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase">{t.stock} ({newProduct.unit})</Label>
+                  <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="h-11 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase flex items-center gap-1">
+                    <BellRing className="w-3 h-3 text-red-500" />
+                    {language === 'en' ? 'Low Stock Warning Level' : 'লো স্টক ওয়ার্নিং লিমিট'}
+                  </Label>
+                  <Input type="number" value={newProduct.alertThreshold} onChange={e => setNewProduct({...newProduct, alertThreshold: e.target.value})} className="h-11 rounded-xl border-red-100 focus:ring-red-500" />
+                </div>
               </div>
             </div>
             <DialogFooter>
@@ -326,42 +340,54 @@ export default function InventoryPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProducts.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-accent/5 transition-all group">
-                      <TableCell className="p-3 pl-4">
-                        <p className="text-xs font-black text-primary leading-tight">{p.name}</p>
-                        <p className="text-[8px] md:text-[9px] text-accent uppercase font-bold mt-0.5">{p.category || 'N/A'}</p>
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-[10px] font-black text-primary">{currency}{p.sellingPrice}</p>
-                        <p className="text-[8px] text-muted-foreground font-bold">{t.buyPrice}: {currency}{p.purchasePrice}</p>
-                      </TableCell>
-                      <TableCell>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter", 
-                          p.stock < 5 ? "bg-red-50 text-red-600 border border-red-100" : "bg-green-50 text-green-700 border border-green-100"
-                        )}>
-                          {p.stock} {p.unit}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase border-accent text-accent hover:bg-accent hover:text-white rounded-lg transition-all active:scale-95" onClick={() => {
-                            setRestockProduct(p);
-                            setRestockPrice(p.purchasePrice.toString());
-                          }}>
-                            <PackagePlus className="w-3.5 h-3.5 mr-1" /> {t.restock}
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-lg" onClick={() => startEditing(p)}>
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5 rounded-lg" onClick={() => setDeleteId(p.id)}>
-                            <Trash className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredProducts.map((p) => {
+                    const threshold = p.alertThreshold || 5;
+                    const isLowStock = p.stock <= threshold;
+                    return (
+                      <TableRow key={p.id} className="hover:bg-accent/5 transition-all group">
+                        <TableCell className="p-3 pl-4">
+                          <p className="text-xs font-black text-primary leading-tight">{p.name}</p>
+                          <p className="text-[8px] md:text-[9px] text-accent uppercase font-bold mt-0.5">{p.category || 'N/A'}</p>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-[10px] font-black text-primary">{currency}{p.sellingPrice}</p>
+                          <p className="text-[8px] text-muted-foreground font-bold">{t.buyPrice}: {currency}{p.purchasePrice}</p>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className={cn(
+                              "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter w-fit", 
+                              isLowStock ? "bg-red-50 text-red-600 border border-red-100" : "bg-green-50 text-green-700 border border-green-100"
+                            )}>
+                              {p.stock} {p.unit}
+                            </span>
+                            {isLowStock && (
+                              <span className="text-[7px] font-bold text-red-500 uppercase flex items-center gap-0.5">
+                                <AlertTriangle className="w-2 h-2" /> 
+                                {language === 'en' ? `Below ${threshold}` : `${threshold} এর নিচে`}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right pr-4">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase border-accent text-accent hover:bg-accent hover:text-white rounded-lg transition-all active:scale-95" onClick={() => {
+                              setRestockProduct(p);
+                              setRestockPrice(p.purchasePrice.toString());
+                            }}>
+                              <PackagePlus className="w-3.5 h-3.5 mr-1" /> {t.restock}
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-lg" onClick={() => startEditing(p)}>
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5 rounded-lg" onClick={() => setDeleteId(p.id)}>
+                              <Trash className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -416,9 +442,18 @@ export default function InventoryPage() {
                 <Input type="number" value={editingProduct?.sellingPrice || ""} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl" />
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase">Manual Stock Adjust ({editingProduct?.unit})</Label>
-              <Input type="number" value={editingProduct?.stock || ""} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} className="h-11 rounded-xl border-orange-200 focus:ring-orange-500" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Manual Stock Adjust ({editingProduct?.unit})</Label>
+                <Input type="number" value={editingProduct?.stock || ""} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} className="h-11 rounded-xl border-orange-200 focus:ring-orange-500" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase flex items-center gap-1">
+                  <BellRing className="w-3 h-3 text-red-500" />
+                  Alert Limit
+                </Label>
+                <Input type="number" value={editingProduct?.alertThreshold || ""} onChange={e => setEditingProduct({...editingProduct, alertThreshold: e.target.value})} className="h-11 rounded-xl border-red-100 focus:ring-red-500" />
+              </div>
             </div>
           </div>
           <DialogFooter>
