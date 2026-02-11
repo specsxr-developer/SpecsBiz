@@ -20,7 +20,10 @@ import {
   ArrowDownCircle,
   Lock,
   BarChart2,
-  ArrowRight
+  ArrowRight,
+  Target,
+  ArrowDownRight,
+  ArrowUpCircle
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -57,19 +60,23 @@ export default function DashboardPage() {
 
   const totalRevenue = sales.reduce((acc, s) => acc + (s.total || 0), 0)
 
-  // Calculate Product-wise Profit
+  // Calculate Product-wise Deep Profit
   const productProfitData = useMemo(() => {
-    const dataMap: Record<string, { name: string, profit: number, qty: number }> = {}
+    const dataMap: Record<string, { name: string, profit: number, qty: number, revenue: number, cost: number }> = {}
     
     sales.forEach(sale => {
-      // We only calculate profit from actual sales items, not baki payments (which are already counted in initial baki)
       if (!sale.isBakiPayment && sale.items) {
         sale.items.forEach((item: any) => {
           const itemId = item.id || item.name;
           if (!dataMap[itemId]) {
-            dataMap[itemId] = { name: item.name, profit: 0, qty: 0 }
+            dataMap[itemId] = { name: item.name, profit: 0, qty: 0, revenue: 0, cost: 0 }
           }
-          const itemProfit = (item.sellingPrice - (item.purchasePrice || 0)) * item.quantity;
+          const itemRevenue = item.sellingPrice * item.quantity;
+          const itemCost = (item.purchasePrice || 0) * item.quantity;
+          const itemProfit = itemRevenue - itemCost;
+          
+          dataMap[itemId].revenue += itemRevenue;
+          dataMap[itemId].cost += itemCost;
           dataMap[itemId].profit += itemProfit;
           dataMap[itemId].qty += item.quantity;
         })
@@ -325,20 +332,20 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Product Profit Analysis Card */}
-        <Card className="border-accent/10">
+        {/* Product Profit Analysis Card - DEEP VERSION */}
+        <Card className="border-accent/10 shadow-lg">
           <CardHeader className="p-4 md:p-6 pb-2 md:pb-4 bg-accent/5">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-sm md:text-base flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 md:w-5 md:h-5 text-accent" />
-                  {language === 'en' ? 'Top Profitable Products' : 'পণ্যভিত্তিক লাভ বিশ্লেষণ'}
+                  <Target className="w-4 h-4 md:w-5 md:h-5 text-accent" />
+                  {language === 'en' ? 'Top Profitable Products (Details)' : 'পণ্যের বিস্তারিত লাভ বিশ্লেষণ'}
                 </CardTitle>
                 <CardDescription className="text-[10px] uppercase font-bold opacity-60 mt-1">
-                  {language === 'en' ? 'Ranking by total net profit' : 'সর্বোচ্চ লাভ অনুযায়ী তালিকা'}
+                  {language === 'en' ? 'A to Z Business Insight' : 'প্রতিটি পণ্যের লাভ-ক্ষতির আসল রিপোর্ট'}
                 </CardDescription>
               </div>
-              <Badge className="bg-accent text-white border-none text-[10px]">{language === 'en' ? 'Live' : 'লাইভ'}</Badge>
+              <Badge className="bg-accent text-white border-none text-[10px] uppercase font-black tracking-widest">{language === 'en' ? 'Live' : 'লাইভ'}</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -349,26 +356,46 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-black/5">
-                {productProfitData.map((item, idx) => (
-                  <div key={idx} className="p-4 flex items-center justify-between hover:bg-accent/5 transition-colors group">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs shrink-0">
-                        {idx + 1}
+                {productProfitData.map((item, idx) => {
+                  const profitMargin = item.revenue > 0 ? ((item.profit / item.revenue) * 100).toFixed(1) : 0;
+                  return (
+                    <div key={idx} className="p-4 hover:bg-accent/5 transition-colors group">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs shrink-0">
+                            #{idx + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-primary truncate group-hover:text-accent transition-colors">{item.name}</p>
+                            <p className="text-[9px] font-bold text-muted-foreground uppercase">{language === 'en' ? 'Units Sold' : 'বিক্রিত সংখ্যা'}: {item.qty}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black text-green-600">+{currency}{item.profit.toLocaleString()}</p>
+                          <div className="flex items-center gap-1 justify-end">
+                            <ArrowUpCircle className="w-2.5 h-2.5 text-green-500" />
+                            <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter">Net Profit</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-primary truncate group-hover:text-accent transition-colors">{item.name}</p>
-                        <p className="text-[9px] font-medium text-muted-foreground uppercase">{language === 'en' ? 'Sold' : 'বিক্রি'}: {item.qty}</p>
+                      
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div className="bg-muted/30 p-2 rounded-lg border border-black/5 text-center">
+                          <p className="text-[8px] font-bold uppercase opacity-50 mb-0.5">{language === 'en' ? 'Revenue' : 'মোট বিক্রি'}</p>
+                          <p className="text-[10px] font-black text-primary">{currency}{item.revenue.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-muted/30 p-2 rounded-lg border border-black/5 text-center">
+                          <p className="text-[8px] font-bold uppercase opacity-50 mb-0.5">{language === 'en' ? 'Total Cost' : 'মোট কেনা'}</p>
+                          <p className="text-[10px] font-black text-orange-600">{currency}{item.cost.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-center">
+                          <p className="text-[8px] font-black uppercase text-emerald-600 mb-0.5">{language === 'en' ? 'Margin' : 'লাভের হার'}</p>
+                          <p className="text-[10px] font-black text-emerald-700">{profitMargin}%</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-black text-green-600">+{currency}{item.profit.toLocaleString()}</p>
-                      <div className="flex items-center gap-1 justify-end">
-                        <TrendingUp className="w-2.5 h-2.5 text-green-500" />
-                        <span className="text-[8px] font-bold text-green-500 uppercase tracking-tighter">Profit</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
