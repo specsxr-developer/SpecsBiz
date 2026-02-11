@@ -74,10 +74,16 @@ export function FloatingCalculator() {
 
   return (
     <>
-      {/* Floating Toggle Button */}
-      <div className="fixed bottom-6 right-6 z-[9999] print:hidden">
+      {/* Floating Toggle Button - Super High Z-Index and Event Stop Propagation */}
+      <div 
+        className="fixed bottom-6 right-6 z-[10001] print:hidden"
+        onPointerDown={(e) => e.stopPropagation()} // Prevents closing of background Dialogs on click
+      >
         <Button
-          onClick={() => setIsOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(true);
+          }}
           className="h-12 w-12 rounded-full shadow-[0_10px_30px_rgba(0,128,128,0.4)] bg-accent hover:bg-accent/90 border-2 border-white animate-in zoom-in duration-300"
           size="icon"
         >
@@ -85,15 +91,18 @@ export function FloatingCalculator() {
         </Button>
       </div>
 
-      {/* Calculator Popup */}
+      {/* Calculator Popup - Z-index set to be on top of everything */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="w-[90vw] max-w-[320px] p-4 rounded-[2rem] gap-4 border-accent/20 shadow-2xl z-[10000]">
+        <DialogContent 
+          className="w-[90vw] max-w-[320px] p-4 rounded-[2rem] gap-4 border-accent/20 shadow-2xl z-[10002]"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <DialogHeader className="flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-accent/10 rounded-lg">
                 <CalcIcon className="w-4 h-4 text-accent" />
               </div>
-              <DialogTitle className="text-sm font-black uppercase tracking-tight">Smart Calc</DialogTitle>
+              <DialogTitle className="text-sm font-black uppercase tracking-tight text-primary">Smart Calc</DialogTitle>
             </div>
           </DialogHeader>
 
