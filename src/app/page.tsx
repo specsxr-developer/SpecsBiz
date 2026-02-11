@@ -632,6 +632,7 @@ export default function DashboardPage() {
                 <X className="w-5 h-5" />
               </Button>
             </div>
+            <DialogDescription className="sr-only">Detailed financial and inventory performance for {viewProduct?.name}.</DialogDescription>
           </div>
 
           <div className="p-6 md:p-8 space-y-8 bg-white max-h-[70vh] overflow-y-auto">
@@ -651,15 +652,15 @@ export default function DashboardPage() {
               </div>
               
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5">
+                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5 text-center">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Revenue</p>
                   <p className="text-xs font-black text-primary">{currency}{viewProduct?.revenue?.toLocaleString()}</p>
                 </div>
-                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5">
+                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5 text-center">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Cost</p>
                   <p className="text-xs font-black text-orange-600">{currency}{viewProduct?.cost?.toLocaleString()}</p>
                 </div>
-                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5">
+                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5 text-center">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Sold Qty</p>
                   <p className="text-xs font-black text-accent">{viewProduct?.qty} {viewProduct?.unit}</p>
                 </div>

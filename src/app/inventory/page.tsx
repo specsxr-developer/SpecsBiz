@@ -247,6 +247,7 @@ export default function InventoryPage() {
                 <DialogTitle className="text-primary font-black uppercase tracking-tighter">{t.addProduct}</DialogTitle>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsAddOpen(false)}><X className="w-4 h-4" /></Button>
               </div>
+              <DialogDescription className="text-[10px] uppercase font-bold opacity-60">Add new items to your shop inventory.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-1.5">
@@ -404,6 +405,7 @@ export default function InventoryPage() {
               <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Product Details</DialogTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setEditingProduct(null)}><X className="w-4 h-4" /></Button>
             </div>
+            <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Update details for {editingProduct?.name}.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-1.5">

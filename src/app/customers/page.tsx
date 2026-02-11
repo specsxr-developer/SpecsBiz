@@ -410,6 +410,7 @@ export default function CustomersPage() {
               <DialogTitle>{addStep === 1 ? t.registerNewCustomer : t.initialBakiDetails}</DialogTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsAddOpen(false)}><X className="w-4 h-4" /></Button>
             </div>
+            <DialogDescription className="text-[10px] font-bold opacity-60">Follow the steps to register a new debtor.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {addStep === 1 ? (
@@ -523,6 +524,7 @@ export default function CustomersPage() {
                 </Button>
               </div>
             </div>
+            <SheetDescription className="sr-only">Detailed credit history and info for {detailsCustomer?.firstName}.</SheetDescription>
             <div className="mt-4 flex gap-3">
               <div className="flex-1 bg-white p-3 rounded-xl border-2 border-accent/10 shadow-inner">
                 <p className="text-[8px] font-black uppercase opacity-50">Total Debt</p>
@@ -583,6 +585,7 @@ export default function CustomersPage() {
               <DialogTitle>Edit Profile</DialogTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsCustomerEditOpen(false)}><X className="w-4 h-4" /></Button>
             </div>
+            <DialogDescription className="text-[10px] font-bold opacity-60">Update contact and address information.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
@@ -616,6 +619,7 @@ export default function CustomersPage() {
               <DialogTitle>Add Baki Record</DialogTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsRecordAddOpen(false)}><X className="w-4 h-4" /></Button>
             </div>
+            <DialogDescription className="text-[10px] font-bold opacity-60">Record a new credit transaction for this customer.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="relative">
