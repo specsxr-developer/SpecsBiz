@@ -9,6 +9,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { BusinessProvider } from '@/hooks/use-business-data';
 import { SplashScreen } from '@/components/splash-screen';
 import { NotificationBell } from '@/components/notification-bell';
+import { FloatingCalculator } from '@/components/floating-calculator';
 import Script from 'next/script';
 
 export const metadata: Metadata = {
@@ -80,6 +81,7 @@ export default function RootLayout({
                 <BottomNav />
               </SidebarInset>
             </SidebarProvider>
+            <FloatingCalculator />
             <Toaster />
           </BusinessProvider>
         </FirebaseClientProvider>
