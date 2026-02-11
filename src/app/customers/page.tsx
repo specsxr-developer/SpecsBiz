@@ -19,7 +19,9 @@ import {
   Calendar,
   X,
   UserEdit,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  Lock
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -70,16 +72,18 @@ export default function CustomersPage() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [addStep, setAddStep] = useState(1) 
   
-  const [detailsCustomer, setDetailsCustomer] = useState<any>(null)
+  const [activeCustomerId, setActiveCustomerId] = useState<string | null>(null)
   const [isRecordAddOpen, setIsRecordAddOpen] = useState(false)
-  
-  // Edit Record State
-  const [editingRecord, setEditingRecord] = useState<any>(null)
   const [isRecordEditOpen, setIsRecordEditOpen] = useState(false)
-
-  // Edit Customer Info State
   const [isCustomerEditOpen, setIsCustomerEditOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   
+  // LIVE Customer Object
+  const detailsCustomer = useMemo(() => {
+    return customers.find(c => c.id === activeCustomerId) || null
+  }, [customers, activeCustomerId])
+
+  const [editingRecord, setEditingRecord] = useState<any>(null)
   const [newRecord, setNewRecord] = useState({
     productId: "",
     productName: "",
@@ -100,31 +104,30 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
-  // --- REAL-TIME DUPLICATE WARNINGS ---
+  // Real-time Warnings
   const nameWarning = useMemo(() => {
     if (!newCustomer.firstName.trim()) return null;
     const fullName = (newCustomer.firstName + " " + (newCustomer.lastName || "")).toLowerCase().trim().replace(/\s+/g, ' ');
     const match = customers.find(c => {
+      if (activeCustomerId && c.id === activeCustomerId) return false;
       const cFull = (c.firstName + " " + (c.lastName || "")).toLowerCase().trim().replace(/\s+/g, ' ');
-      return cFull === fullName || cFull.includes(fullName) || fullName.includes(cFull);
+      return cFull === fullName;
     });
-    if (match) {
-      return language === 'bn' ? `'${match.firstName} ${match.lastName}' নামে একজন গ্রাহক অলরেডি আছেন!` : `Customer '${match.firstName}' already exists!`;
-    }
+    if (match) return language === 'bn' ? `'${match.firstName}' নামে কাস্টমার আছে!` : `Customer '${match.firstName}' exists!`;
     return null;
-  }, [newCustomer.firstName, newCustomer.lastName, customers, language]);
+  }, [newCustomer.firstName, newCustomer.lastName, customers, language, activeCustomerId]);
 
   const phoneWarning = useMemo(() => {
     const rawPhone = newCustomer.phone.replace(/\D/g, '');
     if (rawPhone.length < 5) return null;
-    const match = customers.find(c => (c.phone || "").replace(/\D/g, '') === rawPhone);
-    if (match) {
-      return language === 'bn' ? `এই ফোন নম্বরটি '${match.firstName}' এর জন্য ব্যবহৃত হয়েছে!` : `Phone used by '${match.firstName}'!`;
-    }
+    const match = customers.find(c => {
+      if (activeCustomerId && c.id === activeCustomerId) return false;
+      return (c.phone || "").replace(/\D/g, '') === rawPhone;
+    });
+    if (match) return language === 'bn' ? `ফোন নম্বরটি '${match.firstName}' এর জন্য ব্যবহৃত!` : `Phone used by '${match.firstName}'!`;
     return null;
-  }, [newCustomer.phone, customers, language]);
+  }, [newCustomer.phone, customers, language, activeCustomerId]);
 
-  // Auto-calculate total amount
   useEffect(() => {
     const qty = parseFloat(newRecord.quantity) || 0
     const price = parseFloat(newRecord.unitPrice) || 0
@@ -140,75 +143,25 @@ export default function CustomersPage() {
       unitPrice: p.sellingPrice.toString(),
     }))
     setProductSearch("")
-    toast({ title: language === 'en' ? "Product Selected" : "পণ্য সিলেক্ট করা হয়েছে" })
   }
 
   const bakiRecordsQuery = useMemoFirebase(() => {
-    if (!user?.uid || !db || !detailsCustomer) return null;
+    if (!user?.uid || !db || !activeCustomerId) return null;
     return query(
-      collection(db, 'users', user.uid, 'customers', detailsCustomer.id, 'bakiRecords'),
+      collection(db, 'users', user.uid, 'customers', activeCustomerId, 'bakiRecords'),
       orderBy('takenDate', 'desc')
     );
-  }, [user?.uid, db, detailsCustomer]);
+  }, [user?.uid, db, activeCustomerId]);
 
   const { data: fbBakiRecords } = useCollection(bakiRecordsQuery);
   
-  // CRITICAL: Filter out PAID records so they don't clutter the Baki detail list
   const currentBakiRecords = useMemo(() => {
-    const rawRecords = detailsCustomer ? (user ? (fbBakiRecords || []) : (detailsCustomer.bakiRecords || [])) : [];
+    const rawRecords = activeCustomerId ? (user ? (fbBakiRecords || []) : (detailsCustomer?.bakiRecords || [])) : [];
     return rawRecords.filter((r: any) => r.status !== 'paid');
-  }, [fbBakiRecords, detailsCustomer, user]);
-
-  const handleOpenAddDialog = (open: boolean) => {
-    setIsAddOpen(open)
-    if (open) {
-      setAddStep(1)
-      setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
-      setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
-      setProductSearch("")
-    }
-  }
-
-  const validateCustomer = (cust: any, isUpdate = false, originalId?: string) => {
-    const fName = cust.firstName.trim();
-    const lName = (cust.lastName || "").trim();
-    const phone = (cust.phone || "").trim().replace(/\D/g, '');
-
-    if (!fName) {
-      toast({ variant: "destructive", title: language === 'bn' ? "প্রথম নাম আবশ্যক!" : "First name required!" });
-      return false;
-    }
-
-    const normalizedFullName = (fName + " " + lName).toLowerCase().replace(/\s+/g, ' ');
-    const isNameDuplicate = customers.some(c => {
-      const cFullName = (c.firstName + " " + (c.lastName || "")).toLowerCase().replace(/\s+/g, ' ');
-      const match = cFullName === normalizedFullName;
-      return isUpdate ? (match && c.id !== originalId) : match;
-    });
-
-    if (isNameDuplicate) {
-      toast({ variant: "destructive", title: language === 'bn' ? "ডুপ্লিকেট নাম!" : "Duplicate Name!" });
-      return false;
-    }
-
-    if (phone) {
-      const isPhoneDuplicate = customers.some(c => {
-        const cPhone = (c.phone || "").replace(/\D/g, '');
-        const match = cPhone === phone;
-        return isUpdate ? (match && c.id !== originalId) : match;
-      });
-      if (isPhoneDuplicate) {
-        toast({ variant: "destructive", title: language === 'bn' ? "নম্বরটি ব্যবহৃত হয়েছে!" : "Phone Already Used!" });
-        return false;
-      }
-    }
-
-    return true;
-  }
+  }, [fbBakiRecords, detailsCustomer, user, activeCustomerId]);
 
   const handleAddCustomerAndBaki = () => {
-    if (!validateCustomer(newCustomer)) return;
-
+    if (!newCustomer.firstName.trim()) return;
     const customerId = Date.now().toString()
     const bakiAmount = parseFloat(newRecord.amount) || 0
     actions.addCustomer({ ...newCustomer, id: customerId, totalDue: bakiAmount })
@@ -224,30 +177,32 @@ export default function CustomersPage() {
       });
     }
     setIsAddOpen(false)
-    toast({ title: language === 'en' ? "Customer Saved" : "কাস্টমার সেভ হয়েছে" })
+    toast({ title: "Saved Successfully" })
   }
 
   const handleUpdateCustomer = () => {
-    if (!detailsCustomer) return;
-    if (!validateCustomer(newCustomer, true, detailsCustomer.id)) return;
-
-    actions.updateCustomer(detailsCustomer.id, {
-      firstName: newCustomer.firstName,
-      lastName: newCustomer.lastName,
-      phone: newCustomer.phone,
-      address: newCustomer.address
-    });
-    setDetailsCustomer({ ...detailsCustomer, ...newCustomer });
+    if (!activeCustomerId) return;
+    actions.updateCustomer(activeCustomerId, newCustomer);
     setIsCustomerEditOpen(false);
-    toast({ title: language === 'en' ? "Profile Updated" : "প্রোফাইল আপডেট হয়েছে" });
+    toast({ title: "Updated" });
+  }
+
+  const handleDeleteCustomer = () => {
+    if (!activeCustomerId || !detailsCustomer) return;
+    if (detailsCustomer.totalDue > 0) {
+      toast({ variant: "destructive", title: "Cannot Delete", description: "Clear all debts first!" });
+      return;
+    }
+    actions.deleteCustomer(activeCustomerId);
+    setActiveCustomerId(null);
+    setIsDeleteConfirmOpen(false);
+    setIsCustomerEditOpen(false);
+    toast({ title: "Customer Removed" });
   }
 
   const handleAddBakiRecordOnly = () => {
-    if (!detailsCustomer || !newRecord.productName || !newRecord.amount) {
-      toast({ variant: "destructive", title: "Missing Information" })
-      return;
-    }
-    actions.addBakiRecord(detailsCustomer.id, {
+    if (!activeCustomerId || !newRecord.productName) return;
+    actions.addBakiRecord(activeCustomerId, {
       productId: newRecord.productId,
       productName: newRecord.productName,
       quantity: parseFloat(newRecord.quantity) || 1,
@@ -257,30 +212,27 @@ export default function CustomersPage() {
     });
     setIsRecordAddOpen(false);
     setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0.00", promiseDate: new Date().toISOString().split('T')[0], note: "" })
-    toast({ title: "Baki Recorded" });
   }
 
   const handleUpdateBakiRecord = () => {
-    if (!detailsCustomer || !editingRecord || !newRecord.amount) return;
-    
-    actions.updateBakiRecord(detailsCustomer.id, editingRecord.id, {
+    if (!activeCustomerId || !editingRecord) return;
+    actions.updateBakiRecord(activeCustomerId, editingRecord.id, {
       productName: newRecord.productName,
       quantity: parseFloat(newRecord.quantity) || 1,
       amount: parseFloat(newRecord.amount) || 0,
       note: newRecord.note
     }, editingRecord.amount, editingRecord.productId, editingRecord.quantity);
-    
     setIsRecordEditOpen(false);
     setEditingRecord(null);
-    toast({ title: "Record Updated" });
   }
 
   const handleDeleteBakiRecord = (record: any) => {
-    if (!detailsCustomer) return;
-    const confirmDelete = window.confirm("Are you sure?");
+    if (!activeCustomerId) return;
+    const confirmDelete = window.confirm("Delete this entry?");
     if (confirmDelete) {
-      actions.deleteBakiRecord(detailsCustomer.id, record.id, record.amount - (record.paidAmount || 0), record.productId, record.quantity);
-      toast({ title: "Record Deleted" });
+      const remaining = record.amount - (record.paidAmount || 0);
+      actions.deleteBakiRecord(activeCustomerId, record.id, remaining, record.productId, record.quantity);
+      toast({ title: "Removed" });
     }
   }
 
@@ -324,10 +276,7 @@ export default function CustomersPage() {
     return customers
       .filter(c => {
         const matchesSearch = `${c.firstName} ${c.lastName} ${c.phone}`.toLowerCase().includes(search.toLowerCase());
-        if (search.trim() === "") {
-          return (c.totalDue || 0) > 0;
-        }
-        return matchesSearch;
+        return search.trim() === "" ? (c.totalDue || 0) > 0 : matchesSearch;
       })
       .sort((a, b) => (b.totalDue || 0) - (a.totalDue || 0));
   }, [customers, search]);
@@ -343,23 +292,23 @@ export default function CustomersPage() {
           </h2>
           <p className="text-[10px] md:text-sm text-muted-foreground">{t.bakiDesc}</p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90 gap-2 w-full sm:w-auto h-10 shadow-lg font-bold" onClick={() => handleOpenAddDialog(true)}>
+        <Button className="bg-accent hover:bg-accent/90 gap-2 w-full sm:w-auto h-10 shadow-lg font-bold" onClick={() => setIsAddOpen(true)}>
           <Plus className="w-4 h-4" /> {t.addNewBakiUser}
         </Button>
       </div>
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-destructive/10 border-destructive/20 p-3 flex flex-col justify-center">
-          <p className="text-[8px] uppercase font-black opacity-60 tracking-widest leading-none">{t.totalUnpaidBaki}</p>
+        <Card className="bg-destructive/10 border-destructive/20 p-3">
+          <p className="text-[8px] uppercase font-black opacity-60 tracking-widest">{t.totalUnpaidBaki}</p>
           <p className="text-lg md:text-2xl font-black text-destructive mt-1">{currency}{totalMarketBaki.toLocaleString()}</p>
         </Card>
-        <Card className="bg-primary text-white p-3 flex flex-col justify-center">
-          <p className="text-[8px] uppercase font-black opacity-70 tracking-widest font-headline leading-none">{t.activeDebtors}</p>
+        <Card className="bg-primary text-white p-3">
+          <p className="text-[8px] uppercase font-black opacity-70 tracking-widest">{t.activeDebtors}</p>
           <p className="text-lg md:text-2xl font-black mt-1">{customers.filter(c => (c.totalDue || 0) > 0).length}</p>
         </Card>
       </div>
 
-      <Card className="border-accent/10 shadow-lg overflow-hidden bg-white/50 backdrop-blur-sm">
+      <Card className="border-accent/10 shadow-lg bg-white/50 backdrop-blur-sm">
         <CardHeader className="p-3 border-b bg-muted/20">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -371,7 +320,7 @@ export default function CustomersPage() {
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground italic gap-2">
               <Inbox className="w-8 h-8 opacity-10" />
               <p className="text-xs font-bold uppercase tracking-widest opacity-20">
-                {search ? "No matching customers" : "All debts are cleared!"}
+                {search ? "No matches" : "All debts cleared!"}
               </p>
             </div>
           ) : (
@@ -385,7 +334,7 @@ export default function CustomersPage() {
               </TableHeader>
               <TableBody>
                 {displayCustomers.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-accent/5 group">
+                  <TableRow key={c.id} className="hover:bg-accent/5">
                     <TableCell className="pl-4 py-3 font-bold text-xs text-primary">{c.firstName} {c.lastName}</TableCell>
                     <TableCell>
                       <span className={cn(
@@ -396,7 +345,7 @@ export default function CustomersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right pr-4">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setDetailsCustomer(c)}>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setActiveCustomerId(c.id)}>
                         <Eye className="w-4 h-4 text-accent" />
                       </Button>
                     </TableCell>
@@ -408,15 +357,208 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      {/* Add New Customer Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={handleOpenAddDialog}>
+      {/* Sheet for Customer Baki Details */}
+      <Sheet open={!!activeCustomerId} onOpenChange={(open) => !open && setActiveCustomerId(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b bg-accent/5">
+            <div className="flex items-center justify-between">
+              <SheetTitle className="text-xl font-black flex items-center gap-2">
+                {detailsCustomer?.firstName} {detailsCustomer?.lastName}
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={startEditingCustomer}>
+                  <Edit2 className="w-3.5 h-3.5" />
+                </Button>
+              </SheetTitle>
+              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setActiveCustomerId(null)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="mt-4 flex gap-3">
+              <div className="flex-1 bg-white p-3 rounded-xl border-2 border-accent/10 shadow-inner">
+                <p className="text-[8px] font-black uppercase opacity-50">Total Debt</p>
+                <p className="text-xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
+              </div>
+              <Button className="bg-accent h-auto font-black uppercase text-[10px] px-4" onClick={() => setIsRecordAddOpen(true)}>
+                <Plus className="w-4 h-4 mr-1" /> Add Baki
+              </Button>
+            </div>
+          </SheetHeader>
+          <ScrollArea className="flex-1 p-4 bg-muted/5">
+            <div className="space-y-3">
+              {currentBakiRecords.length === 0 ? (
+                <div className="py-20 text-center opacity-30 italic flex flex-col items-center gap-3">
+                  <CheckCircle2 className="w-10 h-10" />
+                  <p className="text-xs font-black uppercase tracking-widest">ALL DEBTS CLEARED!</p>
+                </div>
+              ) : (
+                currentBakiRecords.map((record: any) => (
+                  <Card key={record.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <p className="font-bold text-xs text-primary">{record.productName}</p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-[8px] h-4 font-black">Qty: {record.quantity}</Badge>
+                            <span className="text-[8px] text-muted-foreground font-bold flex items-center gap-1">
+                              <Calendar className="w-2.5 h-2.5" /> {new Date(record.takenDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-black text-sm text-primary">{currency}{record.amount.toLocaleString()}</p>
+                          <div className="flex items-center gap-1 justify-end mt-1">
+                            <button onClick={() => startEditingRecord(record)} className="p-1 text-accent"><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1 text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                         <Button size="sm" variant="outline" className="h-7 text-[9px] font-black uppercase text-accent border-accent/30" onClick={() => actions.payBakiRecord(activeCustomerId!, record.id, record.amount - (record.paidAmount || 0), record)}>
+                           <CheckCircle2 className="w-3 h-3 mr-1" /> Mark Paid
+                         </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={isCustomerEditOpen} onOpenChange={setIsCustomerEditOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{addStep === 1 ? t.registerNewCustomer : t.initialBakiDetails}</DialogTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsAddOpen(false)}><X className="w-4 h-4" /></Button>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription className="text-xs">Update contact info or remove profile.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">First Name</Label>
+                <Input value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} className="h-11 rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Last Name</Label>
+                <Input value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} className="h-11 rounded-xl" />
+              </div>
             </div>
-            <DialogDescription className="text-[10px] font-bold opacity-60">Follow the steps to register a new debtor.</DialogDescription>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase">Phone</Label>
+              <Input value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="h-11 rounded-xl" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase">Address</Label>
+              <Input value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="h-11 rounded-xl" />
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className={cn(
+                "p-4 rounded-2xl flex items-center justify-between",
+                detailsCustomer?.totalDue > 0 ? "bg-amber-50 border border-amber-100" : "bg-red-50 border border-red-100"
+              )}>
+                <div className="flex-1 pr-4">
+                  <p className="text-[10px] font-black uppercase opacity-60">Delete Customer</p>
+                  <p className="text-xs font-medium mt-1">
+                    {detailsCustomer?.totalDue > 0 
+                      ? "Debt must be ৳0 to delete profile." 
+                      : "Permanently remove this customer?"}
+                  </p>
+                </div>
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className={cn("rounded-xl", detailsCustomer?.totalDue > 0 && "opacity-20 grayscale pointer-events-none")}
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter><Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase" onClick={handleUpdateCustomer}>Update Profile</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Lock className="w-5 h-5" /> Master Delete
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete <b>{detailsCustomer?.firstName}</b>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3 sm:flex-row flex-col">
+            <Button variant="outline" className="flex-1 h-12 rounded-xl" onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</Button>
+            <Button variant="destructive" className="flex-1 h-12 rounded-xl font-bold" onClick={handleDeleteCustomer}>Confirm Wipe</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Baki Record Dialog */}
+      <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
+          <DialogHeader><DialogTitle>Edit Baki Entry</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+             <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Product</Label><Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" /></div>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Qty</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} /></div>
+                <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Price</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} /></div>
+             </div>
+             <div className="bg-accent/5 p-4 rounded-2xl text-center border border-accent/10">
+                <p className="text-[8px] uppercase font-black opacity-50">Adjusted Total</p>
+                <p className="text-2xl font-black text-primary">{currency}{newRecord.amount}</p>
+             </div>
+          </div>
+          <DialogFooter><Button className="w-full bg-primary h-14 rounded-2xl font-black" onClick={handleUpdateBakiRecord}>Update Entry</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Baki to Existing Customer Dialog */}
+      <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
+          <DialogHeader><DialogTitle>Add New Baki</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="relative">
+              <Label className="text-[10px] font-black uppercase mb-1.5 block">Select Product</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50" />
+                <Input placeholder="Search product..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="h-11 rounded-xl" />
+              </div>
+              {filteredProducts.length > 0 && (
+                <Card className="absolute z-50 w-full mt-1 max-h-40 overflow-hidden shadow-xl bg-white border-accent/10 rounded-xl">
+                  <ScrollArea className="h-full">
+                    {filteredProducts.map(p => (
+                      <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b text-xs flex justify-between items-center">
+                        <span className="font-bold">{p.name}</span>
+                        <span className="font-black text-accent">{currency}{p.sellingPrice}</span>
+                      </button>
+                    ))}
+                  </ScrollArea>
+                </Card>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Qty</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} /></div>
+              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Price</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} /></div>
+            </div>
+            <div className="bg-accent/5 p-4 rounded-2xl text-center border border-accent/10">
+              <p className="text-[8px] uppercase font-black opacity-50">Debt Amount</p>
+              <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
+            </div>
+          </div>
+          <DialogFooter><Button className="w-full bg-accent h-14 rounded-2xl font-black uppercase" onClick={handleAddBakiRecordOnly}>Save Baki</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Customer Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
+          <DialogHeader>
+            <DialogTitle>{addStep === 1 ? t.registerNewCustomer : t.initialBakiDetails}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             {addStep === 1 ? (
@@ -424,34 +566,18 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase">{t.firstName}</Label>
-                    <Input 
-                      className={cn("h-10", nameWarning && "border-red-500 focus-visible:ring-red-500")} 
-                      value={newCustomer.firstName} 
-                      onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} 
-                    />
+                    <Input className={cn("h-10", nameWarning && "border-red-500")} value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase">{t.lastName}</Label>
                     <Input className="h-10" value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} />
                   </div>
                 </div>
-                {nameWarning && (
-                  <p className="text-[10px] font-bold text-red-600 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> {nameWarning}
-                  </p>
-                )}
+                {nameWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {nameWarning}</p>}
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase">{t.phone}</Label>
-                  <Input 
-                    className={cn("h-10", phoneWarning && "border-red-500 focus-visible:ring-red-500")} 
-                    value={newCustomer.phone} 
-                    onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} 
-                  />
-                  {phoneWarning && (
-                    <p className="text-[10px] font-bold text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" /> {phoneWarning}
-                    </p>
-                  )}
+                  <Input className={cn("h-10", phoneWarning && "border-red-500")} value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                  {phoneWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {phoneWarning}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase">{t.address}</Label>
@@ -461,11 +587,8 @@ export default function CustomersPage() {
             ) : (
               <div className="space-y-4">
                 <div className="relative">
-                  <Label className="text-[10px] font-black uppercase mb-1.5 block text-primary">Search Product</Label>
-                  <div className="relative">
-                    <ShoppingCart className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50" />
-                    <Input placeholder="Type to search product..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="h-10 pl-9 border-accent/20" />
-                  </div>
+                  <Label className="text-[10px] font-black uppercase mb-1.5 block">Search Product</Label>
+                  <Input placeholder="Type..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="h-10" />
                   {filteredProducts.length > 0 && (
                     <Card className="absolute z-50 w-full mt-1 max-h-40 overflow-hidden shadow-xl bg-white border-accent/10">
                       <ScrollArea className="h-full">
@@ -480,17 +603,11 @@ export default function CustomersPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black">Quantity</Label>
-                    <Input type="number" step="0.01" className="h-10" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black">Unit Price</Label>
-                    <Input type="number" step="0.01" className="h-10" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
-                  </div>
+                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Qty</Label><Input type="number" step="0.01" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} /></div>
+                  <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Price</Label><Input type="number" step="0.01" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} /></div>
                 </div>
                 <div className="bg-destructive/5 p-4 rounded-xl text-center border-2 border-destructive/10">
-                  <Label className="text-[10px] uppercase font-black text-destructive">Total Owed (Auto)</Label>
+                  <Label className="text-[10px] uppercase font-black text-destructive">Initial Baki</Label>
                   <p className="text-2xl font-black text-destructive">{currency}{newRecord.amount}</p>
                 </div>
               </div>
@@ -498,211 +615,11 @@ export default function CustomersPage() {
           </div>
           <DialogFooter>
             {addStep === 1 ? (
-              <Button 
-                className="w-full bg-accent h-12 font-black uppercase" 
-                onClick={() => setAddStep(2)} 
-                disabled={!newCustomer.firstName || !!nameWarning || !!phoneWarning}
-              >
-                Next: Add Baki Details
-              </Button>
+              <Button className="w-full bg-accent h-12 font-black uppercase" onClick={() => setAddStep(2)} disabled={!newCustomer.firstName || !!nameWarning || !!phoneWarning}>Next</Button>
             ) : (
-              <Button className="w-full bg-primary h-12 font-black uppercase" onClick={handleAddCustomerAndBaki}>Save Customer & Baki</Button>
+              <Button className="w-full bg-primary h-12 font-black uppercase" onClick={handleAddCustomerAndBaki}>Save Everything</Button>
             )}
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Customer Details Sheet */}
-      <Sheet open={!!detailsCustomer} onOpenChange={(open) => !open && setDetailsCustomer(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
-          <SheetHeader className="p-4 border-b bg-accent/5">
-            <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl font-black flex items-center gap-2">
-                {detailsCustomer?.firstName} {detailsCustomer?.lastName}
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-accent hover:bg-accent/10 rounded-full" onClick={startEditingCustomer}>
-                  <Edit2 className="w-3.5 h-3.5" />
-                </Button>
-              </SheetTitle>
-              <div className="flex items-center gap-2">
-                <p className="text-[10px] font-black text-muted-foreground bg-white px-2 py-1 rounded-lg border">{detailsCustomer?.phone || 'No Phone'}</p>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-destructive/10 text-muted-foreground" onClick={() => setDetailsCustomer(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <SheetDescription className="sr-only">Detailed credit history and info for {detailsCustomer?.firstName}.</SheetDescription>
-            <div className="mt-4 flex gap-3">
-              <div className="flex-1 bg-white p-3 rounded-xl border-2 border-accent/10 shadow-inner">
-                <p className="text-[8px] font-black uppercase opacity-50">Total Debt</p>
-                <p className="text-xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
-              </div>
-              <Button className="bg-accent h-auto font-black uppercase text-[10px] px-4" onClick={() => setIsRecordAddOpen(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Add Baki
-              </Button>
-            </div>
-          </SheetHeader>
-          <ScrollArea className="flex-1 p-4 bg-muted/5">
-            <div className="space-y-3">
-              {currentBakiRecords.length === 0 ? (
-                <div className="py-20 text-center text-muted-foreground opacity-30 italic flex flex-col items-center gap-3">
-                  <CheckCircle2 className="w-10 h-10" />
-                  <p className="text-xs font-black uppercase tracking-widest">All debts cleared!</p>
-                </div>
-              ) : (
-                currentBakiRecords.map((record: any) => (
-                  <Card key={record.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow">
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold text-xs text-primary">{record.productName}</p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase">Qty: {record.quantity}</Badge>
-                            <span className="text-[8px] text-muted-foreground font-bold flex items-center gap-1">
-                              <Calendar className="w-2.5 h-2.5" /> {new Date(record.takenDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-black text-sm text-primary">{currency}{record.amount.toLocaleString()}</p>
-                          <div className="flex items-center gap-1 justify-end mt-1">
-                            <button onClick={() => startEditingRecord(record)} className="p-1.5 hover:bg-accent/10 rounded-lg text-accent transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1.5 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex justify-end">
-                         <Button size="sm" variant="outline" className="h-7 text-[9px] font-black uppercase text-accent border-accent/30 hover:bg-accent hover:text-white shadow-sm" onClick={() => actions.payBakiRecord(detailsCustomer.id, record.id, record.amount - (record.paidAmount || 0), record)}>
-                           <CheckCircle2 className="w-3 h-3 mr-1" /> Mark Paid
-                         </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {/* Edit Customer Profile Dialog */}
-      <Dialog open={isCustomerEditOpen} onOpenChange={setIsCustomerEditOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Edit Profile</DialogTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsCustomerEditOpen(false)}><X className="w-4 h-4" /></Button>
-            </div>
-            <DialogDescription className="text-[10px] font-bold opacity-60">Update contact and address information.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">First Name</Label>
-                <Input value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} className="h-11 rounded-xl" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">Last Name</Label>
-                <Input value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} className="h-11 rounded-xl" />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase">Phone Number</Label>
-              <Input value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} className="h-11 rounded-xl" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase">Address</Label>
-              <Input value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} className="h-11 rounded-xl" />
-            </div>
-          </div>
-          <DialogFooter><Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase" onClick={handleUpdateCustomer}>Save Profile Changes</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Baki Record Dialog - FIXED: Added missing dialog */}
-      <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Edit Baki Record</DialogTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsRecordEditOpen(false)}><X className="w-4 h-4" /></Button>
-            </div>
-            <DialogDescription className="text-[10px] font-bold opacity-60">Modify the details of this credit entry.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-             <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">Product Name</Label>
-                <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" />
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black">Quantity</Label>
-                  <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] uppercase font-black">Unit Price</Label>
-                  <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
-                </div>
-             </div>
-             <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black">Note / Remarks</Label>
-                <Input value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} className="h-11 rounded-xl" placeholder="Ex: promising to pay on Friday" />
-             </div>
-             <div className="bg-accent/5 p-4 rounded-2xl text-center border border-accent/10">
-                <Label className="text-[10px] uppercase font-black text-accent">Adjusted Debt Amount</Label>
-                <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
-             </div>
-          </div>
-          <DialogFooter>
-            <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleUpdateBakiRecord}>
-              Update Baki Record
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Baki to Existing Customer Dialog */}
-      <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Add Baki Record</DialogTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsRecordAddOpen(false)}><X className="w-4 h-4" /></Button>
-            </div>
-            <DialogDescription className="text-[10px] font-bold opacity-60">Record a new credit transaction for this customer.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="relative">
-              <Label className="text-[10px] font-black uppercase mb-1.5 block text-primary">Select Product</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50" />
-                <Input placeholder="Type to search product..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="h-11 rounded-xl border-accent/20" />
-              </div>
-              {filteredProducts.length > 0 && (
-                <Card className="absolute z-50 w-full mt-1 max-h-40 overflow-hidden shadow-xl bg-white border-accent/10 rounded-xl">
-                  <ScrollArea className="h-full">
-                    {filteredProducts.map(p => (
-                      <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b text-xs flex justify-between items-center">
-                        <span className="font-bold">{p.name}</span>
-                        <div className="text-right">
-                          <span className="font-black text-accent block">{currency}{p.sellingPrice}</span>
-                          <span className="text-[8px] opacity-50 uppercase font-black">Stock: {p.stock}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </ScrollArea>
-                </Card>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Quantity</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} /></div>
-              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Unit Price</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} /></div>
-            </div>
-            <div className="bg-accent/5 p-4 rounded-2xl text-center border border-accent/10">
-              <Label className="text-[10px] uppercase font-black text-accent">New Debt Amount</Label>
-              <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
-            </div>
-          </div>
-          <DialogFooter><Button className="w-full bg-accent h-14 rounded-2xl font-black uppercase" onClick={handleAddBakiRecordOnly}>Confirm & Save Baki</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
