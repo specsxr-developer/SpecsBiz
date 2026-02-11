@@ -73,9 +73,9 @@ export function FloatingCalculator() {
 
   const calculatorContent = (
     <>
-      {/* Floating Toggle Button - SUPER HIGH Z-INDEX & PORTAL PROTECTION */}
+      {/* Floating Toggle Button - MOVED HIGHER to bottom-48 to avoid overlapping input bars */}
       <div 
-        className="fixed bottom-36 right-8 z-[10001] print:hidden pointer-events-auto floating-calc-element"
+        className="fixed bottom-48 right-8 z-[10001] print:hidden pointer-events-auto floating-calc-element"
         onPointerDown={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >

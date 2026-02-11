@@ -1,8 +1,7 @@
-
 'use server';
 /**
  * @fileOverview SpecsAI Advisor - A strategic growth and profit optimization expert.
- * This is the NEW AI system designed to be isolated and easy to manage.
+ * Standardized Genkit Flow for SpecsBiz.
  */
 
 import { ai } from '@/ai/genkit';
@@ -23,8 +22,18 @@ const GrowthExpertInputSchema = z.object({
   }),
 });
 
-export async function growthExpertChat(input: z.infer<typeof GrowthExpertInputSchema>) {
-  try {
+const GrowthExpertOutputSchema = z.object({
+  reply: z.string(),
+});
+
+// Defining the flow properly as per Genkit best practices
+const advisorFlow = ai.defineFlow(
+  {
+    name: 'advisorFlow',
+    inputSchema: GrowthExpertInputSchema,
+    outputSchema: GrowthExpertOutputSchema,
+  },
+  async (input) => {
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
       system: `You are "SpecsAI Advisor", a world-class Strategic Business Growth Expert for shop owners.
@@ -53,8 +62,22 @@ export async function growthExpertChat(input: z.infer<typeof GrowthExpertInputSc
       prompt: input.message,
     });
 
-    return { reply: response.text || "I'm processing the data..." };
-  } catch (error) {
-    return { reply: "Connection issue with Advisor Brain. Please check API settings." };
+    return { reply: response.text || "I'm analyzing your business data..." };
+  }
+);
+
+/**
+ * Wrapper function to call the advisor flow from the UI.
+ */
+export async function growthExpertChat(input: z.infer<typeof GrowthExpertInputSchema>) {
+  try {
+    return await advisorFlow(input);
+  } catch (error: any) {
+    console.error("Advisor AI Error:", error);
+    return { 
+      reply: input.context.currentLanguage === 'bn' 
+        ? "দুঃখিত ভাই, অ্যাডভাইজর ব্রেইনের সাথে সংযোগ করতে পারছি না। দয়া করে আপনার GEMINI_API_KEY সেটিংস চেক করুন।" 
+        : "Sorry Partner, I'm having trouble connecting to the Advisor brain. Please check your GEMINI_API_KEY settings." 
+    };
   }
 }
