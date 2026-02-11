@@ -114,21 +114,65 @@ export default function InventoryPage() {
     })
   }, [products, search, filterCategory])
 
-  const handleAddProduct = () => {
-    if (!newProduct.name || !newProduct.sellingPrice) return;
+  // --- ADVANCED VALIDATION LOGIC ---
+  const validateProduct = (prod: any, isUpdate = false, originalId?: string) => {
+    const name = prod.name.trim();
+    const buyPrice = parseFloat(prod.purchasePrice) || 0;
+    const sellPrice = parseFloat(prod.sellingPrice) || 0;
+    const stock = parseFloat(prod.stock) || 0;
 
-    // --- DUPLICATE CHECK ---
-    const existing = products.find(p => p.name.trim().toLowerCase() === newProduct.name.trim().toLowerCase());
-    if (existing) {
+    if (!name) {
+      toast({ variant: "destructive", title: language === 'bn' ? "নাম দিন!" : "Name required!" });
+      return false;
+    }
+
+    // 1. Duplicate Name Check (Smart - ignores case and extra spaces)
+    const normalizedName = name.toLowerCase().replace(/\s+/g, ' ');
+    const isDuplicate = products.some(p => {
+      const matchesName = p.name.toLowerCase().replace(/\s+/g, ' ') === normalizedName;
+      return isUpdate ? (matchesName && p.id !== originalId) : matchesName;
+    });
+
+    if (isDuplicate) {
       toast({
         variant: "destructive",
-        title: language === 'bn' ? "সতর্কবার্তা: একই পণ্য পাওয়া গেছে!" : "Warning: Duplicate Product!",
+        title: language === 'bn' ? "ডুপ্লিকেট পণ্য!" : "Duplicate Product!",
         description: language === 'bn' 
-          ? `'${newProduct.name}' নামে একটি পণ্য ইতিপূর্বেই ইনভেন্টরিতে আছে। নতুন করে এন্ট্রি দেওয়ার প্রয়োজন নেই।` 
-          : `'${newProduct.name}' already exists in your inventory. No need to add it again.`,
+          ? `'${name}' নামে পণ্যটি অলরেডি আছে। অন্য নাম দিন।` 
+          : `'${name}' already exists. Please use a unique name.`,
       });
-      return;
+      return false;
     }
+
+    // 2. Loss Prevention Check
+    if (sellPrice > 0 && sellPrice < buyPrice) {
+      toast({
+        variant: "destructive",
+        title: language === 'bn' ? "সাবধান: লোকসান হচ্ছে!" : "Warning: Potential Loss!",
+        description: language === 'bn' 
+          ? "বিক্রয় মূল্য কেনা দামের চেয়ে কম! দয়া করে ঠিক করুন।" 
+          : "Selling price is lower than purchase price. Fix to avoid loss.",
+      });
+      return false;
+    }
+
+    // 3. Price Validity
+    if (sellPrice <= 0) {
+      toast({ variant: "destructive", title: language === 'bn' ? "সঠিক বিক্রয় মূল্য দিন!" : "Invalid selling price!" });
+      return false;
+    }
+
+    // 4. Stock Validity (Negative check)
+    if (stock < 0) {
+      toast({ variant: "destructive", title: language === 'bn' ? "স্টক নেগেটিভ হতে পারে না!" : "Stock cannot be negative!" });
+      return false;
+    }
+
+    return true;
+  }
+
+  const handleAddProduct = () => {
+    if (!validateProduct(newProduct)) return;
 
     actions.addProduct({
       ...newProduct,
@@ -138,27 +182,12 @@ export default function InventoryPage() {
     })
     setNewProduct({ name: "", category: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs" })
     setIsAddOpen(false)
-    toast({ title: language === 'en' ? "Product Added Successfully" : "পণ্য সফলভাবে তালিকায় যোগ করা হয়েছে" })
+    toast({ title: language === 'en' ? "Product Added Successfully" : "পণ্য সফলভাবে যোগ করা হয়েছে" })
   }
 
   const handleUpdateProduct = () => {
-    if (!editingProduct || !editingProduct.name) return;
-
-    // --- DUPLICATE CHECK FOR EDIT ---
-    const existsOther = products.find(p => 
-      p.id !== editingProduct.id && 
-      p.name.trim().toLowerCase() === editingProduct.name.trim().toLowerCase()
-    );
-    if (existsOther) {
-      toast({
-        variant: "destructive",
-        title: language === 'bn' ? "ভুল সংশোধন: নাম পরিবর্তন করা যাচ্ছে না!" : "Edit Error: Name Already Exists!",
-        description: language === 'bn' 
-          ? "অন্য একটি পণ্যের নাম অলরেডি এটি দেওয়া আছে। দয়া করে ভিন্ন নাম দিন।" 
-          : "Another product already has this name. Please use a unique name.",
-      });
-      return;
-    }
+    if (!editingProduct) return;
+    if (!validateProduct(editingProduct, true, editingProduct.id)) return;
 
     actions.updateProduct(editingProduct.id, {
       ...editingProduct,
@@ -186,7 +215,15 @@ export default function InventoryPage() {
 
   const handleRestock = () => {
     if (!restockProduct || !restockQty) return;
-    actions.addRestock(restockProduct.id, parseFloat(restockQty), parseFloat(restockPrice) || restockProduct.purchasePrice);
+    const qtyNum = parseFloat(restockQty);
+    const priceNum = parseFloat(restockPrice) || restockProduct.purchasePrice;
+
+    if (qtyNum <= 0) {
+      toast({ variant: "destructive", title: "Invalid quantity" });
+      return;
+    }
+
+    actions.addRestock(restockProduct.id, qtyNum, priceNum);
     setRestockProduct(null);
     setRestockQty("");
     setRestockPrice("");

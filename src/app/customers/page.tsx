@@ -139,30 +139,66 @@ export default function CustomersPage() {
     }
   }
 
-  const handleAddCustomerAndBaki = () => {
-    if (!newCustomer.firstName) return
+  // --- ADVANCED CUSTOMER VALIDATION ---
+  const validateCustomer = (cust: any, isUpdate = false, originalId?: string) => {
+    const fName = cust.firstName.trim();
+    const lName = (cust.lastName || "").trim();
+    const phone = (cust.phone || "").trim().replace(/\D/g, ''); // Digits only
 
-    // --- DUPLICATE CHECK ---
-    const existsByPhone = customers.find(c => c.phone && c.phone.trim() === newCustomer.phone.trim());
-    const existsByName = customers.find(c => 
-      c.firstName.trim().toLowerCase() === newCustomer.firstName.trim().toLowerCase() && 
-      c.lastName.trim().toLowerCase() === newCustomer.lastName.trim().toLowerCase()
-    );
+    if (!fName) {
+      toast({ variant: "destructive", title: language === 'bn' ? "প্রথম নাম আবশ্যক!" : "First name required!" });
+      return false;
+    }
 
-    if (existsByPhone || existsByName) {
+    // 1. Duplicate Name Check (Full Name matching)
+    const normalizedFullName = (fName + " " + lName).toLowerCase().replace(/\s+/g, ' ');
+    const isNameDuplicate = customers.some(c => {
+      const cFullName = (c.firstName + " " + (c.lastName || "")).toLowerCase().replace(/\s+/g, ' ');
+      const match = cFullName === normalizedFullName;
+      return isUpdate ? (match && c.id !== originalId) : match;
+    });
+
+    if (isNameDuplicate) {
       toast({
         variant: "destructive",
-        title: language === 'bn' ? "সতর্কবার্তা: কাস্টমার অলরেডি আছে!" : "Warning: Duplicate Customer!",
+        title: language === 'bn' ? "এই নামের কাস্টমার আছে!" : "Duplicate Name!",
         description: language === 'bn' 
-          ? "এই নামে বা এই ফোন নম্বরে একজন কাস্টমার অলরেডি আপনার তালিকায় আছে।" 
-          : "A customer with this name or phone number already exists in your list.",
+          ? `'${fName} ${lName}' নামে একজন কাস্টমার অলরেডি তালিকায় আছেন।` 
+          : `'${fName} ${lName}' is already in your customer list.`,
       });
-      return;
+      return false;
     }
+
+    // 2. Duplicate Phone Check (Digits only comparison)
+    if (phone) {
+      const isPhoneDuplicate = customers.some(c => {
+        const cPhone = (c.phone || "").replace(/\D/g, '');
+        const match = cPhone === phone;
+        return isUpdate ? (match && c.id !== originalId) : match;
+      });
+
+      if (isPhoneDuplicate) {
+        toast({
+          variant: "destructive",
+          title: language === 'bn' ? "নম্বরটি ব্যবহৃত হয়েছে!" : "Phone Already Used!",
+          description: language === 'bn' 
+            ? `এই ফোন নম্বরটি অন্য একজন কাস্টমারের প্রোফাইলে আছে।` 
+            : `This phone number is already registered to another customer.`,
+        });
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  const handleAddCustomerAndBaki = () => {
+    if (!validateCustomer(newCustomer)) return;
 
     const customerId = Date.now().toString()
     const bakiAmount = parseFloat(newRecord.amount) || 0
     actions.addCustomer({ ...newCustomer, id: customerId, totalDue: bakiAmount })
+    
     if (newRecord.productName && bakiAmount > 0) {
       actions.addBakiRecord(customerId, {
         productId: newRecord.productId,
@@ -174,27 +210,12 @@ export default function CustomersPage() {
       });
     }
     setIsAddOpen(false)
-    toast({ title: language === 'en' ? "Customer & Baki Saved" : "কাস্টমার ও বাকির হিসাব সেভ হয়েছে" })
+    toast({ title: language === 'en' ? "Customer Saved" : "কাস্টমার সেভ হয়েছে" })
   }
 
   const handleUpdateCustomer = () => {
-    if (!detailsCustomer || !newCustomer.firstName) return;
-
-    // --- DUPLICATE CHECK FOR UPDATE ---
-    const existsOther = customers.find(c => 
-      c.id !== detailsCustomer.id && 
-      c.phone && c.phone.trim() === newCustomer.phone.trim()
-    );
-    if (existsOther) {
-      toast({
-        variant: "destructive",
-        title: language === 'bn' ? "আপডেট এরর: নম্বর অলরেডি ব্যবহৃত!" : "Update Error: Phone Already Used!",
-        description: language === 'bn' 
-          ? "এই ফোন নম্বরটি অলরেডি অন্য একজন কাস্টমারের প্রোফাইলে আছে।" 
-          : "This phone number is already registered to another customer.",
-      });
-      return;
-    }
+    if (!detailsCustomer) return;
+    if (!validateCustomer(newCustomer, true, detailsCustomer.id)) return;
 
     actions.updateCustomer(detailsCustomer.id, {
       firstName: newCustomer.firstName,
@@ -284,19 +305,16 @@ export default function CustomersPage() {
 
   const totalMarketBaki = customers.reduce((acc, c) => acc + (c.totalDue || 0), 0)
 
-  // Logic to filter customers: Hide paid ones unless searching
   const displayCustomers = useMemo(() => {
     return customers
       .filter(c => {
         const matchesSearch = `${c.firstName} ${c.lastName} ${c.phone}`.toLowerCase().includes(search.toLowerCase());
-        // If there is no search, only show active debtors
         if (search.trim() === "") {
           return (c.totalDue || 0) > 0;
         }
-        // If searching, show all matches regardless of balance
         return matchesSearch;
       })
-      .sort((a, b) => (b.totalDue || 0) - (a.totalDue || 0)); // Sort by highest debt first
+      .sort((a, b) => (b.totalDue || 0) - (a.totalDue || 0));
   }, [customers, search]);
 
   if (isLoading) return <div className="p-10 text-center animate-pulse text-accent font-bold">{t.loading}</div>
