@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
@@ -110,11 +111,14 @@ export default function InventoryPage() {
   const duplicateWarning = useMemo(() => {
     if (!newProduct.name.trim()) return null;
     const currentName = newProduct.name.toLowerCase().trim();
-    const match = products.find(p => p.name.toLowerCase().trim() === currentName);
+    const match = products.find(p => {
+      const pName = p.name.toLowerCase().trim();
+      return pName.includes(currentName) || currentName.includes(pName);
+    });
     if (match) {
       return language === 'bn' 
-        ? `'${match.name}' নামে একটি পণ্য ইতিমধ্যে আছে।` 
-        : `Product '${match.name}' already exists.`;
+        ? `'${match.name}' নামের সাথে মিল আছে এমন পণ্য অলরেডি আছে।` 
+        : `Similar product '${match.name}' already exists.`;
     }
     return null;
   }, [newProduct.name, products, language]);
@@ -124,12 +128,13 @@ export default function InventoryPage() {
     const currentName = editingProduct.name.toLowerCase().trim();
     const match = products.find(p => {
       if (p.id === editingProduct.id) return false;
-      return p.name.toLowerCase().trim() === currentName;
+      const pName = p.name.toLowerCase().trim();
+      return pName.includes(currentName) || currentName.includes(pName);
     });
     if (match) {
       return language === 'bn' 
-        ? `'${match.name}' নামে অন্য একটি পণ্য আছে!` 
-        : `Another product with name '${match.name}' exists!`;
+        ? `'${match.name}' নামের সাথে মিল আছে এমন পণ্য আছে!` 
+        : `Another similar product '${match.name}' exists!`;
     }
     return null;
   }, [editingProduct?.name, products, language, editingProduct?.id]);
