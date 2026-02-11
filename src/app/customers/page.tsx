@@ -152,7 +152,12 @@ export default function CustomersPage() {
   }, [user?.uid, db, detailsCustomer]);
 
   const { data: fbBakiRecords } = useCollection(bakiRecordsQuery);
-  const currentBakiRecords = detailsCustomer ? (user ? (fbBakiRecords || []) : (detailsCustomer.bakiRecords || [])) : [];
+  
+  // CRITICAL: Filter out PAID records so they don't clutter the Baki detail list
+  const currentBakiRecords = useMemo(() => {
+    const rawRecords = detailsCustomer ? (user ? (fbBakiRecords || []) : (detailsCustomer.bakiRecords || [])) : [];
+    return rawRecords.filter((r: any) => r.status !== 'paid');
+  }, [fbBakiRecords, detailsCustomer, user]);
 
   const handleOpenAddDialog = (open: boolean) => {
     setIsAddOpen(open)
@@ -281,11 +286,12 @@ export default function CustomersPage() {
 
   const startEditingRecord = (record: any) => {
     setEditingRecord(record);
+    const unitPrice = record.quantity > 0 ? (record.amount / record.quantity) : 0;
     setNewRecord({
       productId: record.productId || "",
       productName: record.productName,
       quantity: record.quantity.toString(),
-      unitPrice: (record.amount / record.quantity).toString(),
+      unitPrice: unitPrice.toString(),
       amount: record.amount.toString(),
       promiseDate: record.promiseDate ? new Date(record.promiseDate).toISOString().split('T')[0] : "",
       note: record.note || ""
@@ -537,41 +543,42 @@ export default function CustomersPage() {
           </SheetHeader>
           <ScrollArea className="flex-1 p-4 bg-muted/5">
             <div className="space-y-3">
-              {currentBakiRecords.map((record: any) => (
-                <Card key={record.id} className={cn("border-none shadow-sm", record.status === 'paid' ? 'bg-green-50/50' : 'bg-white')}>
-                  <CardContent className="p-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-bold text-xs text-primary">{record.productName}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase">Qty: {record.quantity}</Badge>
-                          <span className="text-[8px] text-muted-foreground font-bold flex items-center gap-1">
-                            <Calendar className="w-2.5 h-2.5" /> {new Date(record.takenDate).toLocaleDateString()}
-                          </span>
+              {currentBakiRecords.length === 0 ? (
+                <div className="py-20 text-center text-muted-foreground opacity-30 italic flex flex-col items-center gap-3">
+                  <CheckCircle2 className="w-10 h-10" />
+                  <p className="text-xs font-black uppercase tracking-widest">All debts cleared!</p>
+                </div>
+              ) : (
+                currentBakiRecords.map((record: any) => (
+                  <Card key={record.id} className="border-none shadow-sm bg-white hover:shadow-md transition-shadow">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-xs text-primary">{record.productName}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase">Qty: {record.quantity}</Badge>
+                            <span className="text-[8px] text-muted-foreground font-bold flex items-center gap-1">
+                              <Calendar className="w-2.5 h-2.5" /> {new Date(record.takenDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-black text-sm text-primary">{currency}{record.amount.toLocaleString()}</p>
+                          <div className="flex items-center gap-1 justify-end mt-1">
+                            <button onClick={() => startEditingRecord(record)} className="p-1.5 hover:bg-accent/10 rounded-lg text-accent transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1.5 hover:bg-destructive/10 rounded-lg text-destructive transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-black text-sm text-primary">{currency}{record.amount.toLocaleString()}</p>
-                        {record.status === 'paid' ? (
-                          <span className="text-[8px] text-green-600 font-bold uppercase">Paid</span>
-                        ) : (
-                          <div className="flex items-center gap-1 justify-end mt-1">
-                            <button onClick={() => startEditingRecord(record)} className="p-1.5 hover:bg-accent/10 rounded-lg text-accent"><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => handleDeleteBakiRecord(record)} className="p-1.5 hover:bg-destructive/10 rounded-lg text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {record.status !== 'paid' && (
                       <div className="mt-3 flex justify-end">
-                         <Button size="sm" variant="outline" className="h-7 text-[9px] font-black uppercase text-accent border-accent/30 hover:bg-accent hover:text-white" onClick={() => actions.payBakiRecord(detailsCustomer.id, record.id, record.amount - (record.paidAmount || 0), record)}>
-                           Mark Paid
+                         <Button size="sm" variant="outline" className="h-7 text-[9px] font-black uppercase text-accent border-accent/30 hover:bg-accent hover:text-white shadow-sm" onClick={() => actions.payBakiRecord(detailsCustomer.id, record.id, record.amount - (record.paidAmount || 0), record)}>
+                           <CheckCircle2 className="w-3 h-3 mr-1" /> Mark Paid
                          </Button>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </ScrollArea>
         </SheetContent>
@@ -608,6 +615,48 @@ export default function CustomersPage() {
             </div>
           </div>
           <DialogFooter><Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase" onClick={handleUpdateCustomer}>Save Profile Changes</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Baki Record Dialog - FIXED: Added missing dialog */}
+      <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Edit Baki Record</DialogTitle>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsRecordEditOpen(false)}><X className="w-4 h-4" /></Button>
+            </div>
+            <DialogDescription className="text-[10px] font-bold opacity-60">Modify the details of this credit entry.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+             <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase">Product Name</Label>
+                <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-11 rounded-xl" />
+             </div>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black">Quantity</Label>
+                  <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase font-black">Unit Price</Label>
+                  <Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                </div>
+             </div>
+             <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-black">Note / Remarks</Label>
+                <Input value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} className="h-11 rounded-xl" placeholder="Ex: promising to pay on Friday" />
+             </div>
+             <div className="bg-accent/5 p-4 rounded-2xl text-center border border-accent/10">
+                <Label className="text-[10px] uppercase font-black text-accent">Adjusted Debt Amount</Label>
+                <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
+             </div>
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleUpdateBakiRecord}>
+              Update Baki Record
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
