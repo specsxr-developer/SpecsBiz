@@ -14,7 +14,10 @@ import {
   X, 
   AlertTriangle, 
   Lock,
-  Inbox
+  Inbox,
+  PackageSearch,
+  ShoppingCart,
+  Tag
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -75,13 +78,13 @@ export default function CustomersPage() {
 
   const [editingRecord, setEditingRecord] = useState<any>(null)
   
-  // Simplified Record State for Adding New User
+  // Detailed Record State
   const [newRecord, setNewRecord] = useState({
     productId: "",
     productName: "",
     quantity: "1",
     unitPrice: "",
-    amount: "", // Direct amount input
+    amount: "0",
     promiseDate: new Date().toISOString().split('T')[0],
     note: ""
   })
@@ -96,7 +99,7 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
-  // Real-time Warnings for Duplicate Entry
+  // Warnings for Duplicates
   const nameWarning = useMemo(() => {
     if (!newCustomer.firstName.trim()) return null;
     const fullName = (newCustomer.firstName + " " + (newCustomer.lastName || "")).toLowerCase().trim();
@@ -120,16 +123,12 @@ export default function CustomersPage() {
     return null;
   }, [newCustomer.phone, customers, language, activeCustomerId]);
 
-  // Effect only for adding detailed baki records from the sheet
+  // Auto-calculate Amount
   useEffect(() => {
-    if (isRecordAddOpen || isRecordEditOpen) {
-      const qty = parseFloat(newRecord.quantity) || 0
-      const price = parseFloat(newRecord.unitPrice) || 0
-      if (qty > 0 && price > 0) {
-        setNewRecord(prev => ({ ...prev, amount: (qty * price).toFixed(2) }))
-      }
-    }
-  }, [newRecord.quantity, newRecord.unitPrice, isRecordAddOpen, isRecordEditOpen])
+    const qty = parseFloat(newRecord.quantity) || 0;
+    const price = parseFloat(newRecord.unitPrice) || 0;
+    setNewRecord(prev => ({ ...prev, amount: (qty * price).toString() }));
+  }, [newRecord.quantity, newRecord.unitPrice]);
 
   const selectProduct = (p: any) => {
     setNewRecord(prev => ({
@@ -156,37 +155,36 @@ export default function CustomersPage() {
     return rawRecords.filter((r: any) => r.status !== 'paid');
   }, [fbBakiRecords, detailsCustomer, user, activeCustomerId]);
 
-  // Handle Lightning Fast Add
   const handleAddCustomerAndBaki = () => {
     if (!newCustomer.firstName.trim()) return;
     const customerId = Date.now().toString()
     const bakiAmount = parseFloat(newRecord.amount) || 0
     
-    actions.addCustomer({ ...newCustomer, id: customerId, totalDue: bakiAmount })
+    actions.addCustomer({ ...newCustomer, id: customerId, totalDue: 0 })
     
     if (bakiAmount > 0) {
       actions.addBakiRecord(customerId, {
-        productId: "",
-        productName: newRecord.note || (language === 'bn' ? "পূর্বের বকেয়া" : "Previous Debt"),
-        quantity: 1,
+        productId: newRecord.productId,
+        productName: newRecord.productName || (language === 'bn' ? "নতুন বাকি" : "New Debt"),
+        quantity: parseFloat(newRecord.quantity) || 1,
         amount: bakiAmount,
-        promiseDate: new Date().toISOString(),
-        note: ""
+        promiseDate: new Date(newRecord.promiseDate).toISOString(),
+        note: newRecord.note
       });
     }
     
     setIsAddOpen(false)
     setAddStep(1)
     setNewCustomer({ firstName: "", lastName: "", email: "", phone: "", address: "", totalDue: 0, segment: "Baki User" })
-    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "", promiseDate: new Date().toISOString().split('T')[0], note: "" })
-    toast({ title: "Saved Successfully" })
+    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+    toast({ title: "Customer & Baki Saved" })
   }
 
   const handleUpdateCustomer = () => {
     if (!activeCustomerId) return;
     actions.updateCustomer(activeCustomerId, newCustomer);
     setIsCustomerEditOpen(false);
-    toast({ title: "Updated" });
+    toast({ title: "Profile Updated" });
   }
 
   const handleDeleteCustomer = () => {
@@ -195,7 +193,7 @@ export default function CustomersPage() {
     setActiveCustomerId(null);
     setIsDeleteConfirmOpen(false);
     setIsCustomerEditOpen(false);
-    toast({ title: "Customer Removed" });
+    toast({ title: "Customer Wiped" });
   }
 
   const handleAddBakiRecordOnly = () => {
@@ -209,7 +207,7 @@ export default function CustomersPage() {
       note: newRecord.note
     });
     setIsRecordAddOpen(false);
-    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "", promiseDate: new Date().toISOString().split('T')[0], note: "" })
+    setNewRecord({ productId: "", productName: "", quantity: "1", unitPrice: "", amount: "0", promiseDate: new Date().toISOString().split('T')[0], note: "" })
   }
 
   const handleUpdateBakiRecord = () => {
@@ -228,7 +226,7 @@ export default function CustomersPage() {
     if (!activeCustomerId) return;
     const remaining = record.amount - (record.paidAmount || 0);
     actions.deleteBakiRecord(activeCustomerId, record.id, remaining, record.productId, record.quantity);
-    toast({ title: "Removed" });
+    toast({ title: "Record Removed" });
   }
 
   const startEditingRecord = (record: any) => {
@@ -288,7 +286,7 @@ export default function CustomersPage() {
           </h2>
           <p className="text-[10px] md:text-sm text-muted-foreground">{t.bakiDesc}</p>
         </div>
-        <Button className="bg-accent hover:bg-accent/90 gap-2 w-full sm:w-auto h-10 shadow-lg font-bold" onClick={() => setIsAddOpen(true)}>
+        <Button className="bg-accent hover:bg-accent/90 gap-2 w-full sm:w-auto h-10 shadow-lg font-black uppercase" onClick={() => setIsAddOpen(true)}>
           <Plus className="w-4 h-4" /> {t.addNewBakiUser}
         </Button>
       </div>
@@ -308,7 +306,7 @@ export default function CustomersPage() {
         <CardHeader className="p-3 border-b bg-muted/20">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder={t.searchBaki} className="pl-9 h-10 bg-white" value={search} onChange={e => setSearch(setSearch ? e.target.value : "")} />
+            <Input placeholder={t.searchBaki} className="pl-9 h-10 bg-white" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -459,6 +457,7 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Record Edit Dialog */}
       <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
           <DialogHeader><DialogTitle>Edit Baki Entry</DialogTitle></DialogHeader>
@@ -477,101 +476,180 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Record Add Dialog (Detailed) */}
       <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
-          <DialogHeader><DialogTitle>Add New Baki Record</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
+          <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent/10 rounded-xl"><ShoppingCart className="w-6 h-6 text-accent" /></div>
+              <div>
+                <DialogTitle className="text-xl font-black text-primary uppercase tracking-tighter">Add Baki Record</DialogTitle>
+                <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Detailed product & debt entry.</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-6 space-y-5 bg-white max-h-[70vh] overflow-y-auto">
             <div className="relative">
-              <Label className="text-[10px] font-black uppercase mb-1.5 block">Search Product</Label>
-              <Input placeholder="Search..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="h-11 rounded-xl" />
+              <Label className="text-[10px] font-black uppercase mb-1.5 block text-muted-foreground">Search or Type Product</Label>
+              <div className="relative">
+                <PackageSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-50" />
+                <Input placeholder="Start typing product name..." value={productSearch || newRecord.productName} onChange={e => { setProductSearch(e.target.value); setNewRecord({...newRecord, productName: e.target.value}) }} className="pl-10 h-12 rounded-xl bg-accent/5 border-accent/10" />
+              </div>
               {filteredProducts.length > 0 && (
-                <Card className="absolute z-50 w-full mt-1 max-h-40 overflow-hidden shadow-xl bg-white border-accent/10 rounded-xl">
+                <Card className="absolute z-50 w-full mt-1 max-h-48 overflow-hidden shadow-2xl bg-white border-accent/10 rounded-xl animate-in slide-in-from-top-2">
                   <ScrollArea className="h-full">
                     {filteredProducts.map(p => (
-                      <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b text-xs flex justify-between items-center">
-                        <span className="font-bold">{p.name}</span>
-                        <span className="font-black text-accent">{currency}{p.sellingPrice}</span>
+                      <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b last:border-0 text-xs flex justify-between items-center group">
+                        <span className="font-bold group-hover:text-accent transition-colors">{p.name}</span>
+                        <Badge variant="outline" className="font-black text-accent border-accent/20 bg-accent/5">{currency}{p.sellingPrice}</Badge>
                       </button>
                     ))}
                   </ScrollArea>
                 </Card>
               )}
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Qty</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} /></div>
-              <div className="space-y-1.5"><Label className="text-[10px] uppercase font-black">Price</Label><Input type="number" step="0.01" className="h-11 rounded-xl" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} /></div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
+                <Input type="number" step="0.01" className="h-12 rounded-xl font-black" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price ({currency})</Label>
+                <Input type="number" step="0.01" className="h-12 rounded-xl font-black text-accent" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+              </div>
             </div>
-            <div className="bg-accent/5 p-4 rounded-2xl text-center border border-accent/10">
-              <p className="text-[8px] uppercase font-black opacity-50">Debt Amount</p>
-              <p className="text-3xl font-black text-primary mt-1">{currency}{newRecord.amount}</p>
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-black text-muted-foreground">Promise Date</Label>
+              <Input type="date" className="h-12 rounded-xl bg-muted/20 border-none" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase font-black text-muted-foreground">Additional Note</Label>
+              <Input placeholder="Add any details..." className="h-12 rounded-xl" value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} />
+            </div>
+
+            <div className="bg-primary/5 p-5 rounded-2xl text-center border-2 border-primary/10 shadow-inner">
+              <p className="text-[9px] uppercase font-black text-primary opacity-60 tracking-[0.2em] mb-1">TOTAL DEBT AMOUNT</p>
+              <p className="text-4xl font-black text-primary">{currency}{newRecord.amount || '0'}</p>
             </div>
           </div>
-          <DialogFooter><Button className="w-full bg-accent h-14 rounded-2xl font-black uppercase" onClick={handleAddBakiRecordOnly}>Save Baki</Button></DialogFooter>
+          <DialogFooter className="p-6 bg-muted/20 border-t">
+            <Button className="w-full bg-accent hover:bg-accent/90 h-14 rounded-2xl font-black uppercase shadow-xl transition-all active:scale-95" onClick={handleAddBakiRecordOnly}>
+              Confirm & Save Baki
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Add Customer Flow (Full Detail) */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem]">
-          <DialogHeader>
-            <DialogTitle>{addStep === 1 ? t.registerNewCustomer : t.initialBakiDetails}</DialogTitle>
+        <DialogContent className="w-[95vw] sm:max-w-[550px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
+          <DialogHeader className="p-6 bg-primary text-white border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 rounded-xl border border-white/20"><Users className="w-6 h-6 text-accent" /></div>
+                <div>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">{addStep === 1 ? 'Register New Customer' : 'Detailed Baki Entry'}</DialogTitle>
+                  <p className="text-[9px] font-bold uppercase opacity-60 tracking-[0.2em]">Step {addStep} of 2</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/10" onClick={() => setIsAddOpen(false)}><X className="w-4 h-4" /></Button>
+            </div>
           </DialogHeader>
-          <div className="py-4">
+          <div className="p-6 bg-white max-h-[75vh] overflow-y-auto">
             {addStep === 1 ? (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase">{t.firstName}</Label>
-                    <Input className={cn("h-10", nameWarning && "border-red-500")} value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} />
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.firstName}</Label>
+                    <Input className={cn("h-12 rounded-xl", nameWarning && "border-red-500")} value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase">{t.lastName}</Label>
-                    <Input className="h-10" value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} />
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.lastName}</Label>
+                    <Input className="h-12 rounded-xl" value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} />
                   </div>
                 </div>
-                {nameWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {nameWarning}</p>}
+                {nameWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1 -mt-3"><AlertTriangle className="w-3 h-3" /> {nameWarning}</p>}
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase">{t.phone}</Label>
-                  <Input className={cn("h-10", phoneWarning && "border-red-500")} value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
-                  {phoneWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> {phoneWarning}</p>}
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.phone}</Label>
+                  <Input className={cn("h-12 rounded-xl", phoneWarning && "border-red-500")} value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                  {phoneWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1 mt-1"><AlertTriangle className="w-3 h-3" /> {phoneWarning}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase">{t.address}</Label>
-                  <Input className="h-10" value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} />
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.address}</Label>
+                  <Input className="h-12 rounded-xl" value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} />
                 </div>
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase text-primary">কত টাকা বাকি? (Amount)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="0.00" 
-                    className="h-14 text-2xl font-black bg-accent/5 border-accent/20 focus:ring-accent"
-                    value={newRecord.amount}
-                    onChange={e => setNewRecord({...newRecord, amount: e.target.value})}
-                  />
+                <div className="relative">
+                  <Label className="text-[10px] font-black uppercase mb-1.5 block text-muted-foreground">Select Product</Label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-accent opacity-50" />
+                    <Input 
+                      placeholder="Start typing product name..." 
+                      value={productSearch || newRecord.productName} 
+                      onChange={e => { setProductSearch(e.target.value); setNewRecord({...newRecord, productName: e.target.value}) }} 
+                      className="pl-10 h-12 rounded-xl bg-accent/5 border-accent/10 font-bold" 
+                    />
+                  </div>
+                  {filteredProducts.length > 0 && (
+                    <Card className="absolute z-50 w-full mt-1 max-h-40 overflow-hidden shadow-2xl bg-white border-accent/10 rounded-xl">
+                      <ScrollArea className="h-full">
+                        {filteredProducts.map(p => (
+                          <button key={p.id} onClick={() => selectProduct(p)} className="w-full text-left p-3 hover:bg-accent/5 border-b last:border-0 text-xs flex justify-between items-center group">
+                            <span className="font-bold group-hover:text-accent">{p.name}</span>
+                            <span className="font-black text-accent">{currency}{p.sellingPrice}</span>
+                          </button>
+                        ))}
+                      </ScrollArea>
+                    </Card>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-black uppercase text-primary">কিসের জন্য? (Reason/Note)</Label>
-                  <Input 
-                    placeholder="যেমন: চাল, ডাল বা আগের হিসাব..." 
-                    className="h-12 bg-muted/30"
-                    value={newRecord.note}
-                    onChange={e => setNewRecord({...newRecord, note: e.target.value})}
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground">Qty</Label>
+                    <Input type="number" step="0.01" className="h-12 rounded-xl font-black" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price</Label>
+                    <Input type="number" step="0.01" className="h-12 rounded-xl font-black text-accent" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                  </div>
                 </div>
-                <div className="bg-destructive/5 p-4 rounded-xl text-center border-2 border-destructive/10">
-                  <p className="text-[10px] uppercase font-black text-destructive opacity-60">Initial Baki</p>
-                  <p className="text-3xl font-black text-destructive">{currency}{newRecord.amount || '0'}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground">Debt Reason/Note</Label>
+                    <Input placeholder="Short note..." className="h-12 rounded-xl" value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-black text-muted-foreground">Promise Date</Label>
+                    <Input type="date" className="h-12 rounded-xl" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
+                  </div>
+                </div>
+
+                <div className="bg-destructive/5 p-5 rounded-[1.5rem] text-center border-2 border-destructive/10 shadow-inner">
+                  <p className="text-[9px] uppercase font-black text-destructive opacity-60 tracking-[0.2em] mb-1">TOTAL DEBT</p>
+                  <p className="text-4xl font-black text-destructive">{currency}{newRecord.amount || '0'}</p>
                 </div>
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="p-6 bg-muted/20 border-t">
             {addStep === 1 ? (
-              <Button className="w-full bg-accent h-12 font-black uppercase" onClick={() => setAddStep(2)} disabled={!newCustomer.firstName || !!nameWarning || !!phoneWarning}>Next</Button>
+              <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl transition-all active:scale-95" onClick={() => setAddStep(2)} disabled={!newCustomer.firstName || !!nameWarning || !!phoneWarning}>
+                Next: Add Baki Details
+              </Button>
             ) : (
-              <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleAddCustomerAndBaki}>Save Everything</Button>
+              <div className="flex gap-3 w-full">
+                <Button variant="outline" className="h-14 rounded-2xl font-black uppercase px-6" onClick={() => setAddStep(1)}>Back</Button>
+                <Button className="flex-1 bg-accent hover:bg-accent/90 h-14 rounded-2xl font-black uppercase shadow-xl transition-all active:scale-95" onClick={handleAddCustomerAndBaki}>
+                  Save Everything
+                </Button>
+              </div>
             )}
           </DialogFooter>
         </DialogContent>
