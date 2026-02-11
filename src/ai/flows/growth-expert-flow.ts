@@ -1,8 +1,7 @@
-
 'use server';
 /**
  * @fileOverview SpecsAI Advisor - A strategic growth and profit optimization expert.
- * Supports dynamic model detection and user-provided API keys.
+ * Optimized for dynamic model detection and user-provided API keys.
  */
 
 import { ai } from '@/ai/genkit';
@@ -39,8 +38,7 @@ const advisorFlow = ai.defineFlow(
   async (input) => {
     const userKey = input.context.aiApiKey;
     
-    // Logic: If user provides a key, we prioritize it.
-    // We try to use gemini-1.5-flash as the most versatile model for the provided key.
+    // Dynamic model injection: If user provides a key, we prioritize it via the provider.
     const modelInstance = userKey 
       ? googleAI.model('gemini-1.5-flash', { apiKey: userKey })
       : 'googleai/gemini-1.5-flash';
@@ -58,7 +56,7 @@ const advisorFlow = ai.defineFlow(
         
         YOUR GOAL:
         - Analyze the provided shop data to find growth opportunities.
-        - Focus on PROFIT MAXIMIZATION. 
+        - Focus on PROFIT MAXIMIZATION and slow-moving items identification.
         
         DATA CONTEXT:
         - Inventory: ${input.context.inventorySummary}
@@ -73,8 +71,8 @@ const advisorFlow = ai.defineFlow(
       });
 
       return { 
-        reply: response.text || "I'm analyzing your business data...",
-        detectedModel: userKey ? "Custom Gemini (Active)" : "Default System Brain"
+        reply: response.text || "আমি আপনার দোকানের তথ্য অ্যানালাইসিস করছি...",
+        detectedModel: userKey ? "SpecsAI Custom (Active)" : "Default Brain"
       };
     } catch (error: any) {
       console.error("Advisor Execution Error:", error);
@@ -88,10 +86,11 @@ export async function growthExpertChat(input: z.infer<typeof GrowthExpertInputSc
     return await advisorFlow(input);
   } catch (error: any) {
     console.error("Advisor AI Bridge Error:", error);
+    const lang = input.context.currentLanguage;
     return { 
-      reply: input.context.currentLanguage === 'bn' 
-        ? "দুঃখিত ভাই, আপনার এপিআই কি-তে সমস্যা হচ্ছে। দয়া করে Settings থেকে কি (Key) টি পুনরায় চেক করুন এবং নিশ্চিত করুন যে সেটি সক্রিয়।" 
-        : "Sorry Partner, there's an issue with your API Key. Please check your Key in Settings and make sure it's active." 
+      reply: lang === 'bn' 
+        ? `দুঃখিত ভাই, আপনার এপিআই কি-তে সমস্যা হচ্ছে। ভুল কি বা নেটওয়ার্ক সমস্যার কারণে এটি হতে পারে। (এরর: ${error.message?.substring(0, 50)})` 
+        : `Sorry Partner, there's an issue with your API Key connection. (Error: ${error.message?.substring(0, 50)})` 
     };
   }
 }

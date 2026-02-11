@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Activity,
   CheckCircle2,
-  FileText
+  FileText,
+  AlertCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,7 @@ export default function SettingsPage() {
   const [newAiKey, setNewAiKey] = useState(aiApiKey || "");
   const [isVerifying, setIsVerifying] = useState(false);
   const [detectedModel, setDetectedModel] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
     setNewAiKey(aiApiKey || "");
@@ -81,6 +83,7 @@ export default function SettingsPage() {
 
     setIsVerifying(true);
     setDetectedModel(null);
+    setVerifyError(null);
 
     try {
       // REAL-TIME VERIFICATION: Calling the server action
@@ -94,14 +97,16 @@ export default function SettingsPage() {
           description: result.message
         });
       } else {
+        setVerifyError(result.message);
         toast({
           variant: "destructive",
           title: language === 'en' ? "Verification Failed" : "ভেরিফিকেশন ব্যর্থ",
-          description: result.message
+          description: "Please check the error message below the input."
         });
       }
-    } catch (e) {
-      toast({ variant: "destructive", title: "Connection Error", description: "Failed to connect to AI provider." });
+    } catch (e: any) {
+      setVerifyError("সার্ভারের সাথে যোগাযোগ করা যাচ্ছে না। দয়া করে আবার চেষ্টা করুন।");
+      toast({ variant: "destructive", title: "Connection Error", description: "Could not reach AI verify service." });
     } finally {
       setIsVerifying(false);
     }
@@ -175,8 +180,14 @@ export default function SettingsPage() {
                   type="password" 
                   placeholder="Paste your Gemini API Key here..."
                   value={newAiKey}
-                  onChange={(e) => setNewAiKey(e.target.value)}
-                  className="h-14 bg-muted/30 focus:ring-primary font-mono text-xs border-primary/10 rounded-xl"
+                  onChange={(e) => {
+                    setNewAiKey(e.target.value);
+                    setVerifyError(null);
+                  }}
+                  className={cn(
+                    "h-14 bg-muted/30 focus:ring-primary font-mono text-xs border-primary/10 rounded-xl",
+                    verifyError && "border-destructive focus:ring-destructive"
+                  )}
                 />
                 <Button 
                   className="bg-primary hover:bg-primary/90 h-14 px-8 font-black uppercase shadow-xl transition-all active:scale-95 shrink-0"
@@ -186,6 +197,16 @@ export default function SettingsPage() {
                   {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Activate"}
                 </Button>
               </div>
+
+              {verifyError && (
+                <div className="bg-red-50 p-4 rounded-xl border-2 border-destructive/20 flex items-start gap-3 animate-in slide-in-from-top-2">
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-destructive uppercase">Verification Failed</p>
+                    <p className="text-sm font-bold text-destructive/80">{verifyError}</p>
+                  </div>
+                </div>
+              )}
 
               {detectedModel && (
                 <div className="bg-green-50 p-4 rounded-xl border-2 border-green-100 flex items-center justify-between animate-in slide-in-from-top-2">
