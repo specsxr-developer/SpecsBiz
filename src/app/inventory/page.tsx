@@ -12,7 +12,10 @@ import {
   PackagePlus,
   Image as ImageIcon,
   Upload,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  FileText,
+  DollarSign
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -65,6 +68,8 @@ export default function InventoryPage() {
   const [restockProduct, setRestockProduct] = useState<any>(null)
   const [restockQty, setRestockQty] = useState("")
   const [restockPrice, setRestockPrice] = useState("")
+  const [restockSellPrice, setRestockSellPrice] = useState("")
+  const [restockNote, setRestockNote] = useState("")
 
   const units = ["pcs", "kg", "gm", "ltr", "meter", "box", "dozen"]
 
@@ -145,10 +150,18 @@ export default function InventoryPage() {
 
   const handleRestock = () => {
     if (!restockProduct || !restockQty || !restockPrice) return;
-    actions.addRestock(restockProduct.id, parseFloat(restockQty), parseFloat(restockPrice));
+    actions.addRestock(
+      restockProduct.id, 
+      parseFloat(restockQty), 
+      parseFloat(restockPrice), 
+      parseFloat(restockSellPrice) || restockProduct.sellingPrice,
+      restockNote
+    );
     setRestockProduct(null);
     setRestockQty("");
     setRestockPrice("");
+    setRestockSellPrice("");
+    setRestockNote("");
     toast({ title: "Stock Updated Successfully" });
   }
 
@@ -165,8 +178,16 @@ export default function InventoryPage() {
   const startRestocking = (p: any) => {
     setRestockProduct(p);
     setRestockPrice((p.purchasePrice || 0).toString());
+    setRestockSellPrice((p.sellingPrice || 0).toString());
     setRestockQty("");
+    setRestockNote("");
   }
+
+  const restockTotalCost = useMemo(() => {
+    const qty = parseFloat(restockQty) || 0;
+    const price = parseFloat(restockPrice) || 0;
+    return (qty * price).toLocaleString();
+  }, [restockQty, restockPrice]);
 
   if (isLoading) return <div className="p-10 text-center animate-pulse text-accent font-bold">{t.loading}</div>
 
@@ -356,28 +377,95 @@ export default function InventoryPage() {
 
       {/* Restock Dialog */}
       <Dialog open={!!restockProduct} onOpenChange={(open) => !open && setRestockProduct(null)}>
-        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-50 rounded-xl"><PackagePlus className="w-6 h-6 text-teal-600" /></div>
-              <div>
-                <DialogTitle className="text-xl font-black text-primary">Restock Item</DialogTitle>
-                <DialogDescription className="text-xs uppercase font-bold text-muted-foreground">{restockProduct?.name}</DialogDescription>
+        <DialogContent className="w-[95vw] sm:max-w-[450px] rounded-[2.5rem] p-0 overflow-hidden border-teal-100 shadow-2xl">
+          <DialogHeader className="p-6 bg-teal-50/50 border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-teal-600 rounded-xl shadow-lg shadow-teal-200">
+                  <PackagePlus className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-black text-primary tracking-tighter">Restock Item</DialogTitle>
+                  <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">{restockProduct?.name} | {restockProduct?.category || 'General'}</p>
+                </div>
               </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-teal-100" onClick={() => setRestockProduct(null)}><X className="w-4 h-4" /></Button>
             </div>
           </DialogHeader>
-          <div className="py-6 space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase">Quantity to Add</Label>
-              <Input type="number" value={restockQty} onChange={e => setRestockQty(e.target.value)} className="h-12 text-lg font-black bg-teal-50/30 border-teal-100 rounded-xl" placeholder="0.00" />
+          
+          <div className="p-6 space-y-5 bg-white max-h-[70vh] overflow-y-auto">
+            <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between border border-primary/10 shadow-inner">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-primary opacity-40" />
+                <span className="text-[10px] font-black uppercase text-primary/60">Current Stock</span>
+              </div>
+              <Badge className="bg-primary text-white border-none font-black text-[10px] px-3 h-6">
+                {restockProduct?.stock} {restockProduct?.unit?.toUpperCase()}
+              </Badge>
             </div>
+
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase">New Buy Price ({currency})</Label>
-              <Input type="number" value={restockPrice} onChange={e => setRestockPrice(e.target.value)} className="h-12 text-lg font-black border-accent/10 rounded-xl" />
+              <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                <TrendingUp className="w-3 h-3" /> Quantity to Add
+              </Label>
+              <Input 
+                type="number" 
+                value={restockQty} 
+                onChange={e => setRestockQty(e.target.value)} 
+                className="h-14 text-2xl font-black bg-teal-50/20 border-teal-100 focus-visible:ring-teal-500 rounded-2xl transition-all" 
+                placeholder="0.00" 
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                  <DollarSign className="w-3 h-3" /> New Buy Price ({currency})
+                </Label>
+                <Input 
+                  type="number" 
+                  value={restockPrice} 
+                  onChange={e => setRestockPrice(e.target.value)} 
+                  className="h-12 text-lg font-black border-accent/10 rounded-xl bg-accent/5" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                  <TrendingUp className="w-3 h-3 text-emerald-600" /> New Sell Price ({currency})
+                </Label>
+                <Input 
+                  type="number" 
+                  value={restockSellPrice} 
+                  onChange={e => setRestockSellPrice(e.target.value)} 
+                  className="h-12 text-lg font-black border-emerald-100 rounded-xl bg-emerald-50/30" 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground flex items-center gap-1.5">
+                <FileText className="w-3 h-3" /> Remark / Note (Optional)
+              </Label>
+              <Input 
+                value={restockNote} 
+                onChange={e => setRestockNote(e.target.value)} 
+                className="h-12 rounded-xl border-black/5" 
+                placeholder="e.g. Bought from new supplier" 
+              />
+            </div>
+
+            <div className="bg-teal-600 p-5 rounded-2xl text-center shadow-xl shadow-teal-100 border-2 border-white/20">
+              <p className="text-[9px] font-black uppercase text-white/70 tracking-[0.2em] mb-1">Total Entry Cost</p>
+              <p className="text-4xl font-black text-white">{currency}{restockTotalCost}</p>
             </div>
           </div>
-          <DialogFooter>
-            <Button className="w-full bg-teal-600 hover:bg-teal-700 h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleRestock} disabled={!restockQty}>
+
+          <DialogFooter className="p-6 bg-muted/20 border-t">
+            <Button 
+              className="w-full bg-teal-600 hover:bg-teal-700 h-16 rounded-2xl font-black uppercase shadow-2xl transition-all active:scale-95 text-lg" 
+              onClick={handleRestock} 
+              disabled={!restockQty || !restockPrice}
+            >
               Confirm Restock
             </Button>
           </DialogFooter>

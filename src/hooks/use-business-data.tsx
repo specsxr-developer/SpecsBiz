@@ -53,7 +53,7 @@ interface BusinessContextType {
     updateBakiRecord: (customerId: string, recordId: string, updates: any, oldAmount: number, productId?: string, oldQty?: number) => void;
     payBakiRecord: (customerId: string, recordId: string, amountToPay: number, currentRecord: any) => void;
     deleteBakiRecord: (customerId: string, recordId: string, remainingAmount: number, productId?: string, qty?: number) => void;
-    addRestock: (productId: string, qty: number, buyPrice: number) => void;
+    addRestock: (productId: string, qty: number, buyPrice: number, sellPrice: number, note?: string) => void;
     deleteProcurement: (procId: string) => void;
     syncInventoryToProcurement: () => Promise<void>;
     setCurrency: (val: string) => void;
@@ -174,7 +174,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.uid, db]);
 
-  const addRestock = useCallback((productId: string, qty: number, buyPrice: number) => {
+  const addRestock = useCallback((productId: string, qty: number, buyPrice: number, sellPrice: number, note?: string) => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
@@ -187,14 +187,16 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       buyPrice: buyPrice,
       totalCost: qty * buyPrice,
       date: new Date().toISOString(),
-      type: 'restock'
+      type: 'restock',
+      note: note || ''
     };
 
     if (user?.uid && db) {
       setDocumentNonBlocking(doc(db, 'users', user.uid, 'procurements', procId), procData, { merge: true });
       updateDocumentNonBlocking(doc(db, 'users', user.uid, 'products', productId), {
         stock: increment(qty),
-        purchasePrice: buyPrice
+        purchasePrice: buyPrice,
+        sellingPrice: sellPrice
       });
     } else {
       setLocalProcurements(prev => {
@@ -203,7 +205,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         return updated;
       });
       setLocalProducts(prev => {
-        const updated = prev.map(p => p.id === productId ? { ...p, stock: (p.stock || 0) + qty, purchasePrice: buyPrice } : p);
+        const updated = prev.map(p => p.id === productId ? { ...p, stock: (p.stock || 0) + qty, purchasePrice: buyPrice, sellingPrice: sellPrice } : p);
         localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
         return updated;
       });
