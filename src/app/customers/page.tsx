@@ -76,7 +76,9 @@ export default function CustomersPage() {
   const [isRecordEditOpen, setIsRecordEditOpen] = useState(false)
   const [isCustomerEditOpen, setIsCustomerEditOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [isRecordDeleteOpen, setIsRecordDeleteOpen] = useState(false) // New state for record delete dialog
   const [deletePass, setDeletePass] = useState("")
+  const [recordToDelete, setRecordToDelete] = useState<any>(null) // State to track which record to delete
 
   // Payment State
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
@@ -165,7 +167,6 @@ export default function CustomersPage() {
   
   const currentBakiRecords = useMemo(() => {
     const rawRecords = activeCustomerId ? (user ? (fbBakiRecords || []) : (detailsCustomer?.bakiRecords || [])) : [];
-    // Now returning ALL records to maintain history
     return [...rawRecords].sort((a, b) => new Date(b.takenDate).getTime() - new Date(a.takenDate).getTime());
   }, [fbBakiRecords, detailsCustomer, user, activeCustomerId]);
 
@@ -246,11 +247,24 @@ export default function CustomersPage() {
     toast({ title: "Entry Updated" });
   }
 
-  const handleDeleteBakiRecord = (record: any) => {
-    if (!activeCustomerId) return;
-    const remaining = record.amount - (record.paidAmount || 0);
-    actions.deleteBakiRecord(activeCustomerId, record.id, remaining, record.productId, record.quantity);
-    toast({ title: "Record Removed" });
+  const startDeletingRecord = (record: any) => {
+    setRecordToDelete(record);
+    setDeletePass("");
+    setIsRecordDeleteOpen(true);
+  }
+
+  const confirmDeleteBakiRecord = () => {
+    if (!activeCustomerId || !recordToDelete) return;
+    if (deletePass === "specsxr") {
+      const remaining = recordToDelete.amount - (recordToDelete.paidAmount || 0);
+      actions.deleteBakiRecord(activeCustomerId, recordToDelete.id, remaining, recordToDelete.productId, recordToDelete.quantity);
+      setIsRecordDeleteOpen(false);
+      setRecordToDelete(null);
+      setDeletePass("");
+      toast({ title: "History Entry Removed" });
+    } else {
+      toast({ variant: "destructive", title: "Invalid Key" });
+    }
   }
 
   const handlePayment = () => {
@@ -477,7 +491,7 @@ export default function CustomersPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/10 rounded-full" onClick={() => startEditingRecord(record)}>
                               <Edit2 className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full" onClick={() => handleDeleteBakiRecord(record)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full" onClick={() => startDeletingRecord(record)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
@@ -507,6 +521,36 @@ export default function CustomersPage() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {/* Record Deletion Password Protection Dialog */}
+      <Dialog open={isRecordDeleteOpen} onOpenChange={setIsRecordDeleteOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-destructive">
+              <Lock className="w-5 h-5" />
+              <DialogTitle className="font-black uppercase">History Protection</DialogTitle>
+            </div>
+            <DialogDescription>
+              {language === 'bn' ? 'এই ইতিহাসটি চিরতরে মুছে যাবে। নিশ্চিত করতে সিক্রেট কী দিন।' : 'This entry will be permanently removed. Enter master key to confirm.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-[10px] font-black uppercase text-muted-foreground">Secret Master Key</Label>
+            <Input 
+              type="password" 
+              placeholder="••••••••" 
+              className="h-12 rounded-xl text-lg font-bold" 
+              value={deletePass} 
+              onChange={e => setDeletePass(e.target.value)} 
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="destructive" className="w-full h-12 rounded-xl font-black uppercase shadow-xl" onClick={confirmDeleteBakiRecord}>
+              Authorize & Wipe Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Partial Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
