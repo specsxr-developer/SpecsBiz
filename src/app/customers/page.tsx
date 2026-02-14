@@ -76,11 +76,10 @@ export default function CustomersPage() {
   const [isRecordEditOpen, setIsRecordEditOpen] = useState(false)
   const [isCustomerEditOpen, setIsCustomerEditOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-  const [isRecordDeleteOpen, setIsRecordDeleteOpen] = useState(false) // New state for record delete dialog
+  const [isRecordDeleteOpen, setIsRecordDeleteOpen] = useState(false)
   const [deletePass, setDeletePass] = useState("")
-  const [recordToDelete, setRecordToDelete] = useState<any>(null) // State to track which record to delete
+  const [recordToDelete, setRecordToDelete] = useState<any>(null)
 
-  // Payment State
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState("")
   const [paymentRecord, setPaymentRecord] = useState<any>(null)
@@ -91,7 +90,6 @@ export default function CustomersPage() {
 
   const [editingRecord, setEditingRecord] = useState<any>(null)
   
-  // Detailed Record State
   const [newRecord, setNewRecord] = useState({
     productId: "",
     productName: "",
@@ -113,7 +111,6 @@ export default function CustomersPage() {
     segment: "Baki User"
   })
 
-  // Warnings for Duplicates
   const nameWarning = useMemo(() => {
     if (!newCustomer.firstName.trim()) return null;
     const fullName = (newCustomer.firstName + " " + (newCustomer.lastName || "")).toLowerCase().trim();
@@ -137,7 +134,6 @@ export default function CustomersPage() {
     return null;
   }, [newCustomer.phone, customers, language, activeCustomerId]);
 
-  // Auto-calculate Amount
   useEffect(() => {
     const qty = parseFloat(newRecord.quantity) || 0;
     const price = parseFloat(newRecord.unitPrice) || 0;
@@ -522,7 +518,6 @@ export default function CustomersPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Record Deletion Password Protection Dialog */}
       <Dialog open={isRecordDeleteOpen} onOpenChange={setIsRecordDeleteOpen}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
@@ -552,7 +547,6 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Partial Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
@@ -588,7 +582,6 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Record Dialog */}
       <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
@@ -656,7 +649,6 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Record Add Dialog */}
       <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
@@ -743,7 +735,6 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Customer Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[550px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-primary text-white border-b shrink-0">
@@ -751,7 +742,7 @@ export default function CustomersPage() {
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/10 rounded-xl border border-white/20"><Users className="w-6 h-6 text-accent" /></div>
                 <div>
-                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">{addStep === 1 ? 'Register New Customer' : 'Detailed Baki Entry'}</DialogTitle>
+                  <DialogTitle className="text-xl font-black uppercase tracking-tighter">{addStep === 1 ? t.addNewBakiUser : 'Detailed Baki Entry'}</DialogTitle>
                   <p className="text-[9px] font-bold uppercase opacity-60 tracking-[0.2em]">Step {addStep} of 2</p>
                 </div>
               </div>
@@ -763,23 +754,45 @@ export default function CustomersPage() {
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.firstName}</Label>
-                    <Input className={cn("h-12 rounded-xl", nameWarning && "border-red-500")} value={newCustomer.firstName} onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} />
+                    <Label className="text-xs font-black uppercase text-primary mb-1 block">{t.firstName}</Label>
+                    <Input 
+                      placeholder="e.g. Rohim"
+                      className={cn("h-12 rounded-xl bg-accent/5 focus:ring-primary", nameWarning && "border-red-500")} 
+                      value={newCustomer.firstName} 
+                      onChange={e => setNewCustomer({...newCustomer, firstName: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.lastName}</Label>
-                    <Input className="h-12 rounded-xl" value={newCustomer.lastName} onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} />
+                    <Label className="text-xs font-black uppercase text-primary mb-1 block">{t.lastName}</Label>
+                    <Input 
+                      placeholder="e.g. Mia"
+                      className="h-12 rounded-xl bg-accent/5 focus:ring-primary" 
+                      value={newCustomer.lastName} 
+                      onChange={e => setNewCustomer({...newCustomer, lastName: e.target.value})} 
+                    />
                   </div>
                 </div>
                 {nameWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1 -mt-3"><AlertTriangle className="w-3 h-3" /> {nameWarning}</p>}
+                
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.phone}</Label>
-                  <Input className={cn("h-12 rounded-xl", phoneWarning && "border-red-500")} value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+                  <Label className="text-xs font-black uppercase text-primary mb-1 block">{t.phone}</Label>
+                  <Input 
+                    placeholder="017XXXXXXXX"
+                    className={cn("h-12 rounded-xl bg-accent/5 focus:ring-primary", phoneWarning && "border-red-500")} 
+                    value={newCustomer.phone} 
+                    onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} 
+                  />
                   {phoneWarning && <p className="text-[10px] font-bold text-red-600 flex items-center gap-1 mt-1"><AlertTriangle className="w-3 h-3" /> {phoneWarning}</p>}
                 </div>
+                
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground">{t.address}</Label>
-                  <Input className="h-12 rounded-xl" value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} />
+                  <Label className="text-xs font-black uppercase text-primary mb-1 block">{t.address}</Label>
+                  <Input 
+                    placeholder="e.g. Dhaka, Bangladesh"
+                    className="h-12 rounded-xl bg-accent/5 focus:ring-primary" 
+                    value={newCustomer.address} 
+                    onChange={e => setNewCustomer({...newCustomer, address: e.target.value})} 
+                  />
                 </div>
               </div>
             ) : (

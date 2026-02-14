@@ -48,6 +48,20 @@ export const translations = {
     maxPhotosReached: "Maximum 5 photos reached",
     noReviewPhotos: "No review photos for this product yet.",
 
+    // Customers/Baki
+    bakiManagement: "Baki Management",
+    bakiDesc: "Track customer debts and payments.",
+    addNewBakiUser: "Add New Baki User",
+    totalUnpaidBaki: "Total Unpaid Baki",
+    activeDebtors: "Active Debtors",
+    searchBaki: "Search by name or phone...",
+    customerName: "Customer Name",
+    currentBaki: "Current Baki",
+    firstName: "First Name",
+    lastName: "Last Name",
+    phone: "Phone Number",
+    address: "Address",
+
     // Common
     loading: "Loading...",
     noData: "No data found.",
@@ -112,6 +126,20 @@ export const translations = {
     addReviewPhoto: "রিভিউ ছবি যোগ করুন",
     maxPhotosReached: "সর্বোচ্চ ৫টি ছবি যোগ করা হয়েছে",
     noReviewPhotos: "এই পণ্যের কোনো রিভিউ ছবি নেই।",
+
+    // Customers/Baki
+    bakiManagement: "বাকির হিসাব",
+    bakiDesc: "কাস্টমারের বাকি এবং পেমেন্ট ট্র্যাক করুন।",
+    addNewBakiUser: "নতুন বাকি কাস্টমার",
+    totalUnpaidBaki: "মোট বাজার বাকি",
+    activeDebtors: "বাকি কাস্টমার সংখ্যা",
+    searchBaki: "নাম বা ফোন দিয়ে খুঁজুন...",
+    customerName: "কাস্টমারের নাম",
+    currentBaki: "বর্তমান বাকি",
+    firstName: "নাম",
+    lastName: "পদবী",
+    phone: "ফোন নম্বর",
+    address: "ঠিকানা",
 
     // Common
     loading: "লোড হচ্ছে...",
