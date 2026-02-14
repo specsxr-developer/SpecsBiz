@@ -7,7 +7,7 @@ import {
   Package, 
   Users, 
   DollarSign, 
-  ArrowUpRight, 
+  ArrowUp, 
   Clock,
   Inbox,
   Plus,
@@ -20,16 +20,16 @@ import {
   ArrowDownCircle,
   Lock,
   BarChart2,
-  ArrowRight,
   Target,
-  ArrowDownRight,
   ArrowUpCircle,
   Info,
   Layers,
   Tag,
   CreditCard,
   FileText,
-  X
+  X,
+  History,
+  PackageSearch
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -61,7 +61,7 @@ import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   const { toast } = useToast()
-  const { products, sales, customers, actions, currency, language } = useBusinessData()
+  const { products, sales, customers, procurements, actions, currency, language } = useBusinessData()
   const t = translations[language]
   
   const [isSaleDialogOpen, setIsSaleDialogOpen] = useState(false)
@@ -71,12 +71,20 @@ export default function DashboardPage() {
 
   // Deletion Password Protection
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleteType, setDeleteType] = useState<'sale' | 'procurement' | null>(null)
   const [deletePass, setDeletePass] = useState("")
 
   // View Product Details State
   const [viewProduct, setViewProduct] = useState<any>(null)
 
   const totalRevenue = sales.reduce((acc, s) => acc + (s.total || 0), 0)
+
+  // Aggregate A to Z Activity
+  const allActivities = useMemo(() => {
+    const sList = sales.map(s => ({ ...s, activityType: 'sale' as const, timestamp: new Date(s.saleDate).getTime() }));
+    const pList = procurements.map(p => ({ ...p, activityType: 'procurement' as const, timestamp: new Date(p.date).getTime() }));
+    return [...sList, ...pList].sort((a, b) => b.timestamp - a.timestamp);
+  }, [sales, procurements]);
 
   // Calculate Product-wise Deep Profit
   const productProfitData = useMemo(() => {
@@ -101,7 +109,7 @@ export default function DashboardPage() {
       }
     })
 
-    return Object.values(dataMap).sort((a, b) => b.profit - a.profit).slice(0, 5); // Top 5
+    return Object.values(dataMap).sort((a, b) => b.profit - a.profit);
   }, [sales])
 
   const stats = [
@@ -134,11 +142,17 @@ export default function DashboardPage() {
   const updateSelectedUnit = (id: string, unit: string) => {
     setCart(cart.map(c => {
       if (c.id === id) {
-        // If switching from KG to GM, multiply quantity by 1000 for convenience
         let newQty = c.quantity;
-        if (c.selectedUnit === 'kg' && unit === 'gm') newQty = c.quantity * 1000;
-        if (c.selectedUnit === 'gm' && unit === 'kg') newQty = c.quantity / 1000;
-        return { ...c, selectedUnit: unit, quantity: newQty };
+        let newPrice = c.sellingPrice;
+        if (c.selectedUnit === 'kg' && unit === 'gm') {
+          newQty = c.quantity * 1000;
+          newPrice = c.sellingPrice / 1000;
+        }
+        if (c.selectedUnit === 'gm' && unit === 'kg') {
+          newQty = c.quantity / 1000;
+          newPrice = c.sellingPrice * 1000;
+        }
+        return { ...c, selectedUnit: unit, quantity: newQty, sellingPrice: newPrice };
       }
       return c;
     }))
@@ -148,7 +162,6 @@ export default function DashboardPage() {
     setCart(cart.filter(c => c.id !== id))
   }
 
-  // Calculate totals with conversion logic
   const cartSummary = useMemo(() => {
     let subtotal = 0;
     let totalProfit = 0;
@@ -159,16 +172,18 @@ export default function DashboardPage() {
       if (item.unit === 'gm' && item.selectedUnit === 'kg') factor = 1000;
       
       const effectiveQty = item.quantity * factor;
-      const currentPrice = item.sellingPrice;
       const buyPrice = item.purchasePrice || 0;
-      
-      const itemTotal = currentPrice * effectiveQty;
-      const itemProfit = (currentPrice - buyPrice) * effectiveQty;
+      const sellPriceInBaseUnit = item.selectedUnit === 'gm' && item.unit === 'kg' ? item.sellingPrice * 1000 : 
+                                item.selectedUnit === 'kg' && item.unit === 'gm' ? item.sellingPrice / 1000 : 
+                                item.sellingPrice;
+
+      const itemTotal = sellPriceInBaseUnit * effectiveQty;
+      const itemProfit = (sellPriceInBaseUnit - buyPrice) * effectiveQty;
       
       subtotal += itemTotal;
       totalProfit += itemProfit;
       
-      return { ...item, quantity: effectiveQty }; // Normalized for backend
+      return { ...item, quantity: effectiveQty, sellingPrice: sellPriceInBaseUnit }; 
     });
 
     return { subtotal, totalProfit, normalizedItems };
@@ -189,13 +204,17 @@ export default function DashboardPage() {
     setIsSaleDialogOpen(false)
   }
 
-  const handleDeleteSale = () => {
+  const handleAuthorizedDelete = () => {
     if (deletePass === "specsxr") {
-      if (deleteId) {
+      if (deleteId && deleteType === 'sale') {
         actions.deleteSale(deleteId)
-        toast({ title: language === 'en' ? "Sale Deleted" : "বিক্রয় ডিলিট করা হয়েছে", description: "Stock and data reverted." })
+        toast({ title: "Sale Reversed & Removed" })
+      } else if (deleteId && deleteType === 'procurement') {
+        actions.deleteProcurement(deleteId)
+        toast({ title: "Procurement Reversed & Removed" })
       }
       setDeleteId(null)
+      setDeleteType(null)
       setDeletePass("")
     } else {
       toast({ variant: "destructive", title: "Wrong Password", description: "Access denied." })
@@ -305,7 +324,6 @@ export default function DashboardPage() {
                 </div>
               </ScrollArea>
 
-              {/* Action Bar */}
               <div className="p-6 border-t bg-accent/5 flex items-center justify-between gap-4">
                 <div className="flex flex-col">
                   <p className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Cart Items</p>
@@ -324,7 +342,6 @@ export default function DashboardPage() {
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
           <Card key={i} className="hover:shadow-md transition-shadow border-accent/5">
@@ -335,7 +352,7 @@ export default function DashboardPage() {
             <CardContent className="p-3 md:p-4 pt-0">
               <div className="text-lg md:text-2xl font-black">{stat.value}</div>
               <p className="text-[8px] md:text-xs text-muted-foreground flex items-center gap-1 pt-0.5">
-                <ArrowUpRight className="h-2 w-2 md:h-3 md:w-3 text-green-600" />
+                <ArrowUp className="h-2 w-2 md:h-3 md:w-3 text-green-600 rotate-45" />
                 <span className="text-green-600 font-bold">{t.stable}</span>
               </p>
             </CardContent>
@@ -344,150 +361,156 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Product Profit Analysis */}
-        <Card className="border-accent/10 shadow-lg">
-          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4 bg-accent/5">
+        <Card className="border-accent/10 shadow-lg flex flex-col h-[500px]">
+          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4 bg-accent/5 shrink-0">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-sm md:text-base flex items-center gap-2">
                   <Target className="w-4 h-4 md:w-5 md:h-5 text-accent" />
-                  {language === 'en' ? 'Top Profitable Products' : 'পণ্যের বিস্তারিত লাভ বিশ্লেষণ'}
+                  {language === 'en' ? 'Inventory A-Z Profit Report' : 'পণ্যের বিস্তারিত লাভ বিশ্লেষণ'}
                 </CardTitle>
                 <CardDescription className="text-[10px] uppercase font-bold opacity-60 mt-1">
-                  {language === 'en' ? 'A to Z Business Insight (Tap for details)' : 'প্রতিটি পণ্যের পূর্ণাঙ্গ রিপোর্ট (ট্যাপ করুন)'}
+                  {language === 'en' ? 'A to Z Business Insight' : 'প্রতিটি পণ্যের পূর্ণাঙ্গ রিপোর্ট'}
                 </CardDescription>
               </div>
               <Badge className="bg-accent text-white border-none text-[10px] uppercase font-black tracking-widest">{language === 'en' ? 'Live' : 'লাইভ'}</Badge>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            {productProfitData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground opacity-30 gap-2">
-                <BarChart2 className="w-10 h-10" />
-                <p className="text-xs italic">{language === 'en' ? 'No sales data yet' : 'এখনো কোনো বিক্রয় তথ্য নেই'}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-black/5">
-                {productProfitData.map((item, idx) => {
-                  const profitMargin = item.revenue > 0 ? ((item.profit / item.revenue) * 100).toFixed(1) : 0;
-                  return (
-                    <div 
-                      key={idx} 
-                      className="p-4 hover:bg-accent/5 transition-all group cursor-pointer active:scale-[0.98]"
-                      onClick={() => {
-                        const fullProduct = products.find(p => p.id === item.id || p.name === item.name);
-                        setViewProduct({ ...item, ...fullProduct });
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs shrink-0">
-                            #{idx + 1}
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              {productProfitData.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground opacity-30 gap-2">
+                  <BarChart2 className="w-10 h-10" />
+                  <p className="text-xs italic">{language === 'en' ? 'No sales data yet' : 'এখনো কোনো বিক্রয় তথ্য নেই'}</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-black/5">
+                  {productProfitData.map((item, idx) => {
+                    const profitMargin = item.revenue > 0 ? ((item.profit / item.revenue) * 100).toFixed(1) : 0;
+                    return (
+                      <div 
+                        key={idx} 
+                        className="p-4 hover:bg-accent/5 transition-all group cursor-pointer active:scale-[0.98]"
+                        onClick={() => {
+                          const fullProduct = products.find(p => p.id === item.id || p.name === item.name);
+                          setViewProduct({ ...item, ...fullProduct });
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs shrink-0">
+                              #{idx + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-black text-primary truncate group-hover:text-accent transition-colors">{item.name}</p>
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase">{language === 'en' ? 'Units Sold' : 'বিক্রিত সংখ্যা'}: {item.qty} {item.unit}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-black text-primary truncate group-hover:text-accent transition-colors">{item.name}</p>
-                            <p className="text-[9px] font-bold text-muted-foreground uppercase">{language === 'en' ? 'Units Sold' : 'বিক্রিত সংখ্যা'}: {item.qty} {item.unit}</p>
+                          <div className="text-right">
+                            <p className="text-sm font-black text-green-600">+{currency}{item.profit.toLocaleString()}</p>
+                            <div className="flex items-center gap-1 justify-end">
+                              <ArrowUpCircle className="w-2.5 h-2.5 text-green-500" />
+                              <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter">Net Profit</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-black text-green-600">+{currency}{item.profit.toLocaleString()}</p>
-                          <div className="flex items-center gap-1 justify-end">
-                            <ArrowUpCircle className="w-2.5 h-2.5 text-green-500" />
-                            <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter">Net Profit</span>
+                        
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                          <div className="bg-muted/30 p-2 rounded-lg border border-black/5 text-center">
+                            <p className="text-[8px] font-bold uppercase opacity-50 mb-0.5">{language === 'en' ? 'Revenue' : 'মোট বিক্রি'}</p>
+                            <p className="text-[10px] font-black text-primary">{currency}{item.revenue.toLocaleString()}</p>
+                          </div>
+                          <div className="bg-muted/30 p-2 rounded-lg border border-black/5 text-center">
+                            <p className="text-[8px] font-bold uppercase opacity-50 mb-0.5">{language === 'en' ? 'Total Cost' : 'মোট কেনা'}</p>
+                            <p className="text-[10px] font-black text-orange-600">{currency}{item.cost.toLocaleString()}</p>
+                          </div>
+                          <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-center">
+                            <p className="text-[8px] font-black uppercase text-emerald-600 mb-0.5">{language === 'en' ? 'Margin' : 'লাভের হার'}</p>
+                            <p className="text-[10px] font-black text-emerald-700">{profitMargin}%</p>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-3 gap-2 mt-2">
-                        <div className="bg-muted/30 p-2 rounded-lg border border-black/5 text-center">
-                          <p className="text-[8px] font-bold uppercase opacity-50 mb-0.5">{language === 'en' ? 'Revenue' : 'মোট বিক্রি'}</p>
-                          <p className="text-[10px] font-black text-primary">{currency}{item.revenue.toLocaleString()}</p>
-                        </div>
-                        <div className="bg-muted/30 p-2 rounded-lg border border-black/5 text-center">
-                          <p className="text-[8px] font-bold uppercase opacity-50 mb-0.5">{language === 'en' ? 'Total Cost' : 'মোট কেনা'}</p>
-                          <p className="text-[10px] font-black text-orange-600">{currency}{item.cost.toLocaleString()}</p>
-                        </div>
-                        <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-center">
-                          <p className="text-[8px] font-black uppercase text-emerald-600 mb-0.5">{language === 'en' ? 'Margin' : 'লাভের হার'}</p>
-                          <p className="text-[10px] font-black text-emerald-700">{profitMargin}%</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
           </CardContent>
         </Card>
 
-        {/* Recent Activity Card */}
-        <Card className="border-accent/10">
-          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
-            <CardTitle className="text-sm md:text-base flex items-center gap-2"><Clock className="w-4 h-4 md:w-5 md:h-5 text-accent" /> {t.recentActivity}</CardTitle>
-            <CardDescription className="text-xs">Your latest transactions and payments.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {sales.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
-                <Inbox className="w-6 h-6 md:w-8 md:h-8 opacity-20" />
-                <p className="text-xs italic">{t.noTransactions}</p>
+        <Card className="border-accent/10 flex flex-col h-[500px]">
+          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4 shrink-0 bg-muted/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm md:text-base flex items-center gap-2"><History className="w-4 h-4 md:w-5 md:h-5 text-accent" /> {t.recentActivity}</CardTitle>
+                <CardDescription className="text-[10px] font-bold uppercase opacity-60">A to Z history of all transactions.</CardDescription>
               </div>
-            ) : (
-              <div className="divide-y">
-                {sales.slice(0, 5).map((sale, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 md:p-4 hover:bg-muted/5 group">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`p-1.5 md:p-2 rounded-full shrink-0 ${sale.isBakiPayment ? 'bg-blue-100' : 'bg-accent/10'}`}>
-                        {sale.isBakiPayment ? (
-                          <ArrowDownCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600" />
-                        ) : (
-                          <Receipt className="w-3.5 h-3.5 md:w-4 md:h-4 text-accent" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs md:text-sm font-bold truncate">
-                          {sale.isBakiPayment 
-                            ? `Baki Payment: ${sale.bakiProductName}` 
-                            : sale.items && sale.items.length > 0 
-                              ? (sale.items.length === 1 ? sale.items[0].name : `${sale.items[0].name} + ${sale.items.length - 1} items`)
-                              : `${t.saleId}${sale.id?.slice(-4)}`
-                          }
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[9px] md:text-[10px] text-muted-foreground truncate">{new Date(sale.saleDate).toLocaleDateString()}</p>
-                          {sale.isBakiPayment && (
-                            <Badge variant="outline" className="text-[8px] h-3.5 border-blue-200 bg-blue-50 text-blue-600 px-1">
-                              Due: {currency}{sale.remainingAmount?.toLocaleString()}
-                            </Badge>
+              <Badge variant="outline" className="text-[9px] h-5 border-accent/20 text-accent font-black uppercase">{allActivities.length} Records</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              {allActivities.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+                  <Clock className="w-6 h-6 md:w-8 md:h-8 opacity-20" />
+                  <p className="text-xs italic">{t.noTransactions}</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {allActivities.map((activity, i) => (
+                    <div key={activity.id || i} className="flex items-center justify-between p-4 hover:bg-muted/5 transition-all group">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={cn(
+                          "p-2 rounded-full shrink-0",
+                          activity.activityType === 'sale' 
+                            ? (activity.isBakiPayment ? "bg-blue-100" : "bg-emerald-100") 
+                            : "bg-orange-100"
+                        )}>
+                          {activity.activityType === 'sale' ? (
+                            activity.isBakiPayment ? <ArrowDownCircle className="w-4 h-4 text-blue-600" /> : <Receipt className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <PackageSearch className="w-4 h-4 text-orange-600" />
                           )}
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="text-right">
-                        <p className="text-xs md:text-sm font-bold text-primary">{currency}{sale.total?.toLocaleString()}</p>
-                        {!sale.isBakiPayment && (
-                          <p className={cn(
-                            "text-[9px] md:text-[10px] font-bold",
-                            (sale.profit || 0) < 0 ? "text-destructive" : "text-green-600"
-                          )}>
-                            {(sale.profit || 0) < 0 ? '-' : '+'}{currency}{Math.abs(sale.profit || 0).toLocaleString()}
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate">
+                            {activity.activityType === 'sale' 
+                              ? (activity.isBakiPayment ? `Baki Payment: ${activity.bakiProductName}` : (activity.items?.[0]?.name || 'Sale') + (activity.items?.length > 1 ? ` + ${activity.items.length - 1}` : ''))
+                              : `Stock Buy: ${activity.productName}`
+                            }
                           </p>
-                        )}
+                          <div className="flex items-center gap-2">
+                            <p className="text-[9px] text-muted-foreground">{new Date(activity.timestamp).toLocaleDateString()}</p>
+                            {activity.isBakiPayment && <Badge className="bg-blue-50 text-blue-600 border-blue-100 text-[8px] h-4">Paid</Badge>}
+                          </div>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500" onClick={() => setDeleteId(sale.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="text-xs font-black">{currency}{activity.activityType === 'sale' ? activity.total?.toLocaleString() : activity.totalCost?.toLocaleString()}</p>
+                          <p className="text-[8px] uppercase font-bold opacity-40">{activity.activityType}</p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                          onClick={() => {
+                            setDeleteId(activity.id);
+                            setDeleteType(activity.activityType);
+                          }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           </CardContent>
         </Card>
       </div>
 
-      {/* Bill Summary Nested Popup (Step 2 of Sale) */}
       <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[550px] p-0 overflow-hidden border-accent/20 shadow-2xl rounded-3xl">
           <DialogHeader className="p-6 bg-accent/5 border-b">
@@ -513,14 +536,17 @@ export default function DashboardPage() {
                 const isWeightBased = item.unit === 'kg' || item.unit === 'gm';
                 const displayUnit = item.selectedUnit || item.unit;
                 
-                // Calculate item-specific conversions for UI
                 let factor = 1;
                 if (item.unit === 'kg' && displayUnit === 'gm') factor = 0.001;
                 if (item.unit === 'gm' && displayUnit === 'kg') factor = 1000;
 
                 const effectiveQty = item.quantity * factor;
-                const itemTotal = item.sellingPrice * effectiveQty;
-                const itemProfit = (item.sellingPrice - (item.purchasePrice || 0)) * effectiveQty;
+                const sellPriceInBaseUnit = item.selectedUnit === 'gm' && item.unit === 'kg' ? item.sellingPrice * 1000 : 
+                                item.selectedUnit === 'kg' && item.unit === 'gm' ? item.sellingPrice / 1000 : 
+                                item.sellingPrice;
+
+                const itemTotal = sellPriceInBaseUnit * effectiveQty;
+                const itemProfit = (sellPriceInBaseUnit - (item.purchasePrice || 0)) * effectiveQty;
 
                 return (
                   <div key={item.id} className="space-y-4 pb-6 border-b border-black/5 last:border-0 last:pb-0">
@@ -540,7 +566,7 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <div className="flex justify-between items-center">
-                          <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty</Label>
+                          <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty ({displayUnit})</Label>
                           {isWeightBased && (
                             <div className="flex gap-1">
                               <button 
@@ -611,7 +637,6 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Product Deep Detail Popup */}
       <Dialog open={!!viewProduct} onOpenChange={(open) => !open && setViewProduct(null)}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-accent/20 shadow-2xl">
           <div className="bg-primary text-white p-6 md:p-8">
@@ -632,7 +657,6 @@ export default function DashboardPage() {
                 <X className="w-5 h-5" />
               </Button>
             </div>
-            <DialogDescription className="sr-only">Detailed financial and inventory performance for {viewProduct?.name}.</DialogDescription>
           </div>
 
           <div className="p-6 md:p-8 space-y-8 bg-white max-h-[70vh] overflow-y-auto">
@@ -652,15 +676,15 @@ export default function DashboardPage() {
               </div>
               
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5 text-center">
+                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Revenue</p>
                   <p className="text-xs font-black text-primary">{currency}{viewProduct?.revenue?.toLocaleString()}</p>
                 </div>
-                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5 text-center">
+                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Cost</p>
                   <p className="text-xs font-black text-orange-600">{currency}{viewProduct?.cost?.toLocaleString()}</p>
                 </div>
-                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5 text-center">
+                <div className="text-center p-2 rounded-xl bg-muted/30 border border-black/5">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase">Sold Qty</p>
                   <p className="text-xs font-black text-accent">{viewProduct?.qty} {viewProduct?.unit}</p>
                 </div>
@@ -727,37 +751,36 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation with Password */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[400px]">
+      <Dialog open={!!deleteId} onOpenChange={(open) => { if(!open) { setDeleteId(null); setDeleteType(null); setDeletePass(""); } }}>
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2 text-destructive">
-                <Lock className="w-5 h-5" /> {language === 'en' ? 'History Protection' : 'হিস্ট্রি প্রটেকশন'}
+              <DialogTitle className="flex items-center gap-2 text-destructive font-black uppercase">
+                <Lock className="w-5 h-5" /> Reverse & Delete
               </DialogTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setDeleteId(null)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            <DialogDescription>
+            <DialogDescription className="text-xs font-bold text-muted-foreground">
               {language === 'en' 
-                ? 'Deleting this sale will restore item stock and remove revenue data. Enter secret key to confirm.'
-                : 'এই বিক্রয়টি ডিলিট করলে স্টকে মাল ফিরে যাবে এবং আয় কমে যাবে। নিশ্চিত করতে সিক্রেট কী দিন।'}
+                ? 'This action will reverse inventory/balance changes and remove the record forever. Enter password to confirm.'
+                : 'এই অ্যাকশনটি ইনভেন্টরি বা কাস্টমার ব্যালেন্স রিভার্স করবে এবং রেকর্ডটি চিরতরে মুছে ফেলবে।'}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <Label className="text-xs font-bold uppercase opacity-70">Secret Access Key</Label>
+            <Label className="text-[10px] font-black uppercase opacity-70">Master Access Key</Label>
             <Input 
               type="password" 
               placeholder="••••••••" 
-              className="h-12 text-lg font-bold"
+              className="h-12 text-lg font-bold rounded-xl"
               value={deletePass}
               onChange={e => setDeletePass(e.target.value)}
             />
           </div>
           <DialogFooter>
-            <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleDeleteSale}>
-              {language === 'en' ? 'Authorize & Delete' : 'অথোরাইজ ও ডিলিট করুন'}
+            <Button variant="destructive" className="w-full h-12 text-base font-black uppercase rounded-xl shadow-lg" onClick={handleAuthorizedDelete}>
+              Authorize & Reverse Data
             </Button>
           </DialogFooter>
         </DialogContent>

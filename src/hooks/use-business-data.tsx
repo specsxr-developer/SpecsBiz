@@ -54,6 +54,7 @@ interface BusinessContextType {
     payBakiRecord: (customerId: string, recordId: string, amountToPay: number, currentRecord: any) => void;
     deleteBakiRecord: (customerId: string, recordId: string, remainingAmount: number, productId?: string, qty?: number) => void;
     addRestock: (productId: string, qty: number, buyPrice: number) => void;
+    deleteProcurement: (procId: string) => void;
     syncInventoryToProcurement: () => Promise<void>;
     setCurrency: (val: string) => void;
     setLanguage: (lang: 'en' | 'bn') => void;
@@ -209,6 +210,33 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.uid, db, products]);
 
+  const deleteProcurement = useCallback((procId: string) => {
+    const proc = procurements.find(p => p.id === procId);
+    if (!proc) return;
+
+    if (user?.uid && db) {
+      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'procurements', procId));
+      if (proc.productId) {
+        updateDocumentNonBlocking(doc(db, 'users', user.uid, 'products', proc.productId), {
+          stock: increment(-proc.quantity)
+        });
+      }
+    } else {
+      setLocalProcurements(prev => {
+        const updated = prev.filter(p => p.id !== procId);
+        localStorage.setItem(LOCAL_KEYS.PROCUREMENTS, JSON.stringify(updated));
+        return updated;
+      });
+      if (proc.productId) {
+        setLocalProducts(prev => {
+          const updated = prev.map(p => p.id === proc.productId ? { ...p, stock: Math.max(0, (p.stock || 0) - proc.quantity) } : p);
+          localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updated));
+          return updated;
+        });
+      }
+    }
+  }, [user?.uid, db, procurements]);
+
   const syncInventoryToProcurement = useCallback(async () => {
     const batchData: any[] = [];
     products.forEach(p => {
@@ -318,6 +346,10 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
             stock: increment(item.quantity)
           });
         });
+      } else if (saleToDelete.isBakiPayment && saleToDelete.customerId) {
+        updateDocumentNonBlocking(doc(db, 'users', user.uid, 'customers', saleToDelete.customerId), {
+          totalDue: increment(saleToDelete.total)
+        });
       }
     } else {
       setLocalSales(prev => {
@@ -325,7 +357,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(LOCAL_KEYS.SALES, JSON.stringify(updated));
         return updated;
       });
-      if (!saleToDelete.isBakiPayment) {
+      if (!saleToDelete.isBakiPayment && saleToDelete.items) {
         setLocalProducts(prev => {
           const updatedProducts = prev.map(p => {
             const saleItem = saleToDelete.items?.find((i: any) => i.id === p.id);
@@ -336,6 +368,12 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           });
           localStorage.setItem(LOCAL_KEYS.PRODUCTS, JSON.stringify(updatedProducts));
           return updatedProducts;
+        });
+      } else if (saleToDelete.isBakiPayment && saleToDelete.customerId) {
+        setLocalCustomers(prev => {
+          const updated = prev.map(c => c.id === saleToDelete.customerId ? { ...c, totalDue: (c.totalDue || 0) + saleToDelete.total } : c);
+          localStorage.setItem(LOCAL_KEYS.CUSTOMERS, JSON.stringify(updated));
+          return updated;
         });
       }
     }
@@ -615,6 +653,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       payBakiRecord,
       deleteBakiRecord,
       addRestock,
+      deleteProcurement,
       syncInventoryToProcurement,
       setCurrency,
       setLanguage,
