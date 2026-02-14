@@ -60,11 +60,10 @@ export default function SalesPage() {
     if (existing) {
       toast({ title: language === 'en' ? "Already in cart" : "ইতিমধ্যেই কার্টে আছে" })
     } else {
-      // Initialize with base unit
       setCart([...cart, { ...item, quantity: 1, selectedUnit: item.unit }])
       toast({ title: language === 'en' ? "Added to list" : "তালিকায় যোগ করা হয়েছে" })
       
-      // Trigger animation for the floating button
+      // Trigger animation for the header button
       setIsAnimate(true)
       setTimeout(() => setIsAnimate(false), 600)
     }
@@ -84,7 +83,6 @@ export default function SalesPage() {
     setCart(cart.map(c => {
       if (c.id === id) {
         let newQty = c.quantity;
-        // Logic: if switching KG to GM, 1 KG becomes 1000 GM for the user input
         if (c.selectedUnit === 'kg' && unit === 'gm') newQty = c.quantity * 1000;
         if (c.selectedUnit === 'gm' && unit === 'kg') newQty = c.quantity / 1000;
         return { ...c, selectedUnit: unit, quantity: newQty };
@@ -97,13 +95,11 @@ export default function SalesPage() {
     setCart(cart.filter(c => c.id !== id))
   }
 
-  // Master calculation with conversion factors
   const cartSummary = useMemo(() => {
     let subtotal = 0;
     let totalCost = 0;
     
     const normalizedItems = cart.map(item => {
-      // Conversion factor relative to inventory base unit
       let factor = 1;
       if (item.unit === 'kg' && item.selectedUnit === 'gm') factor = 0.001;
       if (item.unit === 'gm' && item.selectedUnit === 'kg') factor = 1000;
@@ -118,7 +114,7 @@ export default function SalesPage() {
       subtotal += itemTotal;
       totalCost += itemCost;
       
-      return { ...item, quantity: effectiveQty }; // This quantity will be used for stock deduction
+      return { ...item, quantity: effectiveQty };
     });
 
     return {
@@ -146,14 +142,37 @@ export default function SalesPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
-      {/* Product Selection Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
+      {/* Product Selection Header with Header Checkout */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 z-20 bg-background/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-accent/10">
+        <div className="flex-1">
           <h2 className="text-2xl font-black font-headline text-primary flex items-center gap-2">
             <Receipt className="w-6 h-6 text-accent" /> {language === 'en' ? 'Quick Sale' : 'দ্রুত বিক্রয়'}
           </h2>
           <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest opacity-60">Select products to generate bill</p>
         </div>
+
+        <Button 
+          disabled={cart.length === 0}
+          onClick={() => setIsSummaryOpen(true)}
+          className={cn(
+            "h-14 px-8 rounded-2xl font-black uppercase text-sm transition-all shadow-xl flex items-center gap-3 border-2",
+            cart.length > 0 
+              ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-400" 
+              : "bg-muted text-muted-foreground border-transparent opacity-50 cursor-not-allowed",
+            isAnimate && "animate-tada"
+          )}
+        >
+          <div className="relative">
+            <ShoppingCart className="w-6 h-6" />
+            {cart.length > 0 && (
+              <Badge className="absolute -top-3 -right-3 h-6 w-6 p-0 flex items-center justify-center bg-red-500 border-2 border-white text-[10px] font-black rounded-full shadow-lg">
+                {cart.length}
+              </Badge>
+            )}
+          </div>
+          {language === 'en' ? 'Pay Bill' : 'বিল পরিশোধ'}
+        </Button>
+
         <div className="relative w-full md:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
@@ -236,29 +255,6 @@ export default function SalesPage() {
         )}
       </div>
 
-      {/* Floating Checkout Button */}
-      {cart.length > 0 && (
-        <div className={cn(
-          "fixed bottom-20 right-6 z-50 transition-all duration-300",
-          isAnimate ? "scale-110" : "scale-100"
-        )}>
-          <Button 
-            onClick={() => setIsSummaryOpen(true)}
-            className={cn(
-              "h-20 w-20 rounded-full shadow-[0_20px_50px_rgba(0,128,128,0.5)] bg-accent hover:bg-accent/90 border-4 border-white flex items-center justify-center p-0 transition-all active:scale-95 shadow-xl",
-              isAnimate && "animate-tada"
-            )}
-          >
-            <div className="relative">
-              <ShoppingCart className="w-9 h-9 text-white" />
-              <Badge className="absolute -top-4 -right-4 h-8 w-8 flex items-center justify-center bg-red-500 border-2 border-white font-black text-[11px] rounded-full shadow-lg">
-                {cart.length}
-              </Badge>
-            </div>
-          </Button>
-        </div>
-      )}
-
       {/* Bill Summary Popup */}
       <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[600px] p-0 overflow-hidden border-accent/20 shadow-2xl rounded-3xl">
@@ -287,7 +283,6 @@ export default function SalesPage() {
                 const isWeightBased = item.unit === 'kg' || item.unit === 'gm';
                 const displayUnit = item.selectedUnit || item.unit;
                 
-                // Calculate item-specific conversions for UI
                 let factor = 1;
                 if (item.unit === 'kg' && displayUnit === 'gm') factor = 0.001;
                 if (item.unit === 'gm' && displayUnit === 'kg') factor = 1000;
