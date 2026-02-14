@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { 
   Package, 
   Plus, 
@@ -25,7 +25,9 @@ import {
   Lock,
   X,
   AlertCircle,
-  BellRing
+  BellRing,
+  Image as ImageIcon,
+  Upload
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -106,40 +108,34 @@ export default function InventoryPage() {
     sellingPrice: "",
     stock: "",
     unit: "pcs",
-    alertThreshold: "5" // Default threshold
+    alertThreshold: "5",
+    imageUrl: ""
   })
 
-  // --- REAL-TIME DUPLICATE WARNING (NON-BLOCKING) ---
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'new' | 'edit') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = reader.result as string
+      if (type === 'new') {
+        setNewProduct(prev => ({ ...prev, imageUrl: base64 }))
+      } else {
+        setEditingProduct((prev: any) => ({ ...prev, imageUrl: base64 }))
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // --- REAL-TIME DUPLICATE WARNING ---
   const duplicateWarning = useMemo(() => {
     if (!newProduct.name.trim()) return null;
     const currentName = newProduct.name.toLowerCase().trim();
-    const match = products.find(p => {
-      const pName = p.name.toLowerCase().trim();
-      return pName.includes(currentName) || currentName.includes(pName);
-    });
-    if (match) {
-      return language === 'bn' 
-        ? `'${match.name}' নামের সাথে মিল আছে এমন পণ্য অলরেডি আছে।` 
-        : `Similar product '${match.name}' already exists.`;
-    }
+    const match = products.find(p => p.name.toLowerCase().trim() === currentName);
+    if (match) return language === 'bn' ? `'${match.name}' আছে!` : `Product exists!`;
     return null;
   }, [newProduct.name, products, language]);
-
-  const editDuplicateWarning = useMemo(() => {
-    if (!editingProduct?.name?.trim()) return null;
-    const currentName = editingProduct.name.toLowerCase().trim();
-    const match = products.find(p => {
-      if (p.id === editingProduct.id) return false;
-      const pName = p.name.toLowerCase().trim();
-      return pName.includes(currentName) || currentName.includes(pName);
-    });
-    if (match) {
-      return language === 'bn' 
-        ? `'${match.name}' নামের সাথে মিল আছে এমন পণ্য আছে!` 
-        : `Another similar product '${match.name}' exists!`;
-    }
-    return null;
-  }, [editingProduct?.name, products, language, editingProduct?.id]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -149,17 +145,8 @@ export default function InventoryPage() {
     })
   }, [products, search, filterCategory])
 
-  const validateProduct = (prod: any) => {
-    if (!prod.name.trim()) {
-      toast({ variant: "destructive", title: language === 'bn' ? "নাম দিন!" : "Name required!" });
-      return false;
-    }
-    return true;
-  }
-
   const handleAddProduct = () => {
-    if (!validateProduct(newProduct)) return;
-
+    if (!newProduct.name.trim()) return;
     actions.addProduct({
       ...newProduct,
       stock: parseFloat(newProduct.stock) || 0,
@@ -167,15 +154,13 @@ export default function InventoryPage() {
       sellingPrice: parseFloat(newProduct.sellingPrice) || 0,
       alertThreshold: parseFloat(newProduct.alertThreshold) || 5
     })
-    setNewProduct({ name: "", category: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs", alertThreshold: "5" })
+    setNewProduct({ name: "", category: "", purchasePrice: "", sellingPrice: "", stock: "", unit: "pcs", alertThreshold: "5", imageUrl: "" })
     setIsAddOpen(false)
-    toast({ title: language === 'en' ? "Product Added" : "পণ্য যোগ করা হয়েছে" })
+    toast({ title: t.saveProduct })
   }
 
   const handleUpdateProduct = () => {
     if (!editingProduct) return;
-    if (!validateProduct(editingProduct)) return;
-
     actions.updateProduct(editingProduct.id, {
       ...editingProduct,
       stock: parseFloat(editingProduct.stock) || 0,
@@ -184,33 +169,7 @@ export default function InventoryPage() {
       alertThreshold: parseFloat(editingProduct.alertThreshold) || 5
     });
     setEditingProduct(null);
-    toast({ title: language === 'en' ? "Product Updated" : "আপডেট করা হয়েছে" });
-  }
-
-  const handleAuthorizedDelete = () => {
-    if (deletePass === "specsxr") {
-      if (deleteId) {
-        actions.deleteProduct(deleteId);
-        toast({ title: "Removed" });
-      }
-      setDeleteId(null);
-      setDeletePass("");
-    } else {
-      toast({ variant: "destructive", title: "Access Denied" });
-      setDeletePass("");
-    }
-  }
-
-  const handleRestock = () => {
-    if (!restockProduct || !restockQty) return;
-    const qtyNum = parseFloat(restockQty);
-    const priceNum = parseFloat(restockPrice) || restockProduct.purchasePrice;
-
-    actions.addRestock(restockProduct.id, qtyNum, priceNum);
-    setRestockProduct(null);
-    setRestockQty("");
-    setRestockPrice("");
-    toast({ title: "Restock Done" });
+    toast({ title: t.updateChanges });
   }
 
   const startEditing = (p: any) => {
@@ -247,23 +206,30 @@ export default function InventoryPage() {
                 <DialogTitle className="text-primary font-black uppercase tracking-tighter">{t.addProduct}</DialogTitle>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setIsAddOpen(false)}><X className="w-4 h-4" /></Button>
               </div>
-              <DialogDescription className="text-[10px] uppercase font-bold opacity-60">Add new items to your shop inventory.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative w-32 h-32 rounded-2xl bg-muted flex items-center justify-center border-2 border-dashed overflow-hidden">
+                  {newProduct.imageUrl ? (
+                    <img src={newProduct.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="w-10 h-10 opacity-20" />
+                  )}
+                  <Label htmlFor="new-image" className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity text-white">
+                    <Upload className="w-6 h-6 mb-1" />
+                    <span className="text-[8px] font-black uppercase">Upload</span>
+                  </Label>
+                  <input id="new-image" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'new')} />
+                </div>
+                <Label className="text-[10px] font-black uppercase">{t.mainPhoto}</Label>
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase">{language === 'en' ? 'Name' : 'নাম'}</Label>
-                <Input 
-                  value={newProduct.name} 
-                  onChange={e => setNewProduct({...newProduct, name: e.target.value})} 
-                  className={cn("h-11 rounded-xl", duplicateWarning && "border-amber-500")}
-                  placeholder={language === 'bn' ? "পণ্যের নাম লিখুন..." : "Enter product name..."}
-                />
-                {duplicateWarning && (
-                  <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3 h-3" /> {duplicateWarning}
-                  </p>
-                )}
+                <Input value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className={cn("h-11 rounded-xl", duplicateWarning && "border-amber-500")} />
+                {duplicateWarning && <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {duplicateWarning}</p>}
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase">{language === 'en' ? 'Category' : 'ক্যাটাগরি'}</Label>
@@ -277,6 +243,7 @@ export default function InventoryPage() {
                   </Select>
                 </div>
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase">{t.buyPrice}</Label>
@@ -287,26 +254,9 @@ export default function InventoryPage() {
                   <Input type="number" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase">{t.stock} ({newProduct.unit})</Label>
-                  <Input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="h-11 rounded-xl" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase flex items-center gap-1">
-                    <BellRing className="w-3 h-3 text-red-500" />
-                    {language === 'en' ? 'Low Stock Warning Level' : 'লো স্টক ওয়ার্নিং লিমিট'}
-                  </Label>
-                  <Input type="number" value={newProduct.alertThreshold} onChange={e => setNewProduct({...newProduct, alertThreshold: e.target.value})} className="h-11 rounded-xl border-red-100 focus:ring-red-500" />
-                </div>
-              </div>
             </div>
             <DialogFooter>
-              <Button 
-                className="bg-accent w-full h-12 rounded-xl font-black uppercase" 
-                onClick={handleAddProduct}
-                disabled={!newProduct.name.trim()}
-              >
+              <Button className="bg-accent w-full h-12 rounded-xl font-black uppercase" onClick={handleAddProduct} disabled={!newProduct.name.trim()}>
                 {t.saveProduct}
               </Button>
             </DialogFooter>
@@ -347,8 +297,19 @@ export default function InventoryPage() {
                     return (
                       <TableRow key={p.id} className="hover:bg-accent/5 transition-all group">
                         <TableCell className="p-3 pl-4">
-                          <p className="text-xs font-black text-primary leading-tight">{p.name}</p>
-                          <p className="text-[8px] md:text-[9px] text-accent uppercase font-bold mt-0.5">{p.category || 'N/A'}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden border">
+                              {p.imageUrl ? (
+                                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <Package className="w-5 h-5 opacity-20" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-primary leading-tight">{p.name}</p>
+                              <p className="text-[8px] md:text-[9px] text-accent uppercase font-bold mt-0.5">{p.category || 'N/A'}</p>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <p className="text-[10px] font-black text-primary">{currency}{p.sellingPrice}</p>
@@ -362,26 +323,17 @@ export default function InventoryPage() {
                             )}>
                               {p.stock} {p.unit}
                             </span>
-                            {isLowStock && (
-                              <span className="text-[7px] font-bold text-red-500 uppercase flex items-center gap-0.5">
-                                <AlertTriangle className="w-2 h-2" /> 
-                                {language === 'en' ? `Below ${threshold}` : `${threshold} এর নিচে`}
-                              </span>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-right pr-4">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button variant="outline" size="sm" className="h-8 text-[9px] font-black uppercase border-accent text-accent hover:bg-accent hover:text-white rounded-lg transition-all active:scale-95" onClick={() => {
-                              setRestockProduct(p);
-                              setRestockPrice(p.purchasePrice.toString());
-                            }}>
-                              <PackagePlus className="w-3.5 h-3.5 mr-1" /> {t.restock}
-                            </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-lg" onClick={() => startEditing(p)}>
                               <Edit2 className="w-3.5 h-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5 rounded-lg" onClick={() => setDeleteId(p.id)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/5 rounded-lg" onClick={() => {
+                              const pass = prompt("Enter 'specsxr' to delete:");
+                              if (pass === 'specsxr') actions.deleteProduct(p.id);
+                            }}>
                               <Trash className="w-3.5 h-3.5" />
                             </Button>
                           </div>
@@ -405,21 +357,29 @@ export default function InventoryPage() {
               <DialogTitle className="text-primary font-black uppercase tracking-tighter">Edit Product Details</DialogTitle>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setEditingProduct(null)}><X className="w-4 h-4" /></Button>
             </div>
-            <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Update details for {editingProduct?.name}.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative w-32 h-32 rounded-2xl bg-muted flex items-center justify-center border-2 border-dashed overflow-hidden">
+                {editingProduct?.imageUrl ? (
+                  <img src={editingProduct.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="w-10 h-10 opacity-20" />
+                )}
+                <Label htmlFor="edit-image" className="absolute inset-0 cursor-pointer flex flex-col items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity text-white">
+                  <Upload className="w-6 h-6 mb-1" />
+                  <span className="text-[8px] font-black uppercase">Change Photo</span>
+                </Label>
+                <input id="edit-image" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'edit')} />
+              </div>
+              <Button variant="ghost" size="sm" className="h-6 text-[8px] font-black uppercase text-destructive" onClick={() => setEditingProduct({...editingProduct, imageUrl: ""})}>
+                <Trash className="w-3 h-3 mr-1" /> Remove
+              </Button>
+            </div>
+
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase">Product Name</Label>
-              <Input 
-                value={editingProduct?.name || ""} 
-                onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} 
-                className={cn("h-11 rounded-xl", editDuplicateWarning && "border-amber-500")} 
-              />
-              {editDuplicateWarning && (
-                <p className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mt-1">
-                  <AlertCircle className="w-3 h-3" /> {editDuplicateWarning}
-                </p>
-              )}
+              <Input value={editingProduct?.name || ""} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="h-11 rounded-xl" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -436,101 +396,18 @@ export default function InventoryPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">Purchase Price ({currency})</Label>
+                <Label className="text-[10px] font-black uppercase">Purchase Price</Label>
                 <Input type="number" value={editingProduct?.purchasePrice || ""} onChange={e => setEditingProduct({...editingProduct, purchasePrice: e.target.value})} className="h-11 rounded-xl" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">Selling Price ({currency})</Label>
+                <Label className="text-[10px] font-black uppercase">Selling Price</Label>
                 <Input type="number" value={editingProduct?.sellingPrice || ""} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">Manual Stock Adjust ({editingProduct?.unit})</Label>
-                <Input type="number" value={editingProduct?.stock || ""} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} className="h-11 rounded-xl border-orange-200 focus:ring-orange-500" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase flex items-center gap-1">
-                  <BellRing className="w-3 h-3 text-red-500" />
-                  Alert Limit
-                </Label>
-                <Input type="number" value={editingProduct?.alertThreshold || ""} onChange={e => setEditingProduct({...editingProduct, alertThreshold: e.target.value})} className="h-11 rounded-xl border-red-100 focus:ring-red-500" />
-              </div>
-            </div>
           </div>
           <DialogFooter>
-            <Button 
-              className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" 
-              onClick={handleUpdateProduct}
-              disabled={!editingProduct?.name?.trim()}
-            >
-              Save All Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Authorized Delete Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2 text-destructive font-black uppercase">
-                <Lock className="w-5 h-5" /> Permanent Deletion
-              </DialogTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setDeleteId(null)}><X className="w-4 h-4" /></Button>
-            </div>
-            <DialogDescription>
-              Enter secret key 'specsxr' to confirm deletion.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-2">
-            <Label className="text-xs font-bold uppercase opacity-70">Secret Access Key</Label>
-            <Input 
-              type="password" 
-              placeholder="••••••••" 
-              className="h-12 text-lg font-bold rounded-xl"
-              value={deletePass}
-              onChange={e => setDeletePass(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="destructive" className="w-full h-12 text-base font-black uppercase rounded-xl shadow-lg" onClick={handleAuthorizedDelete}>
-              Authorize & Wipe Product
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Restock Dialog */}
-      <Dialog open={!!restockProduct} onOpenChange={(open) => !open && setRestockProduct(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-[400px] rounded-[2rem]">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2 text-primary font-black uppercase tracking-tighter">
-                <PackagePlus className="w-5 h-5 text-accent" /> {t.newStockEntry}
-              </DialogTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setRestockProduct(null)}><X className="w-4 h-4" /></Button>
-            </div>
-            <DialogDescription className="font-black text-accent text-xs">{restockProduct?.name}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label className="text-[9px] font-black uppercase opacity-60 tracking-widest">{t.buyQty} ({restockProduct?.unit})</Label>
-              <Input type="number" value={restockQty} onChange={e => setRestockQty(e.target.value)} placeholder="0.00" className="h-12 text-lg font-black rounded-xl border-accent/20 focus:ring-accent" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[9px] font-black uppercase opacity-60 tracking-widest">{t.buyPrice} ({currency})</Label>
-              <Input type="number" value={restockPrice} onChange={e => setRestockPrice(e.target.value)} className="h-12 text-lg font-black text-accent rounded-xl border-accent/20 focus:ring-accent" />
-            </div>
-            <div className="bg-accent/5 p-4 rounded-2xl border border-accent/10 text-center shadow-inner">
-              <p className="text-[8px] font-black uppercase opacity-50 tracking-widest">{t.totalCostSpent}</p>
-              <p className="text-2xl font-black text-primary">{currency}{((parseFloat(restockQty) || 0) * (parseFloat(restockPrice) || 0)).toLocaleString()}</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button className="w-full bg-accent hover:bg-accent/90 h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleRestock} disabled={!restockQty}>
-              Confirm Restock
+            <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handleUpdateProduct}>
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

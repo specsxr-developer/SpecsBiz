@@ -19,7 +19,13 @@
         "sellingPrice": { "type": "number" },
         "stock": { "type": "number" },
         "unit": { "type": "string" },
-        "category": { "type": "string" }
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string", "description": "Base64 data URI of the main product photo" },
+        "reviewImages": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Array of Base64 data URIs for product reviews (max 5)"
+        }
       },
       "required": ["id", "name"]
     },
