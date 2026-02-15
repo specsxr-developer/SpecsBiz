@@ -737,7 +737,7 @@ export default function CustomersPage() {
               Confirm & Save Baki
             </Button>
           </DialogFooter>
-        </CardContent>
+        </DialogContent>
       </Dialog>
 
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
