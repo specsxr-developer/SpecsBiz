@@ -79,6 +79,22 @@ export const translations = {
     categoryAnalysis: "Category Analysis",
     profitPotentialCat: "Profit potential by category",
 
+    // Reports / Ledger
+    masterLedgerDesc: "Comprehensive record of all business transactions.",
+    printLedger: "Print Ledger",
+    exportCSV: "Export CSV",
+    totalCashReceived: "Total Cash Received",
+    marketDues: "Market Dues",
+    inventoryValue: "Inventory Value",
+    filterType: "Search by type...",
+    type: "Type",
+    date: "Date",
+    entity: "Entity",
+    totalVal: "Total",
+    paid: "Paid",
+    unpaid: "Unpaid",
+    status: "Status",
+
     // Common
     loading: "Loading...",
     noData: "No data found.",
@@ -174,6 +190,22 @@ export const translations = {
     monthlyRevVolume: "মাসিক বিক্রয়ের ভলিউম বিশ্লেষণ",
     categoryAnalysis: "ক্যাটাগরি ভিত্তিক বিশ্লেষণ",
     profitPotentialCat: "পণ্যের ক্যাটাগরি অনুযায়ী লাভের সম্ভাবনা",
+
+    // Reports / Ledger
+    masterLedgerDesc: "আপনার ব্যবসার যাবতীয় লেনদেনের পূর্ণাঙ্গ হিসাব।",
+    printLedger: "লেজার প্রিন্ট করুন",
+    exportCSV: "CSV এক্সপোর্ট",
+    totalCashReceived: "মোট নগদ আদায়",
+    marketDues: "বাজার বাকি",
+    inventoryValue: "মালের মোট মূল্য",
+    filterType: "ধরণ অনুযায়ী খুঁজুন...",
+    type: "ধরণ",
+    date: "তারিখ",
+    entity: "কাস্টমার/সাপ্লায়ার",
+    totalVal: "মোট টাকা",
+    paid: "পরিশোধিত",
+    unpaid: "বাকি",
+    status: "অবস্থা",
 
     // Common
     loading: "লোড হচ্ছে...",
