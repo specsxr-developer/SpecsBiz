@@ -58,6 +58,7 @@ import { Separator } from "@/components/ui/separator"
 import { useBusinessData } from "@/hooks/use-business-data"
 import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
+import { CryptoAd } from "@/components/crypto-ad"
 
 export default function DashboardPage() {
   const { toast } = useToast()
@@ -230,116 +231,118 @@ export default function DashboardPage() {
           <p className="text-xs md:text-sm text-muted-foreground">{t.manageDailyOps}</p>
         </div>
         
-        <Dialog open={isSaleDialogOpen} onOpenChange={setIsSaleDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg" className="bg-accent hover:bg-accent/90 shadow-lg gap-2 text-base md:text-lg h-12 md:h-14 px-6 md:px-8 w-full sm:w-auto font-black uppercase">
-              <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" /> {t.createNewSale}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] sm:max-w-[800px] max-h-[90vh] flex flex-col p-0 overflow-hidden border-accent/20 shadow-2xl rounded-[2.5rem]">
-            <DialogHeader className="p-6 border-b bg-accent/5 shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-accent/10 rounded-xl">
-                    <ShoppingCart className="w-6 h-6 text-accent" />
+        <div className="flex flex-col sm:flex-row gap-3 items-center w-full sm:w-auto">
+          <Dialog open={isSaleDialogOpen} onOpenChange={setIsSaleDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="bg-accent hover:bg-accent/90 shadow-lg gap-2 text-base md:text-lg h-12 md:h-14 px-6 md:px-8 w-full sm:w-auto font-black uppercase">
+                <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" /> {t.createNewSale}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[95vw] sm:max-w-[800px] max-h-[90vh] flex flex-col p-0 overflow-hidden border-accent/20 shadow-2xl rounded-[2.5rem]">
+              <DialogHeader className="p-6 border-b bg-accent/5 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-accent/10 rounded-xl">
+                      <ShoppingCart className="w-6 h-6 text-accent" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-black text-primary">Sale Terminal</DialogTitle>
+                      <DialogDescription className="text-[10px] uppercase font-black tracking-widest opacity-60">
+                        Pick products to create a bill
+                      </DialogDescription>
+                    </div>
                   </div>
-                  <div>
-                    <DialogTitle className="text-xl font-black text-primary">Sale Terminal</DialogTitle>
-                    <DialogDescription className="text-[10px] uppercase font-black tracking-widest opacity-60">
-                      Pick products to create a bill
-                    </DialogDescription>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/50 hover:bg-destructive hover:text-white transition-all shadow-sm" onClick={() => setIsSaleDialogOpen(false)}>
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-hidden flex flex-col bg-white">
+                <div className="p-4 border-b">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      placeholder={t.search} 
+                      className="pl-9 h-12 border-accent/10 rounded-xl bg-accent/5 focus-visible:ring-accent font-bold" 
+                      value={search} 
+                      onChange={e => setSearch(e.target.value)} 
+                    />
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-white/50 hover:bg-destructive hover:text-white transition-all shadow-sm" onClick={() => setIsSaleDialogOpen(false)}>
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-hidden flex flex-col bg-white">
-              <div className="p-4 border-b">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder={t.search} 
-                    className="pl-9 h-12 border-accent/10 rounded-xl bg-accent/5 focus-visible:ring-accent font-bold" 
-                    value={search} 
-                    onChange={e => setSearch(e.target.value)} 
-                  />
-                </div>
-              </div>
-              
-              <ScrollArea className="flex-1 p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {products
-                    .filter(i => i.name.toLowerCase().includes(search.toLowerCase()))
-                    .map((item) => {
-                      const profitPerUnit = (item.sellingPrice || 0) - (item.purchasePrice || 0);
-                      return (
-                        <div 
-                          key={item.id} 
-                          className="p-4 border rounded-2xl bg-white flex flex-col gap-3 hover:border-accent hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98]" 
-                          onClick={() => addToCart(item)}
-                        >
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-black text-primary truncate leading-tight">{item.name}</p>
-                              <p className="text-[9px] font-bold text-accent uppercase tracking-wider flex items-center gap-1 mt-0.5">
-                                <Tag className="w-2.5 h-2.5" /> {item.category || 'General'}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className="text-[8px] font-bold bg-blue-50 border-blue-100 text-blue-700 shrink-0">
-                              {t.stock}: {item.stock} {item.unit}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-muted/30 p-2 rounded-xl border border-black/5">
-                              <p className="text-[8px] font-bold text-muted-foreground uppercase mb-0.5">{t.sellPrice}</p>
-                              <p className="text-sm font-black text-primary">{currency}{item.sellingPrice?.toLocaleString()}</p>
-                            </div>
-                            <div className="bg-orange-50/50 p-2 rounded-xl border border-orange-100/50">
-                              <p className="text-[8px] font-bold text-orange-600 uppercase mb-0.5">{t.buyPrice}</p>
-                              <p className="text-sm font-black text-orange-700">{currency}{item.purchasePrice || 0}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <div className="h-6 w-6 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
-                                <TrendingUp className="w-3 h-3 text-emerald-600" />
+                
+                <ScrollArea className="flex-1 p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {products
+                      .filter(i => i.name.toLowerCase().includes(search.toLowerCase()))
+                      .map((item) => {
+                        const profitPerUnit = (item.sellingPrice || 0) - (item.purchasePrice || 0);
+                        return (
+                          <div 
+                            key={item.id} 
+                            className="p-4 border rounded-2xl bg-white flex flex-col gap-3 hover:border-accent hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98]" 
+                            onClick={() => addToCart(item)}
+                          >
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-black text-primary truncate leading-tight">{item.name}</p>
+                                <p className="text-[9px] font-bold text-accent uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                                  <Tag className="w-2.5 h-2.5" /> {item.category || 'General'}
+                                </p>
                               </div>
-                              <div>
-                                <p className="text-[8px] font-bold text-emerald-600 uppercase leading-none">Profit/Unit</p>
-                                <p className="text-[10px] font-black text-emerald-700">+{currency}{profitPerUnit.toLocaleString()}</p>
+                              <Badge variant="outline" className="text-[8px] font-bold bg-blue-50 border-blue-100 text-blue-700 shrink-0">
+                                {t.stock}: {item.stock} {item.unit}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-muted/30 p-2 rounded-xl border border-black/5">
+                                <p className="text-[8px] font-bold text-muted-foreground uppercase mb-0.5">{t.sellPrice}</p>
+                                <p className="text-sm font-black text-primary">{currency}{item.sellingPrice?.toLocaleString()}</p>
+                              </div>
+                              <div className="bg-orange-50/50 p-2 rounded-xl border border-orange-100/50">
+                                <p className="text-[8px] font-bold text-orange-600 uppercase mb-0.5">{t.buyPrice}</p>
+                                <p className="text-sm font-black text-orange-700">{currency}{item.purchasePrice || 0}</p>
                               </div>
                             </div>
-                            <div className="p-2 rounded-full bg-accent/10 group-hover:bg-accent group-hover:text-white transition-colors">
-                              <Plus className="w-4 h-4" />
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-6 w-6 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                                  <TrendingUp className="w-3 h-3 text-emerald-600" />
+                                </div>
+                                <div>
+                                  <p className="text-[8px] font-bold text-emerald-600 uppercase leading-none">Profit/Unit</p>
+                                  <p className="text-[10px] font-black text-emerald-700">+{currency}{profitPerUnit.toLocaleString()}</p>
+                                </div>
+                              </div>
+                              <div className="p-2 rounded-full bg-accent/10 group-hover:bg-accent group-hover:text-white transition-colors">
+                                <Plus className="w-4 h-4" />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </ScrollArea>
+                        );
+                      })}
+                  </div>
+                </ScrollArea>
 
-              <div className="p-6 border-t bg-accent/5 flex items-center justify-between gap-4">
-                <div className="flex flex-col">
-                  <p className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Cart Items</p>
-                  <p className="text-xl font-black text-primary">{cart.length} Products</p>
+                <div className="p-6 border-t bg-accent/5 flex items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground opacity-60">Cart Items</p>
+                    <p className="text-xl font-black text-primary">{cart.length} Products</p>
+                  </div>
+                  <Button 
+                    disabled={cart.length === 0}
+                    onClick={() => setIsSummaryOpen(true)}
+                    className="h-14 px-8 bg-accent hover:bg-accent/90 text-white font-black uppercase text-sm rounded-2xl shadow-xl gap-2 active:scale-95"
+                  >
+                    <FileText className="w-5 h-5" /> View Bill & Pay
+                  </Button>
                 </div>
-                <Button 
-                  disabled={cart.length === 0}
-                  onClick={() => setIsSummaryOpen(true)}
-                  className="h-14 px-8 bg-accent hover:bg-accent/90 text-white font-black uppercase text-sm rounded-2xl shadow-xl gap-2 active:scale-95"
-                >
-                  <FileText className="w-5 h-5" /> View Bill & Pay
-                </Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -358,6 +361,11 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Ad Section */}
+      <div className="px-1">
+        <CryptoAd className="max-w-md mx-auto" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -511,8 +519,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Sale Dialogs OMITTED for space - they remain unchanged */}
       <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[550px] p-0 overflow-hidden border-accent/20 shadow-2xl rounded-3xl">
+          {/* ... Content same as before ... */}
           <DialogHeader className="p-6 bg-accent/5 border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -652,6 +662,7 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete/View Dialogs OMITTED for space */}
       <Dialog open={!!viewProduct} onOpenChange={(open) => !open && setViewProduct(null)}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-3xl p-0 overflow-hidden border-accent/20 shadow-2xl">
           <div className="bg-primary text-white p-6 md:p-8">
