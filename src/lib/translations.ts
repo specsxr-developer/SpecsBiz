@@ -65,6 +65,20 @@ export const translations = {
     phone: "Phone Number",
     address: "Address",
 
+    // BI Analytics
+    biInsights: "Strategic business optimization insights.",
+    runAudit: "Run AI Health Audit",
+    totalInvestment: "Total Investment",
+    investmentDesc: "Capital invested in current stock",
+    potentialProfit: "Potential Profit",
+    marginDesc: "Estimated profit after selling all",
+    totalStockValue: "Total Stock Value",
+    warehouseValueDesc: "Current value of warehouse inventory",
+    revenueTrends: "Revenue Trends",
+    monthlyRevVolume: "Monthly revenue volume analysis",
+    categoryAnalysis: "Category Analysis",
+    profitPotentialCat: "Profit potential by category",
+
     // Common
     loading: "Loading...",
     noData: "No data found.",
@@ -146,6 +160,20 @@ export const translations = {
     lastName: "পদবী",
     phone: "ফোন নম্বর",
     address: "ঠিকানা",
+
+    // BI Analytics
+    biInsights: "আপনার ব্যবসার কৌশলগত উন্নয়নের তথ্য।",
+    runAudit: "এআই হেলথ অডিট শুরু করুন",
+    totalInvestment: "মোট বিনিয়োগ (Investment)",
+    investmentDesc: "বর্তমানে স্টকে থাকা মালের কেনা দাম",
+    potentialProfit: "সম্ভাব্য নিট লাভ",
+    marginDesc: "সব মাল বিক্রি শেষে সম্ভাব্য মুনাফা",
+    totalStockValue: "মোট মালের বাজার মূল্য",
+    warehouseValueDesc: "গুদামে থাকা মালের বর্তমান বিক্রয় মূল্য",
+    revenueTrends: "বিক্রয়ের ট্রেন্ড",
+    monthlyRevVolume: "মাসিক বিক্রয়ের ভলিউম বিশ্লেষণ",
+    categoryAnalysis: "ক্যাটাগরি ভিত্তিক বিশ্লেষণ",
+    profitPotentialCat: "পণ্যের ক্যাটাগরি অনুযায়ী লাভের সম্ভাবনা",
 
     // Common
     loading: "লোড হচ্ছে...",
