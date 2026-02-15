@@ -18,6 +18,9 @@ export const translations = {
     cloudSync: "Cloud Sync",
     offlineMode: "Offline Mode",
     management: "Management",
+    revenue: "Revenue",
+    products: "Products",
+    netProfit: "Net Profit",
 
     // Inventory
     manageStock: "Manage your stock and profit margins.",
@@ -97,6 +100,9 @@ export const translations = {
     cloudSync: "ক্লাউড সিঙ্ক",
     offlineMode: "অফলাইন মোড",
     management: "ব্যবস্থাপনা",
+    revenue: "মোট বিক্রি",
+    products: "মোট পণ্য",
+    netProfit: "নিট লাভ",
 
     // Inventory
     manageStock: "আপনার স্টক এবং লাভের হিসাব পরিচালনা করুন।",
