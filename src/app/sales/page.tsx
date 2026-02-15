@@ -288,7 +288,7 @@ export default function SalesPage() {
                 if (item.unit === 'gm' && displayUnit === 'kg') factor = 1000;
 
                 const effectiveQty = item.quantity * factor;
-                const itemTotal = item.sellingPrice * effectiveQty;
+                const itemTotal = item.sellingPrice * item.quantity; // Price is already for the current unit
                 const itemProfit = (item.sellingPrice - (item.purchasePrice || 0)) * effectiveQty;
                 const isLoss = itemProfit < 0;
                 
@@ -307,7 +307,7 @@ export default function SalesPage() {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
                         <div className="flex justify-between items-center">
                           <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty</Label>
@@ -333,7 +333,7 @@ export default function SalesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[9px] font-black uppercase text-muted-foreground">Unit Price ({currency})</Label>
+                        <Label className="text-[9px] font-black uppercase text-muted-foreground">Unit Price</Label>
                         <Input 
                           type="number" 
                           step="0.01" 
@@ -342,12 +342,27 @@ export default function SalesPage() {
                           onChange={(e) => updateUnitPrice(item.id, e.target.value)} 
                         />
                       </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[9px] font-black uppercase text-muted-foreground">Amount (৳)</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          className="h-11 bg-emerald-50/50 border-emerald-100 text-lg font-black text-emerald-700" 
+                          placeholder="৳"
+                          value={(item.quantity * item.sellingPrice) || ""}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            const newQty = amt / (item.sellingPrice || 1);
+                            updateQuantity(item.id, newQty.toString());
+                          }}
+                        />
+                      </div>
                     </div>
 
                     <div className="flex justify-between items-center gap-2">
                       <div className="flex-1 px-4 py-2.5 bg-muted/30 rounded-xl border border-muted flex justify-between items-center">
                         <span className="text-[9px] font-black uppercase text-muted-foreground">{language === 'en' ? 'Item Total' : 'মোট বিল'}</span>
-                        <span className="text-sm font-black text-primary">{currency}{itemTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-black text-primary">{currency}{(item.quantity * item.sellingPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div className={cn(
                         "flex-1 px-4 py-2.5 rounded-xl border flex justify-between items-center",

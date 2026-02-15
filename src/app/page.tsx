@@ -563,7 +563,7 @@ export default function DashboardPage() {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1.5">
                         <div className="flex justify-between items-center">
                           <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty ({displayUnit})</Label>
@@ -596,6 +596,21 @@ export default function DashboardPage() {
                           className="h-11 bg-accent/5 border-accent/10 text-lg font-black text-accent" 
                           value={item.sellingPrice} 
                           onChange={(e) => updateUnitPrice(item.id, e.target.value)} 
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[9px] font-black uppercase text-muted-foreground">Amount (৳)</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          className="h-11 bg-emerald-50/50 border-emerald-100 text-lg font-black text-emerald-700" 
+                          placeholder="৳"
+                          value={(item.quantity * item.sellingPrice) || ""}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            const newQty = amt / (item.sellingPrice || 1);
+                            updateQuantity(item.id, newQty.toString());
+                          }}
                         />
                       </div>
                     </div>
