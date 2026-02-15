@@ -9,7 +9,7 @@ interface CryptoAdProps {
 
 /**
  * @fileOverview Dedicated component to display Crypto Ads.
- * Optimized for A-Ads Unit 2427567 verification using user-provided snippet.
+ * Updated to A-Ads Unit 2427583 as per user request.
  */
 export function CryptoAd({ className }: CryptoAdProps) {
   return (
@@ -19,8 +19,8 @@ export function CryptoAd({ className }: CryptoAdProps) {
       </div>
       <div id="frame" style={{ width: '320px', margin: 'auto', zIndex: 99998, height: 'auto' }}>
         <iframe 
-          data-aa='2427567' 
-          src='//ad.a-ads.com/2427567/?size=320x50&background_color=transparent'
+          data-aa='2427583' 
+          src='//ad.a-ads.com/2427583/?size=320x50&background_color=transparent'
           style={{ border: 0, padding: 0, width: '320px', height: '50px', overflow: 'hidden', display: 'block', margin: 'auto' }}
         ></iframe>
       </div>
