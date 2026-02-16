@@ -51,6 +51,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useBusinessData } from "@/hooks/use-business-data"
 import { translations } from "@/lib/translations"
 import { cn } from "@/lib/utils"
+import { InventoryAd } from "@/components/inventory-ad"
 
 export default function InventoryPage() {
   const { toast } = useToast()
@@ -374,6 +375,11 @@ export default function InventoryPage() {
           </ScrollArea>
         </CardContent>
       </Card>
+
+      {/* Ads Section */}
+      <div className="mt-6 px-1">
+        <InventoryAd />
+      </div>
 
       {/* Restock Dialog */}
       <Dialog open={!!restockProduct} onOpenChange={(open) => !open && setRestockProduct(null)}>
