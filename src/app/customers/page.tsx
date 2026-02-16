@@ -24,7 +24,8 @@ import {
   Clock,
   Phone,
   MapPin,
-  History
+  History,
+  TrendingUp
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -108,6 +109,42 @@ function CustomersPageContent() {
     segment: "Baki User"
   })
 
+  // Calculations for current item being added/edited
+  const currentItemCalc = useMemo(() => {
+    const p = products.find(p => p.id === newRecord.productId);
+    const buyPrice = p?.purchasePrice || 0;
+    const qty = parseFloat(newRecord.quantity) || 0;
+    const sellPrice = parseFloat(newRecord.unitPrice) || 0;
+    const itemTotal = qty * sellPrice;
+    const itemProfit = (sellPrice - buyPrice) * qty;
+    return { itemTotal, itemProfit, buyPrice, baseUnit: p?.unit || '' };
+  }, [newRecord.productId, newRecord.quantity, newRecord.unitPrice, products]);
+
+  const handleUnitSwitch = (targetUnit: string) => {
+    const current = newRecord.unit.toLowerCase();
+    const target = targetUnit.toLowerCase();
+    if (current === target) return;
+
+    let qty = parseFloat(newRecord.quantity) || 0;
+    let price = parseFloat(newRecord.unitPrice) || 0;
+
+    if (current === 'kg' && target === 'gm') {
+      qty = qty * 1000;
+      price = price / 1000;
+    } else if (current === 'gm' && target === 'kg') {
+      qty = qty / 1000;
+      price = price * 1000;
+    }
+
+    setNewRecord(prev => ({
+      ...prev,
+      unit: targetUnit,
+      quantity: qty.toString(),
+      unitPrice: price.toString(),
+      amount: (qty * price).toFixed(2)
+    }));
+  }
+
   // Handle auto-open profile from URL
   useEffect(() => {
     const id = searchParams.get('id')
@@ -140,10 +177,14 @@ function CustomersPageContent() {
     return null;
   }, [newCustomer.phone, customers, language, activeCustomerId]);
 
+  // Sync amount when quantity or unitPrice changes (for standard manual inputs)
   useEffect(() => {
     const qty = parseFloat(newRecord.quantity) || 0;
     const price = parseFloat(newRecord.unitPrice) || 0;
-    setNewRecord(prev => ({ ...prev, amount: (qty * price).toFixed(2) }));
+    const total = (qty * price).toFixed(2);
+    if (total !== newRecord.amount) {
+      setNewRecord(prev => ({ ...prev, amount: total }));
+    }
   }, [newRecord.quantity, newRecord.unitPrice]);
 
   const selectProduct = (p: any) => {
@@ -152,7 +193,8 @@ function CustomersPageContent() {
       productId: p.id,
       productName: p.name,
       unitPrice: p.sellingPrice.toString(),
-      unit: p.unit || ""
+      unit: p.unit || "",
+      quantity: "1"
     }))
     setProductSearch("")
   }
@@ -568,7 +610,7 @@ function CustomersPageContent() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={isRecordDeleteOpen} onOpenChange={setIsRecordDeleteOpen}>
+      <Dialog open={isRecordDeleteOpen} onOpenChange={isRecordDeleteOpen}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
             <div className="flex items-center gap-3 text-destructive mb-2">
@@ -635,8 +677,12 @@ function CustomersPageContent() {
         </DialogContent>
       </Dialog>
 
+      {/* RE-USABLE CALCULATION FORM PART */}
+      {/* Used in Edit Baki, Add Baki, and New User Wizard Step 2 */}
+      {/* Pass props to render calculation logic */}
+      
       <Dialog open={isRecordEditOpen} onOpenChange={setIsRecordEditOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-[550px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -655,30 +701,52 @@ function CustomersPageContent() {
               <Input value={newRecord.productName} onChange={e => setNewRecord({...newRecord, productName: e.target.value})} className="h-12 rounded-xl bg-accent/5 border-accent/10 font-bold" />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
-                <div className="flex gap-2">
-                  <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                  <div className="flex flex-col gap-1.5 flex-1">
-                    <Input placeholder="Unit" className="h-12 rounded-xl font-bold bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
-                    <div className="flex flex-wrap gap-1">
-                      {COMMON_UNITS.map(u => (
-                        <button key={u} onClick={() => setNewRecord({...newRecord, unit: u})} className="px-1.5 py-0.5 text-[8px] font-black bg-accent/10 text-accent rounded border border-accent/20 hover:bg-accent hover:text-white transition-colors uppercase">
-                          {u}
-                        </button>
-                      ))}
+                <div className="flex justify-between items-center">
+                  <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty</Label>
+                  {(newRecord.unit?.toLowerCase() === 'kg' || newRecord.unit?.toLowerCase() === 'gm') && (
+                    <div className="flex gap-1">
+                      <button onClick={() => handleUnitSwitch('KG')} className={cn("text-[8px] px-1.5 py-0.5 rounded border font-black", newRecord.unit?.toUpperCase() === 'KG' ? "bg-accent text-white border-accent" : "bg-white text-accent border-accent/20")}>KG</button>
+                      <button onClick={() => handleUnitSwitch('GM')} className={cn("text-[8px] px-1.5 py-0.5 rounded border font-black", newRecord.unit?.toUpperCase() === 'GM' ? "bg-accent text-white border-accent" : "bg-white text-accent border-accent/20")}>GM</button>
                     </div>
-                  </div>
+                  )}
                 </div>
+                <Input type="number" step="0.01" className="h-11 bg-accent/5 border-accent/10 text-lg font-black" value={newRecord.quantity} onChange={(e) => setNewRecord({...newRecord, quantity: e.target.value})} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price ({currency})</Label>
-                <Input type="number" step="0.01" className="h-12 rounded-xl font-black text-accent" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                <Label className="text-[9px] font-black uppercase text-muted-foreground">Unit Price ({currency})</Label>
+                <Input type="number" step="0.01" className="h-11 bg-accent/5 border-accent/10 text-lg font-black text-accent" value={newRecord.unitPrice} onChange={(e) => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black uppercase text-muted-foreground">Amount (৳)</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  className="h-11 bg-emerald-50/50 border-emerald-100 text-lg font-black text-emerald-700" 
+                  placeholder="৳"
+                  value={newRecord.amount}
+                  onChange={(e) => {
+                    const amt = parseFloat(e.target.value) || 0;
+                    const price = parseFloat(newRecord.unitPrice) || 1;
+                    setNewRecord({...newRecord, amount: e.target.value, quantity: (amt / price).toFixed(2)});
+                  }}
+                />
               </div>
             </div>
 
-            <div className="space-y-4 pt-2">
+            <div className="flex gap-3">
+              <div className="flex-1 p-3 bg-muted/30 rounded-xl border border-muted flex justify-between items-center">
+                <span className="text-[9px] font-black uppercase text-muted-foreground">Item Total</span>
+                <span className="text-sm font-black text-primary">{currency}{parseFloat(newRecord.amount).toLocaleString()}</span>
+              </div>
+              <div className={cn("flex-1 p-3 rounded-xl border flex justify-between items-center", currentItemCalc.itemProfit < 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
+                <span className={cn("text-[9px] font-black uppercase", currentItemCalc.itemProfit < 0 ? "text-red-600" : "text-emerald-600")}>{currentItemCalc.itemProfit < 0 ? 'Loss' : 'Lav'}</span>
+                <span className={cn("text-sm font-black", currentItemCalc.itemProfit < 0 ? "text-red-600" : "text-emerald-700")}>{currentItemCalc.itemProfit < 0 ? '-' : '+'}{currency}{Math.abs(currentItemCalc.itemProfit).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Debt Remark / Note</Label>
                 <Input placeholder="Add any details..." className="h-12 rounded-xl" value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} />
@@ -687,11 +755,6 @@ function CustomersPageContent() {
                 <Label className="text-[10px] uppercase font-black text-muted-foreground">Promise Date</Label>
                 <Input type="date" className="h-12 rounded-xl bg-muted/20 border-none" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
               </div>
-            </div>
-
-            <div className="bg-primary/5 p-5 rounded-2xl text-center border-2 border-primary/10 shadow-inner">
-              <p className="text-[9px] uppercase font-black text-primary opacity-60 tracking-[0.2em] mb-1">ADJUSTED TOTAL</p>
-              <p className="text-4xl font-black text-primary">{currency}{newRecord.amount || '0'}</p>
             </div>
           </div>
           <DialogFooter className="p-6 bg-muted/20 border-t">
@@ -703,7 +766,7 @@ function CustomersPageContent() {
       </Dialog>
 
       <Dialog open={isRecordAddOpen} onOpenChange={setIsRecordAddOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-[550px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
           <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -742,42 +805,60 @@ function CustomersPageContent() {
               )}
             </div>
             
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty</Label>
+                  {(newRecord.unit?.toLowerCase() === 'kg' || newRecord.unit?.toLowerCase() === 'gm') && (
+                    <div className="flex gap-1">
+                      <button onClick={() => handleUnitSwitch('KG')} className={cn("text-[8px] px-1.5 py-0.5 rounded border font-black", newRecord.unit?.toUpperCase() === 'KG' ? "bg-accent text-white border-accent" : "bg-white text-accent border-accent/20")}>KG</button>
+                      <button onClick={() => handleUnitSwitch('GM')} className={cn("text-[8px] px-1.5 py-0.5 rounded border font-black", newRecord.unit?.toUpperCase() === 'GM' ? "bg-accent text-white border-accent" : "bg-white text-accent border-accent/20")}>GM</button>
+                    </div>
+                  )}
+                </div>
+                <Input type="number" step="0.01" className="h-11 bg-accent/5 border-accent/10 text-lg font-black" value={newRecord.quantity} onChange={(e) => setNewRecord({...newRecord, quantity: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black uppercase text-muted-foreground">Unit Price ({currency})</Label>
+                <Input type="number" step="0.01" className="h-11 bg-accent/5 border-accent/10 text-lg font-black text-accent" value={newRecord.unitPrice} onChange={(e) => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black uppercase text-muted-foreground">Amount (৳)</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  className="h-11 bg-emerald-50/50 border-emerald-100 text-lg font-black text-emerald-700" 
+                  placeholder="৳"
+                  value={newRecord.amount}
+                  onChange={(e) => {
+                    const amt = parseFloat(e.target.value) || 0;
+                    const price = parseFloat(newRecord.unitPrice) || 1;
+                    setNewRecord({...newRecord, amount: e.target.value, quantity: (amt / price).toFixed(2)});
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="flex-1 p-3 bg-muted/30 rounded-xl border border-muted flex justify-between items-center">
+                <span className="text-[9px] font-black uppercase text-muted-foreground">Item Total</span>
+                <span className="text-sm font-black text-primary">{currency}{parseFloat(newRecord.amount).toLocaleString()}</span>
+              </div>
+              <div className={cn("flex-1 p-3 rounded-xl border flex justify-between items-center", currentItemCalc.itemProfit < 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
+                <span className={cn("text-[9px] font-black uppercase", currentItemCalc.itemProfit < 0 ? "text-red-600" : "text-emerald-600")}>{currentItemCalc.itemProfit < 0 ? 'Loss' : 'Lav'}</span>
+                <span className={cn("text-sm font-black", currentItemCalc.itemProfit < 0 ? "text-red-600" : "text-emerald-700")}>{currentItemCalc.itemProfit < 0 ? '-' : '+'}{currency}{Math.abs(currentItemCalc.itemProfit).toLocaleString()}</span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground">Quantity</Label>
-                <div className="flex gap-2">
-                  <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                  <div className="flex flex-col gap-1.5 flex-1">
-                    <Input placeholder="Unit" className="h-12 rounded-xl font-bold bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
-                    <div className="flex flex-wrap gap-1">
-                      {COMMON_UNITS.map(u => (
-                        <button key={u} onClick={() => setNewRecord({...newRecord, unit: u})} className="px-1.5 py-0.5 text-[8px] font-black bg-accent/10 text-accent rounded border border-accent/20 hover:bg-accent hover:text-white transition-colors uppercase">
-                          {u}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <Label className="text-[10px] uppercase font-black text-muted-foreground">Promise Date</Label>
+                <Input type="date" className="h-12 rounded-xl bg-muted/20 border-none" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price ({currency})</Label>
-                <Input type="number" step="0.01" className="h-12 rounded-xl font-black text-accent" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                <Label className="text-[10px] uppercase font-black text-muted-foreground">Additional Note</Label>
+                <Input placeholder="Add any details..." className="h-12 rounded-xl" value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} />
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-black text-muted-foreground">Promise Date</Label>
-              <Input type="date" className="h-12 rounded-xl bg-muted/20 border-none" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-black text-muted-foreground">Additional Note</Label>
-              <Input placeholder="Add any details..." className="h-12 rounded-xl" value={newRecord.note} onChange={e => setNewRecord({...newRecord, note: e.target.value})} />
-            </div>
-
-            <div className="bg-primary/5 p-5 rounded-2xl text-center border-2 border-primary/10 shadow-inner">
-              <p className="text-[9px] uppercase font-black text-primary opacity-60 tracking-[0.2em] mb-1">TOTAL DEBT AMOUNT</p>
-              <p className="text-4xl font-black text-primary">{currency}{newRecord.amount || '0'}</p>
             </div>
           </div>
           <DialogFooter className="p-6 bg-muted/20 border-t">
@@ -875,26 +956,48 @@ function CustomersPageContent() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black text-muted-foreground">Qty</Label>
-                    <div className="flex gap-2">
-                      <Input type="number" step="0.01" className="h-12 rounded-xl font-black flex-1" value={newRecord.quantity} onChange={e => setNewRecord({...newRecord, quantity: e.target.value})} />
-                      <div className="flex flex-col gap-1.5 flex-1">
-                        <Input placeholder="Unit" className="h-12 rounded-xl font-bold bg-muted/20" value={newRecord.unit} onChange={e => setNewRecord({...newRecord, unit: e.target.value})} />
-                        <div className="flex flex-wrap gap-1">
-                          {COMMON_UNITS.map(u => (
-                            <button key={u} onClick={() => setNewRecord({...newRecord, unit: u})} className="px-1.5 py-0.5 text-[8px] font-black bg-accent/10 text-accent rounded border border-accent/20 hover:bg-accent hover:text-white transition-colors uppercase">
-                              {u}
-                            </button>
-                          ))}
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[9px] font-black uppercase text-muted-foreground">Qty</Label>
+                      {(newRecord.unit?.toLowerCase() === 'kg' || newRecord.unit?.toLowerCase() === 'gm') && (
+                        <div className="flex gap-1">
+                          <button onClick={() => handleUnitSwitch('KG')} className={cn("text-[8px] px-1.5 py-0.5 rounded border font-black", newRecord.unit?.toUpperCase() === 'KG' ? "bg-accent text-white border-accent" : "bg-white text-accent border-accent/20")}>KG</button>
+                          <button onClick={() => handleUnitSwitch('GM')} className={cn("text-[8px] px-1.5 py-0.5 rounded border font-black", newRecord.unit?.toUpperCase() === 'GM' ? "bg-accent text-white border-accent" : "bg-white text-accent border-accent/20")}>GM</button>
                         </div>
-                      </div>
+                      )}
                     </div>
+                    <Input type="number" step="0.01" className="h-11 bg-accent/5 border-accent/10 text-lg font-black" value={newRecord.quantity} onChange={(e) => setNewRecord({...newRecord, quantity: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-black text-muted-foreground">Unit Price</Label>
-                    <Input type="number" step="0.01" className="h-12 rounded-xl font-black text-accent" value={newRecord.unitPrice} onChange={e => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                    <Label className="text-[9px] font-black uppercase text-muted-foreground">Unit Price</Label>
+                    <Input type="number" step="0.01" className="h-11 bg-accent/5 border-accent/10 text-lg font-black text-accent" value={newRecord.unitPrice} onChange={(e) => setNewRecord({...newRecord, unitPrice: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[9px] font-black uppercase text-muted-foreground">Amount (৳)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      className="h-11 bg-emerald-50/50 border-emerald-100 text-lg font-black text-emerald-700" 
+                      placeholder="৳"
+                      value={newRecord.amount}
+                      onChange={(e) => {
+                        const amt = parseFloat(e.target.value) || 0;
+                        const price = parseFloat(newRecord.unitPrice) || 1;
+                        setNewRecord({...newRecord, amount: e.target.value, quantity: (amt / price).toFixed(2)});
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="flex-1 p-3 bg-muted/30 rounded-xl border border-muted flex justify-between items-center">
+                    <span className="text-[9px] font-black uppercase text-muted-foreground">Item Total</span>
+                    <span className="text-sm font-black text-primary">{currency}{parseFloat(newRecord.amount).toLocaleString()}</span>
+                  </div>
+                  <div className={cn("flex-1 p-3 rounded-xl border flex justify-between items-center", currentItemCalc.itemProfit < 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
+                    <span className={cn("text-[9px] font-black uppercase", currentItemCalc.itemProfit < 0 ? "text-red-600" : "text-emerald-600")}>{currentItemCalc.itemProfit < 0 ? 'Loss' : 'Lav'}</span>
+                    <span className={cn("text-sm font-black", currentItemCalc.itemProfit < 0 ? "text-red-600" : "text-emerald-700")}>{currentItemCalc.itemProfit < 0 ? '-' : '+'}{currency}{Math.abs(currentItemCalc.itemProfit).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -907,11 +1010,6 @@ function CustomersPageContent() {
                     <Label className="text-[10px] uppercase font-black text-muted-foreground">Promise Date</Label>
                     <Input type="date" className="h-12 rounded-xl" value={newRecord.promiseDate} onChange={e => setNewRecord({...newRecord, promiseDate: e.target.value})} />
                   </div>
-                </div>
-
-                <div className="bg-destructive/5 p-5 rounded-[1.5rem] text-center border-2 border-destructive/10 shadow-inner">
-                  <p className="text-[9px] uppercase font-black text-destructive opacity-60 tracking-[0.2em] mb-1">TOTAL DEBT</p>
-                  <p className="text-4xl font-black text-destructive">{currency}{newRecord.amount || '0'}</p>
                 </div>
               </div>
             )}
