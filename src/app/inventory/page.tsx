@@ -300,7 +300,13 @@ export default function InventoryPage() {
         <CardHeader className="p-3 md:p-4 border-b flex flex-col md:flex-row gap-3 md:gap-4 items-center justify-between">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder={t.searchInventory} className="pl-9 h-10 md:h-11 bg-white border-accent/10 rounded-xl text-sm" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input 
+              placeholder={t.searchInventory} 
+              className="pl-9 h-10 md:h-11 bg-white border-accent/10 rounded-xl text-sm" 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              autoComplete="off"
+            />
           </div>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-full md:w-[180px] bg-white h-10 md:h-11 rounded-xl text-xs"><SelectValue placeholder={t.allCategories} /></SelectTrigger>
@@ -572,7 +578,7 @@ export default function InventoryPage() {
       </Dialog>
 
       {/* Styled Delete Authorization Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <Dialog open={!!deleteId} onOpenChange={(open) => { if(!open) { setDeleteId(null); setDeletePass(""); } }}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
             <div className="flex items-center gap-3 text-destructive mb-2">
@@ -591,6 +597,7 @@ export default function InventoryPage() {
             <Input 
               type="password" 
               placeholder="••••••••" 
+              autoComplete="new-password"
               className="h-14 rounded-2xl text-2xl font-black text-center bg-accent/5 border-accent/10" 
               value={deletePass} 
               onChange={e => setDeletePass(e.target.value)} 
