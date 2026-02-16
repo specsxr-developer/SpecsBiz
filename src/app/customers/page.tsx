@@ -21,21 +21,16 @@ import {
   Tag,
   FileText,
   DollarSign,
-  Clock
+  Clock,
+  Phone,
+  MapPin,
+  History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
 import { 
   Dialog, 
   DialogContent, 
@@ -359,167 +354,211 @@ export default function CustomersPage() {
         </Card>
       </div>
 
-      <Card className="border-accent/10 shadow-lg bg-white/50 backdrop-blur-sm">
+      <Card className="border-accent/10 shadow-lg bg-white/50 backdrop-blur-sm overflow-hidden">
         <CardHeader className="p-3 border-b bg-muted/20">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder={t.searchBaki} className="pl-9 h-10 bg-white" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder={t.searchBaki} className="pl-9 h-10 bg-white rounded-xl" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
           {displayCustomers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground italic gap-2">
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground italic gap-2">
               <Inbox className="w-8 h-8 opacity-10" />
               <p className="text-xs font-bold uppercase tracking-widest opacity-20">
                 {search ? "No matches" : "No customers registered"}
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="pl-4 font-black text-primary uppercase text-[10px] tracking-widest">{t.customerName}</TableHead>
-                  <TableHead className="font-black text-primary uppercase text-[10px] tracking-widest">{t.currentBaki}</TableHead>
-                  <TableHead className="text-right pr-4 font-black text-primary uppercase text-[10px] tracking-widest">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayCustomers.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-accent/5">
-                    <TableCell className="pl-4 py-3 font-bold text-xs text-primary">
-                      {c.firstName || c.lastName ? `${c.firstName || ''} ${c.lastName || ''}` : 'Untitled Customer'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-black",
-                        (c.totalDue || 0) > 0 ? 'bg-red-50 text-destructive' : 'bg-green-50 text-green-600'
+            <div className="grid gap-4 p-4 md:p-6 bg-muted/5">
+              {displayCustomers.map((c) => (
+                <Card 
+                  key={c.id} 
+                  className="overflow-hidden border-accent/10 shadow-sm hover:shadow-md transition-all rounded-[1.5rem] bg-white cursor-pointer group active:scale-[0.98]"
+                  onClick={() => setActiveCustomerId(c.id)}
+                >
+                  <div className="p-4 md:p-6 flex items-center justify-between">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent shadow-inner group-hover:bg-accent group-hover:text-white transition-colors shrink-0">
+                        <Users className="w-6 h-6 md:w-7 md:h-7" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm md:text-lg font-black text-primary leading-tight truncate group-hover:text-accent transition-colors">
+                          {c.firstName || c.lastName ? `${c.firstName || ''} ${c.lastName || ''}` : 'Untitled Customer'}
+                        </h3>
+                        <div className="flex flex-col gap-1 mt-1">
+                          <p className="text-[10px] md:text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                            <Phone className="w-3 h-3 text-accent" /> {c.phone || 'No phone provided'}
+                          </p>
+                          {c.address && (
+                            <p className="text-[9px] md:text-[10px] font-medium text-muted-foreground truncate flex items-center gap-1.5">
+                              <MapPin className="w-2.5 h-2.5 text-accent" /> {c.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right shrink-0 ml-4">
+                      <p className="text-[8px] md:text-[9px] font-black uppercase opacity-50 mb-1 tracking-widest">{t.currentBaki}</p>
+                      <div className={cn(
+                        "px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-sm md:text-base font-black shadow-sm transition-all",
+                        (c.totalDue || 0) > 0 ? 'bg-red-50 text-destructive border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'
                       )}>
                         {currency}{c.totalDue?.toLocaleString() || '0'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right pr-4">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setActiveCustomerId(c.id)}>
-                        <Eye className="w-4 h-4 text-accent" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Sheet open={!!activeCustomerId} onOpenChange={(open) => !open && setActiveCustomerId(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
-          <SheetHeader className="p-4 border-b bg-accent/5">
+        <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col border-l-accent/20">
+          <SheetHeader className="p-6 border-b bg-accent/5 shrink-0">
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl font-black flex items-center gap-2">
-                {detailsCustomer?.firstName || detailsCustomer?.lastName ? `${detailsCustomer?.firstName || ''} ${detailsCustomer?.lastName || ''}` : 'Customer'}
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={startEditingCustomer}>
-                  <Edit2 className="w-3.5 h-3.5" />
+              <SheetTitle className="text-xl md:text-2xl font-black flex items-center gap-3 text-primary uppercase tracking-tighter">
+                <div className="p-2 bg-accent/10 rounded-xl"><Users className="w-6 h-6 text-accent" /></div>
+                {detailsCustomer?.firstName || detailsCustomer?.lastName ? `${detailsCustomer?.firstName || ''} ${detailsCustomer?.lastName || ''}` : 'Customer Profile'}
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/10 rounded-full" onClick={startEditingCustomer}>
+                  <Edit2 className="w-4 h-4" />
                 </Button>
               </SheetTitle>
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setActiveCustomerId(null)}>
-                <X className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-white/50" onClick={() => setActiveCustomerId(null)}>
+                <X className="w-5 h-5" />
               </Button>
             </div>
-            <div className="mt-4 flex gap-3">
-              <div className="flex-1 bg-white p-3 rounded-xl border-2 border-accent/10 shadow-inner">
-                <p className="text-[8px] font-black uppercase opacity-50">Current Outstanding</p>
-                <p className="text-xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
+            <div className="mt-6 flex flex-col md:flex-row gap-4">
+              <div className="flex-1 bg-white p-4 rounded-2xl border-2 border-accent/10 shadow-inner flex justify-between items-center">
+                <div>
+                  <p className="text-[9px] font-black uppercase opacity-50 tracking-widest">Total Outstanding</p>
+                  <p className="text-2xl font-black text-destructive">{currency}{detailsCustomer?.totalDue?.toLocaleString()}</p>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center border border-red-100"><DollarSign className="w-5 h-5 text-destructive" /></div>
               </div>
-              <Button className="bg-accent h-auto font-black uppercase text-[10px] px-4 shadow-xl" onClick={() => setIsRecordAddOpen(true)}>
-                <Plus className="w-4 h-4 mr-1" /> Add New Baki
+              <Button className="bg-accent h-auto font-black uppercase text-[10px] md:text-xs px-6 py-4 shadow-xl rounded-2xl gap-2 active:scale-95" onClick={() => setIsRecordAddOpen(true)}>
+                <Plus className="w-5 h-5" /> Add New Baki
               </Button>
             </div>
           </SheetHeader>
           
-          <div className="bg-muted/30 px-4 py-2 border-b">
-            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-              <Clock className="w-3 h-3" /> History of all transactions
+          <div className="bg-muted/30 px-6 py-3 border-b flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+              <History className="w-4 h-4 text-accent" /> Full Transaction Ledger
             </p>
+            <Badge variant="outline" className="text-[9px] font-bold border-accent/20 text-accent uppercase">{currentBakiRecords.length} Records</Badge>
           </div>
 
-          <ScrollArea className="flex-1 p-4 bg-muted/5">
-            <div className="space-y-4">
+          <ScrollArea className="flex-1 p-4 md:p-6 bg-muted/5">
+            <div className="space-y-5">
               {currentBakiRecords.length === 0 ? (
-                <div className="py-20 text-center opacity-30 italic flex flex-col items-center gap-3">
-                  <CheckCircle2 className="w-10 h-10" />
-                  <p className="text-xs font-black uppercase tracking-widest">NO HISTORY YET</p>
+                <div className="py-24 text-center opacity-30 italic flex flex-col items-center gap-4">
+                  <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center"><CheckCircle2 className="w-10 h-10" /></div>
+                  <p className="text-xs font-black uppercase tracking-widest">No transaction history found</p>
                 </div>
               ) : (
                 currentBakiRecords.map((record: any) => (
                   <Card key={record.id} className={cn(
-                    "border border-accent/10 shadow-sm bg-white hover:shadow-md transition-all rounded-[1.5rem] overflow-hidden",
+                    "border border-accent/10 shadow-sm bg-white hover:shadow-md transition-all rounded-[1.5rem] overflow-hidden group",
                     record.status === 'paid' && "opacity-60 bg-muted/5"
                   )}>
-                    <CardContent className="p-5">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-black text-sm text-primary leading-tight truncate">{record.productName}</h4>
-                            {record.status === 'paid' && (
-                              <Badge className="bg-green-100 text-green-700 border-none text-[8px] font-black px-2 h-5 rounded-lg uppercase">
-                                Full Paid
-                              </Badge>
-                            )}
+                    <CardContent className="p-0">
+                      <div className="p-4 md:p-5 bg-accent/5 border-b border-accent/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-xl shadow-sm border border-accent/10">
+                            <Calendar className="w-4 h-4 text-accent" />
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="bg-accent text-white border-none text-[10px] font-black px-2.5 h-6 rounded-lg uppercase">
-                              Qty: {record.quantity} {record.unit || ''}
-                            </Badge>
-                            <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1 bg-muted/30 px-2 py-1 rounded-lg">
-                              <Calendar className="w-3 h-3 text-accent" /> {new Date(record.takenDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-1.5 mt-2">
-                            {record.note && (
-                              <div className="flex items-start gap-2 bg-muted/20 p-2 rounded-lg border border-black/5">
-                                <FileText className="w-3 h-3 text-accent mt-0.5 shrink-0" />
-                                <p className="text-[10px] text-muted-foreground italic leading-tight">{record.note}</p>
-                              </div>
-                            )}
-                            {record.promiseDate && record.status !== 'paid' && (
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg w-fit border border-amber-100">
-                                <Calendar className="w-3 h-3 shrink-0" />
-                                <span>Promise: {new Date(record.promiseDate).toLocaleDateString()}</span>
-                              </div>
-                            )}
+                          <div>
+                            <p className="text-[11px] font-black text-primary uppercase">{new Date(record.takenDate).toLocaleDateString()}</p>
+                            <p className="text-[9px] font-bold text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-accent" /> 
+                              {new Date(record.takenDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right shrink-0 ml-4">
-                          <p className="font-black text-xl text-primary">{currency}{record.amount.toLocaleString()}</p>
-                          {record.status !== 'paid' && record.paidAmount > 0 && (
-                            <p className="text-[9px] font-bold text-green-600">Already Paid: {currency}{record.paidAmount}</p>
-                          )}
-                          <div className="flex items-center gap-1 justify-end mt-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-accent hover:bg-accent/10 rounded-full" onClick={() => startEditingRecord(record)}>
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-full" onClick={() => startDeletingRecord(record)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
+                        {record.status === 'paid' ? (
+                          <Badge className="bg-green-100 text-green-700 border-none text-[9px] font-black px-3 h-6 rounded-lg uppercase tracking-tighter">
+                            Full Paid
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-50 text-amber-600 border border-amber-100 text-[9px] font-black px-3 h-6 rounded-lg uppercase tracking-tighter">
+                            Pending
+                          </Badge>
+                        )}
                       </div>
-                      
-                      {record.status !== 'paid' && (
-                        <div className="flex justify-end pt-3 border-t border-accent/5">
-                           <Button 
-                             variant="outline" 
-                             className="h-9 text-[10px] font-black uppercase text-accent border-accent hover:bg-accent hover:text-white px-5 rounded-xl transition-all shadow-sm" 
-                             onClick={() => {
-                               setPaymentRecord(record);
-                               setPaymentAmount((record.amount - (record.paidAmount || 0)).toString());
-                               setIsPaymentDialogOpen(true);
-                             }}
-                           >
-                             <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> Pay Now
-                           </Button>
+
+                      <div className="p-5 space-y-4">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="space-y-3 flex-1 min-w-0">
+                            <div>
+                              <Label className="text-[8px] font-black uppercase text-muted-foreground opacity-60 block mb-1">Item Details</Label>
+                              <h4 className="font-black text-sm text-primary leading-tight truncate">{record.productName}</h4>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-3">
+                              <Badge className="bg-primary text-white border-none text-[10px] font-black px-3 h-7 rounded-xl uppercase tracking-tighter">
+                                Qty: {record.quantity} {record.unit || 'PCS'}
+                              </Badge>
+                              <div className="h-4 w-px bg-muted mx-1 hidden sm:block" />
+                              <p className="text-[10px] font-bold text-muted-foreground">Unit: {currency}{(record.amount / (record.quantity || 1)).toFixed(2)}</p>
+                            </div>
+                            
+                            {(record.note || record.promiseDate) && (
+                              <div className="grid grid-cols-1 gap-2 mt-2">
+                                {record.note && (
+                                  <div className="bg-muted/30 p-2.5 rounded-xl border border-black/5 flex items-start gap-2">
+                                    <FileText className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
+                                    <p className="text-[10px] text-muted-foreground italic leading-relaxed">{record.note}</p>
+                                  </div>
+                                )}
+                                {record.promiseDate && record.status !== 'paid' && (
+                                  <div className="flex items-center gap-2 text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl w-fit border border-amber-100 shadow-sm">
+                                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Promise: {new Date(record.promiseDate).toLocaleDateString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="text-right shrink-0 flex flex-col items-end gap-3">
+                            <div className="bg-primary/5 p-3 rounded-2xl border border-primary/10 shadow-inner min-w-[100px]">
+                              <p className="text-[8px] font-black uppercase opacity-50 mb-1">Total Due</p>
+                              <p className="font-black text-xl text-primary">{currency}{record.amount.toLocaleString()}</p>
+                              {record.status !== 'paid' && record.paidAmount > 0 && (
+                                <p className="text-[9px] font-bold text-green-600 mt-1">Paid: {currency}{record.paidAmount}</p>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-accent hover:bg-accent/10 rounded-xl" onClick={() => startEditingRecord(record)}>
+                                <Edit2 className="w-4.5 h-4.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => startDeletingRecord(record)}>
+                                <Trash2 className="w-4.5 h-4.5" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                      )}
+                        
+                        {record.status !== 'paid' && (
+                          <div className="pt-4 border-t border-accent/5 flex justify-end">
+                             <Button 
+                               className="bg-accent hover:bg-accent/90 h-12 text-xs font-black uppercase text-white px-8 rounded-2xl transition-all shadow-xl shadow-accent/10 gap-2 active:scale-95" 
+                               onClick={() => {
+                                 setPaymentRecord(record);
+                                 setPaymentAmount((record.amount - (record.paidAmount || 0)).toString());
+                                 setIsPaymentDialogOpen(true);
+                               }}
+                             >
+                               <CheckCircle2 className="w-4 h-4" /> Record Payment
+                             </Button>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))
@@ -532,26 +571,29 @@ export default function CustomersPage() {
       <Dialog open={isRecordDeleteOpen} onOpenChange={setIsRecordDeleteOpen}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
-            <div className="flex items-center gap-2 text-destructive">
-              <Lock className="w-5 h-5" />
-              <DialogTitle className="font-black uppercase">History Protection</DialogTitle>
+            <div className="flex items-center gap-3 text-destructive mb-2">
+              <div className="p-2 bg-red-50 rounded-xl"><Lock className="w-6 h-6" /></div>
+              <div>
+                <DialogTitle className="font-black uppercase tracking-tighter">Security Authorization</DialogTitle>
+                <DialogDescription className="text-xs">Master key required to delete history.</DialogDescription>
+              </div>
             </div>
-            <DialogDescription>
-              {language === 'bn' ? 'এই ইতিহাসটি চিরতরে মুছে যাবে। নিশ্চিত করতে সিক্রেট কী দিন।' : 'This entry will be permanently removed. Enter master key to confirm.'}
-            </DialogDescription>
+            <p className="text-xs font-medium text-muted-foreground mt-2">
+              {language === 'bn' ? 'এই ইতিহাসটি চিরতরে মুছে যাবে এবং কাস্টমারের ব্যালেন্সে এটি প্রভাব ফেলবে। নিশ্চিত করতে সিক্রেট কী দিন।' : 'This record will be permanently removed and customer balance will be adjusted. Enter key to confirm.'}
+            </p>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <Label className="text-[10px] font-black uppercase text-muted-foreground">Secret Master Key</Label>
+            <Label className="text-[10px] font-black uppercase text-muted-foreground opacity-70 tracking-widest">Master Access Key</Label>
             <Input 
               type="password" 
               placeholder="••••••••" 
-              className="h-12 rounded-xl text-lg font-bold" 
+              className="h-14 rounded-2xl text-2xl font-black text-center bg-accent/5 border-accent/10" 
               value={deletePass} 
               onChange={e => setDeletePass(e.target.value)} 
             />
           </div>
           <DialogFooter>
-            <Button variant="destructive" className="w-full h-12 rounded-xl font-black uppercase shadow-xl" onClick={confirmDeleteBakiRecord}>
+            <Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase shadow-xl transition-all active:scale-95" onClick={confirmDeleteBakiRecord}>
               Authorize & Wipe Entry
             </Button>
           </DialogFooter>
@@ -559,35 +601,35 @@ export default function CustomersPage() {
       </Dialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
+        <DialogContent className="sm:max-w-[400px] rounded-[2.5rem]">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-50 rounded-xl"><DollarSign className="w-6 h-6 text-green-600" /></div>
+              <div className="p-3 bg-green-50 rounded-2xl shadow-sm border border-green-100"><DollarSign className="w-7 h-7 text-green-600" /></div>
               <div>
-                <DialogTitle className="text-xl font-black text-primary">Receive Payment</DialogTitle>
-                <DialogDescription className="text-xs">Enter amount being paid for {paymentRecord?.productName}.</DialogDescription>
+                <DialogTitle className="text-xl font-black text-primary tracking-tighter">Receive Payment</DialogTitle>
+                <DialogDescription className="text-[10px] uppercase font-bold text-muted-foreground opacity-60">Settling dues for {paymentRecord?.productName}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
-          <div className="py-6 space-y-4">
-            <div className="bg-muted/30 p-4 rounded-xl text-center border">
-              <p className="text-[10px] font-black uppercase opacity-50 mb-1">Remaining Due</p>
-              <p className="text-2xl font-black text-destructive">{currency}{(paymentRecord?.amount - (paymentRecord?.paidAmount || 0)).toLocaleString()}</p>
+          <div className="py-6 space-y-6">
+            <div className="bg-primary/5 p-5 rounded-[1.5rem] text-center border-2 border-primary/10 shadow-inner">
+              <p className="text-[10px] font-black uppercase opacity-50 mb-1 tracking-widest">Remaining Due</p>
+              <p className="text-3xl font-black text-destructive">{currency}{(paymentRecord?.amount - (paymentRecord?.paidAmount || 0)).toLocaleString()}</p>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase">Amount Paying Now</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Amount Paying Now</Label>
               <Input 
                 type="number" 
                 step="0.01" 
-                className="h-14 text-2xl font-black text-center bg-accent/5 border-accent/20 rounded-2xl" 
+                className="h-16 text-3xl font-black text-center bg-accent/5 border-accent/20 rounded-[1.2rem] shadow-sm focus-visible:ring-accent" 
                 value={paymentAmount} 
                 onChange={e => setPaymentAmount(e.target.value)} 
               />
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full bg-accent hover:bg-accent/90 h-14 rounded-2xl font-black uppercase shadow-xl" onClick={handlePayment}>
-              Confirm Payment
+            <Button className="w-full bg-teal-700 hover:bg-teal-800 h-16 rounded-[1.5rem] font-black uppercase text-lg shadow-2xl transition-all active:scale-95 gap-2" onClick={handlePayment}>
+              <CheckCircle2 className="w-6 h-6" /> Confirm Payment
             </Button>
           </DialogFooter>
         </DialogContent>
