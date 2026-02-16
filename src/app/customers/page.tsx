@@ -638,7 +638,7 @@ function CustomersPageContent() {
         </SheetContent>
       </Sheet>
 
-      <Dialog open={isRecordDeleteOpen} onOpenChange={isRecordDeleteOpen}>
+      <Dialog open={isRecordDeleteOpen} onOpenChange={setIsRecordDeleteOpen}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
             <div className="flex items-center gap-3 text-destructive mb-2">
