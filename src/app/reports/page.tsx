@@ -20,7 +20,10 @@ import {
   Check,
   Settings2,
   Trash2,
-  Lock
+  Lock,
+  Clock,
+  Tag,
+  ChevronRight
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -338,7 +341,7 @@ export default function MasterLedgerPage() {
         </Card>
       </div>
 
-      <Card className="border-accent/10 shadow-lg overflow-hidden print:border-none print:shadow-none">
+      <Card className="border-accent/10 shadow-lg overflow-hidden print:border-none print:shadow-none bg-white/50 backdrop-blur-sm">
         <CardHeader className="p-4 border-b bg-muted/20 flex flex-col md:flex-row gap-4 items-center justify-between print:hidden">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -364,85 +367,194 @@ export default function MasterLedgerPage() {
             </Select>
           </div>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
+        
+        <CardContent className="p-0">
           {filteredLedger.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
               <Inbox className="w-12 h-12 opacity-10" />
               <p className="text-sm italic">{t.noData}</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className={cn("text-[10px] uppercase font-bold pl-6", !printColumns.date && "print:hidden")}>{t.date}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.type && "print:hidden")}>{t.type}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.item && "print:hidden")}>Item & Qty</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.entity && "print:hidden")}>{t.entity}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.total && "print:hidden")}>{t.totalVal}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.paid && "print:hidden")}>{t.paid}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold", !printColumns.unpaid && "print:hidden")}>{t.unpaid}</TableHead>
-                  <TableHead className={cn("text-[10px] uppercase font-bold text-right pr-6", !printColumns.status && "print:hidden")}>{t.status}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLedger.map((entry, idx) => (
-                  <TableRow key={entry.id + idx} className="hover:bg-accent/5 group">
-                    <TableCell className={cn("pl-6 text-xs font-medium whitespace-nowrap", !printColumns.date && "print:hidden")}>
-                      {entry.date.toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className={cn(!printColumns.type && "print:hidden")}>
-                      <Badge variant="outline" className="text-[9px] font-bold h-5 uppercase tracking-tighter">
-                        {entry.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className={cn("text-xs font-bold text-primary truncate max-w-[200px]", !printColumns.item && "print:hidden")}>
-                      {entry.item}
-                    </TableCell>
-                    <TableCell className={cn("text-xs", !printColumns.entity && "print:hidden")}>
-                      {entry.customer}
-                    </TableCell>
-                    <TableCell className={cn("text-xs font-black", !printColumns.total && "print:hidden")}>{currency}{entry.amount.toLocaleString()}</TableCell>
-                    <TableCell className={cn("text-xs font-bold text-green-600", !printColumns.paid && "print:hidden")}>{currency}{entry.paid.toLocaleString()}</TableCell>
-                    <TableCell className={cn("text-xs font-bold", entry.unpaid > 0 ? 'text-destructive' : 'text-muted-foreground opacity-30', !printColumns.unpaid && "print:hidden")}>
-                      {currency}{entry.unpaid.toLocaleString()}
-                    </TableCell>
-                    <TableCell className={cn("text-right pr-6", !printColumns.status && "print:hidden")}>
-                      <div className="flex items-center justify-end gap-2">
-                        <span className={`text-[10px] font-black uppercase ${entry.color}`}>
+            <div className="grid gap-4 p-4 md:p-6 bg-muted/5">
+              {filteredLedger.map((entry, idx) => (
+                <Card key={entry.id + idx} className="overflow-hidden border-accent/10 shadow-sm hover:shadow-md transition-all rounded-[1.5rem] bg-white print:border-none print:shadow-none print:rounded-none">
+                  <div className="p-4 md:p-6 space-y-4">
+                    {/* Header: Date, Time and Type */}
+                    <div className={cn("flex flex-wrap items-center justify-between gap-3", !printColumns.date && !printColumns.type && "print:hidden")}>
+                      <div className={cn("flex items-center gap-3", !printColumns.date && "print:hidden")}>
+                        <div className="p-2 bg-accent/10 rounded-xl">
+                          <Calendar className="w-4 h-4 text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-primary uppercase">{entry.date.toLocaleDateString()}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" /> 
+                            {entry.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={cn(!printColumns.type && "print:hidden")}>
+                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter h-6 px-3 bg-accent/5 border-accent/20 text-accent">
+                          {entry.type}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Content Section: Item Details & Entity */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                      <div className="space-y-4">
+                        <div className={cn(!printColumns.item && "print:hidden")}>
+                          <Label className="text-[9px] font-black uppercase opacity-50 block mb-1.5 tracking-widest">Item & Quantity Details</Label>
+                          <p className="text-sm font-bold text-primary leading-relaxed border-l-2 border-accent/20 pl-3">{entry.item}</p>
+                        </div>
+                        <div className={cn(!printColumns.entity && "print:hidden")}>
+                          <Label className="text-[9px] font-black uppercase opacity-50 block mb-1.5 tracking-widest">Customer / Entity</Label>
+                          <p className="text-xs font-bold flex items-center gap-2 text-muted-foreground">
+                            <Users className="w-3.5 h-3.5 text-accent" /> {entry.customer}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Financials Block */}
+                      <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 shadow-inner flex flex-col justify-center">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div className={cn(!printColumns.total && "print:hidden")}>
+                            <p className="text-[8px] font-black uppercase opacity-50 mb-1">Total Bill</p>
+                            <p className="text-sm font-black text-primary">{currency}{entry.amount.toLocaleString()}</p>
+                          </div>
+                          <div className={cn(!printColumns.paid && "print:hidden")}>
+                            <p className="text-[8px] font-black uppercase opacity-50 mb-1">Received</p>
+                            <p className="text-sm font-black text-green-600">{currency}{entry.paid.toLocaleString()}</p>
+                          </div>
+                          <div className={cn(!printColumns.unpaid && "print:hidden")}>
+                            <p className="text-[8px] font-black uppercase opacity-50 mb-1">Outstanding</p>
+                            <p className={cn(
+                              "text-sm font-black", 
+                              entry.unpaid > 0 ? "text-destructive" : "text-muted-foreground opacity-30"
+                            )}>
+                              {currency}{entry.unpaid.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer: Status and Delete Action */}
+                    <div className="flex items-center justify-between pt-4 border-t border-black/5">
+                      <div className={cn("flex items-center gap-2", !printColumns.status && "print:hidden")}>
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          entry.rawType === 'inventory' ? 'bg-primary' : (entry.unpaid > 0 ? 'bg-destructive' : 'bg-green-500')
+                        )} />
+                        <span className={cn("text-[10px] font-black uppercase tracking-[0.2em]", entry.color)}>
                           {entry.status}
                         </span>
-                        {entry.rawType !== 'inventory' && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 hover:text-red-500 print:hidden" onClick={() => setDeleteItem({ id: entry.id, type: entry.rawType, extra: entry.rawType === 'baki' ? { customerId: entry.customerId, remaining: entry.unpaid } : null })}>
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      
+                      {entry.rawType !== 'inventory' && (
+                        <div className="print:hidden">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl font-black text-[9px] uppercase px-3 gap-2"
+                            onClick={() => setDeleteItem({ id: entry.id, type: entry.rawType, extra: entry.rawType === 'baki' ? { customerId: entry.customerId, remaining: entry.unpaid } : null })}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Remove Record
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
       
+      {/* Hidden Table for Printing Only (Traditional format for paperwork) */}
+      <div className="hidden print:block">
+        <Table className="border-collapse w-full">
+          <TableHeader>
+            <TableRow>
+              <TableHead className={cn(!printColumns.date && "hidden")}>Date/Time</TableHead>
+              <TableHead className={cn(!printColumns.type && "hidden")}>Type</TableHead>
+              <TableHead className={cn(!printColumns.item && "hidden")}>Description</TableHead>
+              <TableHead className={cn(!printColumns.entity && "hidden")}>Entity</TableHead>
+              <TableHead className={cn(!printColumns.total && "hidden")}>Total</TableHead>
+              <TableHead className={cn(!printColumns.paid && "hidden")}>Paid</TableHead>
+              <TableHead className={cn(!printColumns.unpaid && "hidden")}>Unpaid</TableHead>
+              <TableHead className={cn(!printColumns.status && "hidden")}>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredLedger.map((entry, i) => (
+              <TableRow key={i}>
+                <TableCell className={cn(!printColumns.date && "hidden")}>{entry.date.toLocaleString()}</TableCell>
+                <TableCell className={cn(!printColumns.type && "hidden")}>{entry.type}</TableCell>
+                <TableCell className={cn(!printColumns.item && "hidden")}>{entry.item}</TableCell>
+                <TableCell className={cn(!printColumns.entity && "hidden")}>{entry.customer}</TableCell>
+                <TableCell className={cn(!printColumns.total && "hidden")}>{currency}{entry.amount}</TableCell>
+                <TableCell className={cn(!printColumns.paid && "hidden")}>{currency}{entry.paid}</TableCell>
+                <TableCell className={cn(!printColumns.unpaid && "hidden")}>{currency}{entry.unpaid}</TableCell>
+                <TableCell className={cn(!printColumns.status && "hidden")}>{entry.status}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
       <Dialog open={!!deleteItem} onOpenChange={(open) => !open && setDeleteItem(null)}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Lock className="w-5 h-5" /> Master Authorization
-            </DialogTitle>
-            <DialogDescription>
-              {language === 'en' ? 'Deleting an entry from the ledger is a permanent action.' : 'লেজার থেকে এই তথ্য ডিলিট করা একটি স্থায়ী পদক্ষেপ।'}
-            </DialogDescription>
+            <div className="flex items-center gap-3 text-destructive mb-2">
+              <div className="p-2 bg-red-50 rounded-xl"><Lock className="w-6 h-6" /></div>
+              <div>
+                <DialogTitle className="font-black uppercase tracking-tighter">Master Authorization</DialogTitle>
+                <DialogDescription className="text-xs">Security clearance required for deletion.</DialogDescription>
+              </div>
+            </div>
+            <p className="text-xs font-bold text-muted-foreground mt-2">
+              {language === 'en' ? 'Deleting an entry from the ledger is a permanent action and affects historical balances.' : 'লেজার থেকে এই তথ্য ডিলিট করা একটি স্থায়ী পদক্ষেপ এবং এটি আপনার ইনভেন্টরি বা ব্যালেন্স পরিবর্তন করতে পারে।'}
+            </p>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <Label className="text-xs font-bold uppercase opacity-70">{t.secretKey}</Label>
-            <Input type="password" placeholder="••••••••" className="h-12 text-lg font-bold" value={deletePass} onChange={e => setDeletePass(e.target.value)} />
+            <Label className="text-[10px] font-black uppercase opacity-70 tracking-widest">{t.secretKey}</Label>
+            <Input type="password" placeholder="••••••••" className="h-14 text-2xl font-black text-center rounded-2xl bg-accent/5 border-accent/10" value={deletePass} onChange={e => setDeletePass(e.target.value)} />
           </div>
           <DialogFooter>
-            <Button variant="destructive" className="w-full h-12 text-base font-bold shadow-lg" onClick={handleAuthorizedDelete}>
+            <Button variant="destructive" className="w-full h-14 text-base font-black uppercase rounded-2xl shadow-xl transition-all active:scale-95" onClick={handleAuthorizedDelete}>
               {language === 'en' ? 'Authorize & Wipe Entry' : 'অথোরাইজ ও ডিলিট করুন'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-[2.5rem]">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-xl"><Settings2 className="w-6 h-6 text-primary" /></div>
+              <div>
+                <DialogTitle className="font-black uppercase tracking-tighter">Report Configuration</DialogTitle>
+                <DialogDescription className="text-xs">Customize columns for your printed report.</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-6">
+            {Object.entries(printColumns).map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border border-black/5">
+                <Label className="text-[10px] font-black uppercase tracking-widest capitalize">{key}</Label>
+                <Switch 
+                  checked={value} 
+                  onCheckedChange={(checked) => setPrintColumns(prev => ({ ...prev, [key]: checked }))} 
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button className="w-full bg-primary h-14 rounded-2xl font-black uppercase shadow-xl gap-2" onClick={handlePrint}>
+              <Printer className="w-5 h-5" /> Generate PDF / Print
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -454,8 +566,11 @@ export default function MasterLedgerPage() {
           body { background: white !important; padding: 0 !important; margin: 0 !important; }
           .sidebar-wrapper, header, footer, .sidebar-inset > header, nav, [role="navigation"], .print\\:hidden { display: none !important; }
           main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
-          table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #ddd !important; }
-          th, td { border: 1px solid #ddd !important; padding: 8px !important; color: black !important; }
+          .hidden.print\\:block { display: block !important; }
+          .hidden.print\\:flex { display: flex !important; }
+          table { width: 100% !important; border-collapse: collapse !important; border: 1px solid #000 !important; }
+          th, td { border: 1px solid #000 !important; padding: 10px !important; color: black !important; font-size: 10pt !important; }
+          th { background-color: #f0f0f0 !important; font-weight: bold !important; }
         }
       `}</style>
     </div>
