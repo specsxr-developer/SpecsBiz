@@ -237,12 +237,38 @@ export default function ShopManagerPage() {
     )
   }, [inventoryProducts, shopProducts])
 
-  const shopUrl = user ? `${window.location.origin}/shop/${user.uid}` : ""
+  // Improved Link Copy logic
+  const [shopUrl, setShopUrl] = useState("")
+  useEffect(() => {
+    if (user && typeof window !== 'undefined') {
+      setShopUrl(`${window.location.origin}/shop/${user.uid}`)
+    }
+  }, [user])
 
   const copyToClipboard = () => {
     if (!shopUrl) return
-    navigator.clipboard.writeText(shopUrl)
-    toast({ title: "Link Copied" })
+    
+    const fallbackCopy = (text: string) => {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast({ title: language === 'bn' ? "লিঙ্ক কপি হয়েছে" : "Link Copied" });
+      } catch (err) {
+        toast({ variant: "destructive", title: "Copy Failed" });
+      }
+      document.body.removeChild(textArea);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shopUrl).then(() => {
+        toast({ title: language === 'bn' ? "লিঙ্ক কপি হয়েছে" : "Link Copied" });
+      }).catch(() => fallbackCopy(shopUrl));
+    } else {
+      fallbackCopy(shopUrl);
+    }
   }
 
   return (
@@ -335,7 +361,10 @@ export default function ShopManagerPage() {
                         <Badge className="bg-emerald-100 text-emerald-700 border-none text-[8px] font-black uppercase h-5">Public</Badge>
                       </div>
                       <div className="flex gap-2">
-                        <div className="flex-1 bg-white border border-emerald-200 p-3 rounded-xl truncate text-[10px] font-mono text-emerald-800 shadow-inner">
+                        <div 
+                          onClick={copyToClipboard}
+                          className="flex-1 bg-white border border-emerald-200 p-3 rounded-xl truncate text-[10px] font-mono text-emerald-800 shadow-inner cursor-pointer hover:bg-emerald-50/50 transition-colors"
+                        >
                           {shopUrl || 'Login required'}
                         </div>
                         <Button variant="outline" size="sm" className="bg-white border-emerald-200 text-emerald-700 font-bold rounded-xl" onClick={copyToClipboard} disabled={!user}>
