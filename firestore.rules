@@ -8,13 +8,15 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Comprehensive rule for the owner's entire directory
+    // PRIMARY OWNER ACCESS: Grant full recursive access to the owner's root path
+    // This covers products, shopProducts, shopConfig, etc.
     match /users/{userId}/{document=**} {
-      // Grant full access to the owner for everything in their path
       allow read, write: if isOwner(userId);
     }
 
-    // Public access rules for customers viewing the shop
+    // PUBLIC READ ACCESS: Specifically allow anyone to view shop data
+    // This ensures customers can see the website without logging in
+    
     match /users/{userId}/products/{productId} {
       allow get, list: if true;
     }
@@ -27,7 +29,7 @@ service cloud.firestore {
       allow get: if true;
     }
 
-    // Default deny
+    // Default deny for everything else
     match /{path=**} {
       allow read, write: if false;
     }

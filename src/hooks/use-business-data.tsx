@@ -163,7 +163,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const shopConfig = user ? fbShopConfig : localShopConfig;
   const isLoading = isUserLoading || (user && (pLoading || spLoading || sLoading || cLoading || prLoading));
 
-  // Main Inventory Actions
+  // --- ACTIONS ---
+
   const addProduct = useCallback((product: any) => {
     const id = product.id || Date.now().toString();
     const data = { ...product, id };
@@ -202,11 +203,12 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.uid, db]);
 
-  // Shop-Specific Catalog Actions
+  // SPECIAL WEBSITE PRODUCT SYSTEM (Fully Independent)
   const addShopProduct = useCallback((product: any) => {
-    const id = product.id || Date.now().toString();
+    const id = product.id || `web-${Date.now()}`;
     const data = { ...product, id };
     if (user?.uid && db) {
+      // Use setDocument with merge for reliability
       setDocumentNonBlocking(doc(db, 'users', user.uid, 'shopProducts', id), data, { merge: true });
     } else {
       setLocalShopProducts(prev => {
@@ -219,7 +221,8 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   const updateShopProduct = useCallback((productId: string, data: any) => {
     if (user?.uid && db) {
-      updateDocumentNonBlocking(doc(db, 'users', user.uid, 'shopProducts', productId), data);
+      // Using setDocumentNonBlocking with merge: true is often more robust for base64 strings
+      setDocumentNonBlocking(doc(db, 'users', user.uid, 'shopProducts', productId), data, { merge: true });
     } else {
       setLocalShopProducts(prev => {
         const updated = prev.map(p => p.id === productId ? { ...p, ...data } : p);
