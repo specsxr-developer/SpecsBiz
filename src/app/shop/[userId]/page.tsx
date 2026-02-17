@@ -18,7 +18,8 @@ import {
   DollarSign,
   ShoppingCart,
   Percent,
-  FileText
+  FileText,
+  Maximize2
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -45,6 +46,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [error, setError] = useState("")
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
+  const [zoomImage, setZoomImage] = useState<string | null>(null)
 
   // Fetch Public Shop Config
   const shopConfigRef = useMemoFirebase(() => {
@@ -190,7 +192,6 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
       {/* Product Details Modal */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
         <DialogContent className="w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto rounded-[3rem] p-0 border-none shadow-2xl">
-          {/* Accessibility requirements: DialogTitle must be present inside DialogContent */}
           <div className="sr-only">
             <DialogTitle>{selectedProduct?.name || "Product Details"}</DialogTitle>
             <DialogDescription>Viewing detailed information for {selectedProduct?.name}</DialogDescription>
@@ -199,9 +200,17 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
           <div className="relative">
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="space-y-4 bg-muted/30 p-6 md:p-8">
-                <div className="aspect-square rounded-[2rem] overflow-hidden shadow-2xl bg-white">
+                <div 
+                  className="aspect-square rounded-[2rem] overflow-hidden shadow-2xl bg-white cursor-zoom-in group/main relative"
+                  onClick={() => selectedProduct?.imageUrl && setZoomImage(selectedProduct.imageUrl)}
+                >
                   {selectedProduct?.imageUrl ? (
-                    <img src={selectedProduct.imageUrl} alt={selectedProduct?.name} className="w-full h-full object-cover" />
+                    <>
+                      <img src={selectedProduct.imageUrl} alt={selectedProduct?.name} className="w-full h-full object-cover transition-transform group-hover/main:scale-105" />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/main:opacity-100 flex items-center justify-center transition-opacity">
+                        <Maximize2 className="w-8 h-8 text-white drop-shadow-lg" />
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-muted opacity-20">
                       <Package className="w-16 h-16" />
@@ -211,7 +220,11 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
                 {(selectedProduct?.galleryImages?.length || 0) > 0 && (
                   <div className="grid grid-cols-5 gap-2">
                     {selectedProduct?.galleryImages.map((img: string, i: number) => (
-                      <div key={i} className="aspect-square rounded-xl overflow-hidden border-2 border-white shadow-sm">
+                      <div 
+                        key={i} 
+                        className="aspect-square rounded-xl overflow-hidden border-2 border-white shadow-sm cursor-zoom-in hover:scale-105 active:scale-95 transition-all"
+                        onClick={() => setZoomImage(img)}
+                      >
                         {img ? <img src={img} className="w-full h-full object-cover" alt={`Gallery ${i}`} /> : null}
                       </div>
                     ))}
@@ -252,6 +265,29 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
               </div>
             </div>
             <button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 h-10 w-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl hover:bg-red-500 hover:text-white transition-all"><X className="w-6 h-6" /></button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Zoom Popup */}
+      <Dialog open={!!zoomImage} onOpenChange={(open) => !open && setZoomImage(null)}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-black/90 backdrop-blur-xl shadow-none flex items-center justify-center overflow-hidden rounded-3xl">
+          <div className="sr-only">
+            <DialogTitle>Image Preview</DialogTitle>
+            <DialogDescription>Full screen view of product photo</DialogDescription>
+          </div>
+          <div className="relative w-full h-full flex items-center justify-center p-4">
+            <img 
+              src={zoomImage || ""} 
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-300" 
+              alt="Zoomed preview" 
+            />
+            <button 
+              onClick={() => setZoomImage(null)}
+              className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all shadow-xl"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </DialogContent>
       </Dialog>
