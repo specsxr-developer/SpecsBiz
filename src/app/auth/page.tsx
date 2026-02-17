@@ -15,9 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Store, LogIn, LogOut, ShieldCheck, Loader2, UserPlus } from 'lucide-react';
+import { Store, LogIn, LogOut, ShieldCheck, Loader2, UserPlus, MailCheck, ChevronLeft } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { sendWelcomeEmail } from '@/actions/send-welcome-email';
+import { sendVerificationCode } from '@/actions/send-verification-code';
 
 export default function AuthPage() {
   const { user, isUserLoading } = useUser();
@@ -30,60 +31,93 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Verification States
+  const [step, setStep] = useState<'auth' | 'verify'>('auth');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [enteredCode, setEnteredCode] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const generateOTP = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
+  const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     
     setLoading(true);
     try {
       if (isRegistering) {
-        // Registration Flow
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Step 1: Send OTP instead of creating account
+        const otp = generateOTP();
+        setGeneratedCode(otp);
         
-        // Initialize User Profile in Firestore
-        if (db && userCredential.user) {
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
-            id: userCredential.user.uid,
-            email: email,
-            role: 'owner',
-            createdAt: new Date().toISOString()
+        const res = await sendVerificationCode(email, otp);
+        if (res.success) {
+          setStep('verify');
+          toast({ 
+            title: "Verification Sent!", 
+            description: `We've sent a 6-digit code to ${email}` 
           });
+        } else {
+          throw new Error(res.error || "Failed to send code.");
         }
-        
-        // Send Official Welcome Email (Non-blocking background call)
-        sendWelcomeEmail(email).catch(err => console.error("Welcome email failed", err));
-        
-        toast({ 
-          title: "Account Created!", 
-          description: "Welcome to SpecsBiz! Your secure cloud space is now active." 
-        });
       } else {
-        // Login Flow
+        // Standard Login
         await signInWithEmailAndPassword(auth, email, password);
         toast({ 
           title: "Welcome back", 
           description: "Successfully connected to your business cloud." 
         });
+        router.push('/');
       }
-      router.push('/');
     } catch (error: any) {
       console.error("Auth Error:", error.code);
-      
-      let errorMsg = "Authentication failed. Please check your internet.";
-      
+      let errorMsg = error.message || "Authentication failed. Please check your internet.";
       if (error.code === 'auth/user-not-found') errorMsg = "Account not found. Please register first.";
       else if (error.code === 'auth/wrong-password') errorMsg = "Incorrect password. Please try again.";
-      else if (error.code === 'auth/email-already-in-use') errorMsg = "This email is already registered. Please log in.";
-      else if (error.code === 'auth/invalid-email') errorMsg = "Please enter a valid email address.";
-      else if (error.code === 'auth/weak-password') errorMsg = "Password should be at least 6 characters.";
-      else if (error.code === 'auth/invalid-credential') errorMsg = "Invalid credentials. Check email and password.";
-
+      
       toast({ 
         variant: "destructive", 
-        title: isRegistering ? "Registration Failed" : "Access Denied", 
+        title: "Error", 
         description: errorMsg 
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (enteredCode !== generatedCode) {
+      toast({ variant: "destructive", title: "Invalid Code", description: "The code you entered is incorrect." });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Step 2: Final Account Creation
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (db && userCredential.user) {
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          id: userCredential.user.uid,
+          email: email,
+          role: 'owner',
+          createdAt: new Date().toISOString()
+        });
+      }
+      
+      // Welcome Email in background
+      sendWelcomeEmail(email).catch(err => console.error("Welcome email failed", err));
+      
+      toast({ 
+        title: "Account Verified!", 
+        description: "Welcome to SpecsBiz! Your cloud space is now active." 
+      });
+      router.push('/');
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Registration Failed", description: error.message });
     } finally {
       setLoading(false);
     }
@@ -127,6 +161,51 @@ export default function AuthPage() {
     );
   }
 
+  // --- Step 2: Verification UI ---
+  if (step === 'verify') {
+    return (
+      <div className="flex h-[90vh] items-center justify-center p-6 animate-in slide-in-from-right duration-500">
+        <Card className="w-full max-w-md shadow-2xl border-accent/10 rounded-[3rem] overflow-hidden bg-white">
+          <CardHeader className="text-center p-8 bg-accent/5">
+            <div className="mx-auto bg-primary p-5 rounded-[1.5rem] w-fit mb-2 shadow-xl">
+              <MailCheck className="w-10 h-10 text-white" />
+            </div>
+            <CardTitle className="text-3xl font-black text-primary uppercase tracking-tighter">Verify Email</CardTitle>
+            <CardDescription className="text-[10px] font-bold uppercase tracking-widest opacity-60">Enter the 6-digit code sent to your mail</CardDescription>
+          </CardHeader>
+          
+          <CardContent className="p-8">
+            <form onSubmit={handleVerifyAndCreate} className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase ml-1 opacity-60">Verification Code</Label>
+                <Input 
+                  placeholder="000000"
+                  maxLength={6}
+                  value={enteredCode}
+                  onChange={e => setEnteredCode(e.target.value)}
+                  required
+                  className="h-16 rounded-2xl bg-muted/20 border-none text-4xl text-center font-black tracking-[10px] focus:ring-2 focus:ring-accent"
+                />
+              </div>
+              
+              <Button className="w-full bg-accent hover:bg-accent/90 h-16 text-lg font-black uppercase shadow-2xl transition-all active:scale-95 rounded-2xl" disabled={loading}>
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Verify & Activate Account"}
+              </Button>
+            </form>
+
+            <button 
+              onClick={() => { setStep('auth'); setEnteredCode(''); }}
+              className="mt-6 flex items-center justify-center gap-2 w-full text-xs font-black text-muted-foreground uppercase tracking-widest hover:text-primary transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" /> Change Email
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // --- Step 1: Initial Auth UI ---
   return (
     <div className="flex h-[90vh] items-center justify-center p-6 animate-in fade-in duration-700">
       <Card className="w-full max-w-md shadow-[0_30px_80px_rgba(0,0,0,0.1)] border-accent/10 rounded-[3rem] overflow-hidden bg-white">
@@ -141,7 +220,7 @@ export default function AuthPage() {
         </CardHeader>
         
         <CardContent className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleInitialSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-[10px] font-black uppercase ml-1 opacity-60">Email Address</Label>
               <Input 
@@ -171,9 +250,9 @@ export default function AuthPage() {
               {loading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
-                isRegistering ? <UserPlus className="w-6 h-6" /> : <LogIn className="w-6 h-6" />
+                isRegistering ? <MailCheck className="w-6 h-6" /> : <LogIn className="w-6 h-6" />
               )}
-              {loading ? "Processing..." : (isRegistering ? "Create Account" : "Connect to Cloud")}
+              {loading ? "Processing..." : (isRegistering ? "Get Verification Code" : "Connect to Cloud")}
             </Button>
           </form>
 
