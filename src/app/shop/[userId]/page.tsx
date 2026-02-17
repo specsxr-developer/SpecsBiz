@@ -45,7 +45,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images"
 
 /**
  * @fileOverview Top banner ad component for Adsterra integration.
- * Placed above the search box as requested.
+ * Placed above the search box.
  */
 function ShopTopBannerAd() {
   const adRef = useRef<HTMLDivElement>(null);
@@ -77,7 +77,46 @@ function ShopTopBannerAd() {
   return (
     <div className="mb-8 flex flex-col items-center gap-1 overflow-hidden w-full">
       <p className="text-[7px] font-black uppercase text-primary/20 tracking-widest">Sponsored</p>
-      <div ref={adRef} className="w-full flex justify-center min-h-[60px]" />
+      <div ref={adRef} className="w-full flex justify-center min-h-[60px] overflow-x-auto no-scrollbar" />
+    </div>
+  );
+}
+
+/**
+ * @fileOverview Bottom leaderboard banner ad.
+ * Placed below the entire product grid.
+ */
+function ShopBottomBannerAd() {
+  const adRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (adRef.current && adRef.current.childNodes.length === 0) {
+      const container = adRef.current;
+      
+      const scriptConf = document.createElement('script');
+      scriptConf.innerHTML = `
+        atOptions = {
+          'key' : 'ae5282f07f3dd22b306e23b3fb3f1ba4',
+          'format' : 'iframe',
+          'height' : 90,
+          'width' : 728,
+          'params' : {}
+        };
+      `;
+      
+      const scriptInvoke = document.createElement('script');
+      scriptInvoke.type = 'text/javascript';
+      scriptInvoke.src = `https://www.highperformanceformat.com/ae5282f07f3dd22b306e23b3fb3f1ba4/invoke.js`;
+      
+      container.appendChild(scriptConf);
+      container.appendChild(scriptInvoke);
+    }
+  }, []);
+
+  return (
+    <div className="mt-12 mb-8 flex flex-col items-center gap-1 overflow-hidden w-full">
+      <p className="text-[7px] font-black uppercase text-primary/20 tracking-widest">Sponsored</p>
+      <div ref={adRef} className="w-full flex justify-center min-h-[90px] overflow-x-auto no-scrollbar" />
     </div>
   );
 }
@@ -352,6 +391,8 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
             })}
           </div>
         )}
+
+        <ShopBottomBannerAd />
       </div>
 
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
