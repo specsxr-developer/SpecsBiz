@@ -15,7 +15,8 @@ import {
   Settings,
   X,
   Maximize2,
-  RefreshCw
+  RefreshCw,
+  ShieldAlert
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -166,6 +167,14 @@ export default function ShopManagerPage() {
                     <Button variant="outline" size="sm" className="bg-white border-emerald-200 text-emerald-700 font-bold rounded-xl" onClick={copyToClipboard} disabled={!user}>
                       <Copy className="w-4 h-4" />
                     </Button>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-xl border border-primary/20">
+                    <ShieldAlert className="w-4 h-4 text-primary shrink-0" />
+                    <p className="text-[9px] font-bold text-primary leading-tight">
+                      {language === 'bn' 
+                        ? 'আপনার লিঙ্কটি এখন প্রাইভেসি শিল্ড দ্বারা সুরক্ষিত। আইডি কেটে কেউ আপনার মেইন অ্যাপে ঢুকতে পারবে না।' 
+                        : 'Your link is now protected by Privacy Shield. No one can access your app by cutting the ID.'}
+                    </p>
                   </div>
                 </div>
 
