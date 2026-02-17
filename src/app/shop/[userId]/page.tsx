@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, use, useEffect, useRef } from "react"
+import { useState, useMemo, use, useEffect } from "react"
 import { 
   Lock, 
   Store, 
@@ -43,104 +43,10 @@ import {
 } from "@/components/ui/dialog"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
 
-/**
- * @fileOverview Top banner ad component for Adsterra integration.
- * Placed above the search box.
- */
-function ShopTopBannerAd() {
-  const adRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && adRef.current && adRef.current.childNodes.length === 0) {
-      const container = adRef.current;
-      
-      const scriptConf = document.createElement('script');
-      scriptConf.innerHTML = `
-        atOptions = {
-          'key' : '44d28b6f7e3567f40fd2e068a8084c0c',
-          'format' : 'iframe',
-          'height' : 60,
-          'width' : 468,
-          'params' : {}
-        };
-      `;
-      
-      const scriptInvoke = document.createElement('script');
-      scriptInvoke.type = 'text/javascript';
-      scriptInvoke.src = `https://www.highperformanceformat.com/44d28b6f7e3567f40fd2e068a8084c0c/invoke.js`;
-      
-      container.appendChild(scriptConf);
-      container.appendChild(scriptInvoke);
-    }
-  }, []);
-
-  return (
-    <div className="mb-8 flex flex-col items-center gap-1 overflow-hidden w-full">
-      <p className="text-[7px] font-black uppercase text-primary/20 tracking-widest">Sponsored</p>
-      <div ref={adRef} className="w-full flex justify-center min-h-[60px] overflow-x-auto no-scrollbar" />
-    </div>
-  );
-}
-
-/**
- * @fileOverview Bottom leaderboard banner ad.
- * Placed below the entire product grid.
- */
-function ShopBottomBannerAd() {
-  const adRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && adRef.current && adRef.current.childNodes.length === 0) {
-      const container = adRef.current;
-      
-      const scriptConf = document.createElement('script');
-      scriptConf.innerHTML = `
-        atOptions = {
-          'key' : 'ae5282f07f3dd22b306e23b3fb3f1ba4',
-          'format' : 'iframe',
-          'height' : 90,
-          'width' : 728,
-          'params' : {}
-        };
-      `;
-      
-      const scriptInvoke = document.createElement('script');
-      scriptInvoke.type = 'text/javascript';
-      scriptInvoke.src = `https://www.highperformanceformat.com/ae5282f07f3dd22b306e23b3fb3f1ba4/invoke.js`;
-      
-      container.appendChild(scriptConf);
-      container.appendChild(scriptInvoke);
-    }
-  }, []);
-
-  return (
-    <div className="mt-12 mb-8 flex flex-col items-center gap-1 overflow-hidden w-full">
-      <p className="text-[7px] font-black uppercase text-primary/20 tracking-widest">Sponsored</p>
-      <div ref={adRef} className="w-full flex justify-center min-h-[90px] overflow-x-auto no-scrollbar" />
-    </div>
-  );
-}
-
 export default function PublicShopPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params)
   const db = useFirestore()
   
-  // POPUNDER AD - HIGHEST PRIORITY
-  // Set immediately on component mount to ensure it's active everywhere
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const scriptId = 'adsterra-popunder-script';
-      // Safety check: ensure it's not double-loaded
-      if (!document.getElementById(scriptId)) {
-        const script = document.createElement('script');
-        script.id = scriptId;
-        script.src = "https://pl28730615.effectivegatecpm.com/52/c3/f7/52c3f78501c6a5e4f66885863b6715df.js";
-        script.async = true;
-        document.body.appendChild(script);
-      }
-    }
-  }, []);
-
   const [code, setCode] = useState("")
   const [isUnlocked, setIsUnlocked] = useState(false)
   const [error, setError] = useState("")
@@ -318,8 +224,6 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
           </Card>
         )}
 
-        <ShopTopBannerAd />
-
         <div className="relative group/search max-w-2xl mx-auto">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search className="w-5 h-5 text-primary opacity-40 group-focus-within/search:opacity-100 group-focus-within/search:text-accent transition-all" />
@@ -397,8 +301,6 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
             })}
           </div>
         )}
-
-        <ShopBottomBannerAd />
       </div>
 
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
