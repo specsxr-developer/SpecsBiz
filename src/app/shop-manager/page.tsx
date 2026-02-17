@@ -131,6 +131,13 @@ export default function ShopManagerPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'new' | 'edit' | 'gallery-new' | 'gallery-edit') => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Firestore Document Limit is 1MB. We should warn or handle large strings.
+    if (file.size > 600 * 1024) {
+      toast({ variant: "destructive", title: "Image too large", description: "Please use images under 600KB for cloud reliability." })
+      return
+    }
+
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64 = reader.result as string
@@ -174,6 +181,7 @@ export default function ShopManagerPage() {
 
   const handleUpdateProduct = () => {
     if (!editingProduct) return
+    // CRITICAL: Explicitly pass the ID to the action to ensure we target the right document
     actions.updateShopProduct(editingProduct.id, {
       ...editingProduct,
       originalPrice: parseFloat(editingProduct.originalPrice) || 0,
@@ -197,7 +205,10 @@ export default function ShopManagerPage() {
   }
 
   const handleImportFromInventory = (p: any) => {
+    // Generate a fresh ID for the web copy to ensure 100% independence
+    const webId = `web-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     actions.addShopProduct({
+      id: webId,
       name: p.name,
       category: p.category || "",
       originalPrice: p.sellingPrice || 0,
@@ -266,7 +277,7 @@ export default function ShopManagerPage() {
                     <div className="p-2 bg-white rounded-xl border border-accent/10 shadow-sm"><Settings2 className="w-6 h-6 text-accent" /></div>
                     <div>
                       <DialogTitle className="text-xl font-black text-primary uppercase tracking-tighter">Shop Administrator</DialogTitle>
-                      <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Full Control Panel (Web Catalog Only)</DialogDescription>
+                      <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Full Control Panel (Independent Web Store)</DialogDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mr-8">

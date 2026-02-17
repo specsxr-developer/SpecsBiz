@@ -8,19 +8,29 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // PRIMARY OWNER ACCESS: Grant full recursive access to the owner's root path
-    // This covers products, shopProducts, shopConfig, etc.
-    match /users/{userId}/{document=**} {
+    // PRIMARY OWNER ACCESS: Grant explicit access to all specific collections
+    // This structure ensures no ambiguity for the Firestore SDK
+    match /users/{userId} {
       allow read, write: if isOwner(userId);
+      
+      match /products/{id} { allow read, write: if isOwner(userId); }
+      match /shopProducts/{id} { allow read, write: if isOwner(userId); }
+      match /shopConfig/{id} { allow read, write: if isOwner(userId); }
+      match /procurements/{id} { allow read, write: if isOwner(userId); }
+      match /customers/{id} { allow read, write: if isOwner(userId); }
+      match /sales/{id} { allow read, write: if isOwner(userId); }
+      match /aiMessages/{id} { allow read, write: if isOwner(userId); }
+      match /advisorMessages/{id} { allow read, write: if isOwner(userId); }
+      match /notes/{id} { allow read, write: if isOwner(userId); }
+      
+      // Nested collections under customers
+      match /customers/{customerId}/bakiRecords/{recordId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // PUBLIC READ ACCESS: Specifically allow anyone to view shop data
     // This ensures customers can see the website without logging in
-    
-    match /users/{userId}/products/{productId} {
-      allow get, list: if true;
-    }
-
     match /users/{userId}/shopProducts/{productId} {
       allow get, list: if true;
     }

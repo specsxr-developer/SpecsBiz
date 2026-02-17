@@ -208,7 +208,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     const id = product.id || `web-${Date.now()}`;
     const data = { ...product, id };
     if (user?.uid && db) {
-      // Use setDocument with merge for reliability
       setDocumentNonBlocking(doc(db, 'users', user.uid, 'shopProducts', id), data, { merge: true });
     } else {
       setLocalShopProducts(prev => {
@@ -221,7 +220,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   const updateShopProduct = useCallback((productId: string, data: any) => {
     if (user?.uid && db) {
-      // Using setDocumentNonBlocking with merge: true is often more robust for base64 strings
       setDocumentNonBlocking(doc(db, 'users', user.uid, 'shopProducts', productId), data, { merge: true });
     } else {
       setLocalShopProducts(prev => {
