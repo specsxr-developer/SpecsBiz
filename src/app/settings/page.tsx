@@ -66,11 +66,11 @@ function MasterDeveloperPanel() {
   const db = useFirestore();
   const { toast } = useToast();
   
-  // Fix: Properly memoize the Firestore query using useMemoFirebase
+  // Fix: Only trigger the query if the user is the master admin to avoid permission errors
   const codesQuery = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || user?.email !== 'specsxr@gmail.com') return null;
     return query(collection(db, 'registrationCodes'), orderBy('createdAt', 'desc'));
-  }, [db]);
+  }, [db, user?.email]);
 
   const { data: codes, isLoading } = useCollection(codesQuery);
 
@@ -302,7 +302,7 @@ export default function SettingsPage() {
 
         {/* Danger Zone */}
         <Card className="border-red-500/50 bg-red-50/50 rounded-[2rem] overflow-hidden">
-          <CardHeader className="bg-red-500/10"><CardTitle className="text-sm font-black text-red-600 uppercase flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {t.dangerZone}</CardTitle></CardHeader>
+          <CardHeader className="bg-red-500/10"><CardTitle className="text-sm font-black text-red-600 uppercase flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {t.dangerZone}</AlertTriangle></CardHeader>
           <CardContent className="p-6">
             <div className="flex justify-between items-center">
               <p className="text-xs font-bold text-red-700">Wipe all data from cloud and local.</p>
