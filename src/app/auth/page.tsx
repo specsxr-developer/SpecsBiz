@@ -7,7 +7,8 @@ import {
   getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  signOut 
+  signOut,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { useUser, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Store, LogIn, LogOut, ShieldCheck, Loader2, MailCheck, ChevronLeft, KeyRound, AlertCircle } from 'lucide-react';
+import { Store, LogIn, LogOut, ShieldCheck, Loader2, MailCheck, ChevronLeft, KeyRound, AlertCircle, HelpCircle } from 'lucide-react';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { sendWelcomeEmail } from '@/actions/send-welcome-email';
 import { sendVerificationCode } from '@/actions/send-verification-code';
@@ -53,7 +54,6 @@ export default function AuthPage() {
           throw new Error("দয়া করে ডেভলপার থেকে পাওয়া এক্সেস কোডটি দিন।");
         }
 
-        // 1. Verify Access Code
         const codeRef = doc(db, 'registrationCodes', accessCode.trim().toUpperCase());
         const codeSnap = await getDoc(codeRef);
 
@@ -66,7 +66,6 @@ export default function AuthPage() {
           throw new Error("এই কোডটি ইতিমধ্যে অন্য কেউ ব্যবহার করেছে।");
         }
 
-        // 2. Send OTP
         const otp = generateOTP();
         setGeneratedOTP(otp);
         
@@ -81,17 +80,41 @@ export default function AuthPage() {
           throw new Error(res.error || "OTP পাঠাতে ব্যর্থ হয়েছে।");
         }
       } else {
-        // Standard Login
         await signInWithEmailAndPassword(auth, email, password);
         toast({ title: "Welcome back", description: "Cloud sync active." });
         router.push('/');
       }
     } catch (error: any) {
+      let message = error.message;
+      if (error.code === 'auth/invalid-credential') {
+        message = "ভুল ইমেইল অথবা পাসওয়ার্ড! দয়া করে সঠিক তথ্য দিন।";
+      } else if (error.code === 'auth/user-not-found') {
+        message = "এই ইমেইলে কোনো একাউন্ট পাওয়া যায়নি।";
+      } else if (error.code === 'auth/wrong-password') {
+        message = "ভুল পাসওয়ার্ড! আবার চেষ্টা করুন।";
+      }
+      
       toast({ 
         variant: "destructive", 
-        title: "Error", 
-        description: error.message || "Authentication failed." 
+        title: "Authentication Error", 
+        description: message 
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ variant: "destructive", title: "Email Required", description: "পাসওয়ার্ড রিসেট করতে আগে আপনার ইমেইলটি লিখুন।" });
+      return;
+    }
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({ title: "Reset Email Sent!", description: "আপনার ইমেইল চেক করুন, পাসওয়ার্ড রিসেট করার লিঙ্ক পাঠানো হয়েছে।" });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: "পাসওয়ার্ড রিসেট লিঙ্ক পাঠানো সম্ভব হয়নি।" });
     } finally {
       setLoading(false);
     }
@@ -106,12 +129,10 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      // 1. Create Firebase Auth Account
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
       const cleanCode = accessCode.trim().toUpperCase();
       
-      // 2. Setup User Profile
       if (db) {
         await setDoc(doc(db, 'users', uid), {
           id: uid,
@@ -122,7 +143,6 @@ export default function AuthPage() {
           createdAt: new Date().toISOString()
         });
 
-        // 3. Mark Code as Used & Active
         await updateDoc(doc(db, 'registrationCodes', cleanCode), {
           isUsed: true,
           userId: uid,
@@ -226,7 +246,18 @@ export default function AuthPage() {
               <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="h-14 rounded-2xl bg-muted/20 border-none font-bold" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase ml-1 opacity-60">Password</Label>
+              <div className="flex justify-between items-center px-1">
+                <Label className="text-[10px] font-black uppercase opacity-60">Password</Label>
+                {!isRegistering && (
+                  <button 
+                    type="button" 
+                    onClick={handleForgotPassword}
+                    className="text-[9px] font-black text-accent uppercase hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
               <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="h-14 rounded-2xl bg-muted/20 border-none font-bold" />
             </div>
 
@@ -251,7 +282,7 @@ export default function AuthPage() {
             </Button>
           </form>
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center flex flex-col gap-4">
             <button onClick={() => setIsRegistering(!isRegistering)} className="text-xs font-black text-accent uppercase tracking-widest hover:underline">
               {isRegistering ? "Already have an account? Login" : "New User? Register with Secret Code"}
             </button>

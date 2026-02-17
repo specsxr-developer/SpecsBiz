@@ -134,7 +134,6 @@ function MasterDeveloperPanel() {
   const handleFinalConfirmDelete = async (code: string, userId: string) => {
     if (!db) return;
     try {
-      // 1. Wipe User's Main Firestore Data (Products, Sales, Customers)
       const subCollections = ['products', 'sales', 'customers', 'procurements', 'aiMessages', 'advisorMessages', 'notes'];
       
       for (const coll of subCollections) {
@@ -144,13 +143,11 @@ function MasterDeveloperPanel() {
         await batch.commit();
       }
       
-      // 2. Delete User Profile
       await deleteDoc(doc(db, 'users', userId));
 
-      // 3. Update Code Status to Deleted
       await updateDoc(doc(db, 'registrationCodes', code), { 
         status: 'deleted',
-        isUsed: true // Keep it as used to prevent re-registration with same code
+        isUsed: true
       });
 
       toast({ title: "Account & Data Permanently Wiped" });
@@ -251,17 +248,19 @@ function MasterDeveloperPanel() {
                     </div>
 
                     {isPendingDel && (
-                      <div className="pl-14 pt-2 flex flex-col gap-2">
-                        <p className="text-[10px] font-black text-red-600 flex items-center gap-1.5 uppercase">
-                          <AlertTriangle className="w-3.5 h-3.5" /> User requested permanent deletion
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" className="h-8 bg-red-600 hover:bg-red-700 text-[9px] font-black uppercase rounded-lg" onClick={() => handleFinalConfirmDelete(c.code, c.userId)}>
-                            <Trash2 className="w-3 h-3 mr-1" /> Confirm Delete & Wipe
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 border-primary text-primary text-[9px] font-black uppercase rounded-lg" onClick={() => handleCancelDelete(c.code)}>
-                            <RotateCcw className="w-3 h-3 mr-1" /> Cancel Delete
-                          </Button>
+                      <div className="pl-14 pt-4 border-t border-red-200 mt-2">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-red-100">
+                          <p className="text-[10px] font-black text-red-600 flex items-center gap-1.5 uppercase mb-3">
+                            <AlertTriangle className="w-4 h-4" /> User requested permanent deletion
+                          </p>
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <Button className="flex-1 bg-red-600 hover:bg-red-700 text-[10px] h-11 font-black uppercase rounded-xl shadow-lg" onClick={() => handleFinalConfirmDelete(c.code, c.userId)}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Confirm & Wipe All Data
+                            </Button>
+                            <Button variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/5 text-[10px] h-11 font-black uppercase rounded-xl" onClick={() => handleCancelDelete(c.code)}>
+                              <RotateCcw className="w-4 h-4 mr-2" /> Cancel Request
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -306,7 +305,6 @@ export default function SettingsPage() {
   const [detectedModel, setDetectedModel] = useState<string | null>(aiModel || null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
-  // Fetch User Profile to check used code for deletion
   const userProfileRef = useMemoFirebase(() => {
     if (!user?.uid || !db) return null;
     return doc(db, 'users', user.uid);
@@ -366,19 +364,16 @@ export default function SettingsPage() {
       const updateData = {
         status: 'pending_deletion',
         deleteRequestedAt: serverTimestamp(),
-        // Always try to attach user data if missing
         userId: user.uid,
         userEmail: user.email || ''
       };
 
-      // USE NON-AWAIT PATTERN FOR FIREBASE MUTATIONS
       updateDoc(codeDocRef, updateData)
         .then(() => {
           toast({ title: "Deletion Request Sent", description: "Account will be wiped in 3 days." });
           setIsDeleteAccOpen(false);
         })
         .catch(async (serverError) => {
-          // Wrap in our special contextual error handler for debugging
           const permissionError = new FirestorePermissionError({
             path: codeDocRef.path,
             operation: 'update',
@@ -405,10 +400,8 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-8">
-        {/* Developer Admin Section */}
         <MasterDeveloperPanel />
 
-        {/* AI Activation */}
         <Card className="border-primary/30 shadow-xl bg-white overflow-hidden rounded-[2.5rem]">
           <div className="bg-primary text-white p-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -442,7 +435,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Language & Data */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="rounded-[2rem]">
             <CardHeader><CardTitle className="text-sm uppercase flex items-center gap-2"><Languages className="w-4 h-4" /> {t.language}</CardTitle></CardHeader>
@@ -465,7 +457,6 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        {/* Danger Zone */}
         <Card className="border-red-500/50 bg-red-50/50 rounded-[2rem] overflow-hidden">
           <CardHeader className="bg-red-500/10"><CardTitle className="text-sm font-black text-red-600 uppercase flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {t.dangerZone}</CardTitle></CardHeader>
           <CardContent className="p-6 space-y-6">
