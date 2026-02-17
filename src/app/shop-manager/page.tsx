@@ -159,10 +159,11 @@ export default function ShopManagerPage() {
   const handleDeleteConfirm = () => {
     if (deletePass === "specsxr") {
       if (deleteId) {
+        // This only deletes from shopProducts collection
         actions.deleteShopProduct(deleteId)
         setDeleteId(null)
         setDeletePass("")
-        toast({ title: "Removed from shop catalog" })
+        toast({ title: "Removed from website only" })
       }
     } else {
       toast({ variant: "destructive", title: "Invalid Key" })
@@ -185,6 +186,13 @@ export default function ShopManagerPage() {
   const filteredProducts = useMemo(() => {
     return shopProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
   }, [shopProducts, search])
+
+  // Filter products that are NOT already in the web catalog to prevent duplicate imports
+  const importableProducts = useMemo(() => {
+    return inventoryProducts.filter(ip => 
+      !shopProducts.some(sp => sp.name.toLowerCase().trim() === ip.name.toLowerCase().trim())
+    )
+  }, [inventoryProducts, shopProducts])
 
   const shopUrl = user ? `${window.location.origin}/shop/${user.uid}` : ""
 
@@ -230,7 +238,7 @@ export default function ShopManagerPage() {
                     <div className="p-2 bg-white rounded-xl border border-accent/10 shadow-sm"><Settings2 className="w-6 h-6 text-accent" /></div>
                     <div>
                       <DialogTitle className="text-xl font-black text-primary uppercase tracking-tighter">Shop Administrator</DialogTitle>
-                      <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Full Control Panel</DialogDescription>
+                      <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Full Control Panel (Web Catalog Only)</DialogDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mr-8">
@@ -246,7 +254,7 @@ export default function ShopManagerPage() {
                 <TabsList className="w-full justify-start rounded-none bg-muted/30 px-6 h-12 border-b overflow-x-auto no-scrollbar">
                   <TabsTrigger value="general" className="gap-2 text-[10px] font-black uppercase tracking-widest"><Settings className="w-3.5 h-3.5" /> General</TabsTrigger>
                   <TabsTrigger value="content" className="gap-2 text-[10px] font-black uppercase tracking-widest"><LayoutTemplate className="w-3.5 h-3.5" /> Customization</TabsTrigger>
-                  <TabsTrigger value="products" className="gap-2 text-[10px] font-black uppercase tracking-widest"><PackageCheck className="w-3.5 h-3.5" /> Inventory Control</TabsTrigger>
+                  <TabsTrigger value="products" className="gap-2 text-[10px] font-black uppercase tracking-widest"><PackageCheck className="w-3.5 h-3.5" /> Web Inventory Control</TabsTrigger>
                 </TabsList>
 
                 <div className="p-6 md:p-8 bg-white max-h-[65vh] overflow-y-auto">
@@ -303,7 +311,7 @@ export default function ShopManagerPage() {
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b pb-4">
                       <div>
                         <h4 className="text-xs font-black uppercase text-primary">Web Catalog Manager</h4>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Separate from main inventory</p>
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Operations here only affect the website</p>
                       </div>
                       <div className="flex gap-2 w-full md:w-auto">
                         <div className="relative flex-1 md:w-64">
@@ -427,26 +435,32 @@ export default function ShopManagerPage() {
         </div>
       )}
 
-      {/* A to Z: Import from Inventory Dialog */}
+      {/* A to Z: Import from Inventory Dialog - Updated with Duplicate Prevention Filter */}
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-accent/5 border-b">
             <DialogTitle className="text-primary font-black uppercase flex items-center gap-2">
               <Import className="w-5 h-5" /> Import from Inventory
             </DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase">Quickly add existing items to web catalog</DialogDescription>
+            <DialogDescription className="text-[10px] font-bold uppercase">Showing only items not in web catalog</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] p-4">
             <div className="grid gap-2">
-              {inventoryProducts.map(p => (
-                <div key={p.id} className="flex items-center justify-between p-3 border rounded-xl hover:bg-muted/10 transition-all">
-                  <div className="min-w-0">
-                    <p className="text-xs font-black truncate">{p.name}</p>
-                    <p className="text-[9px] text-muted-foreground uppercase">{p.category || 'General'} | {currency}{p.sellingPrice}</p>
-                  </div>
-                  <Button size="sm" variant="ghost" className="h-8 text-accent font-bold" onClick={() => handleImportFromInventory(p)}>Import</Button>
+              {importableProducts.length === 0 ? (
+                <div className="py-10 text-center text-xs font-bold text-muted-foreground italic">
+                  All inventory items are already in your web catalog.
                 </div>
-              ))}
+              ) : (
+                importableProducts.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-3 border rounded-xl hover:bg-muted/10 transition-all">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black truncate">{p.name}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase">{p.category || 'General'} | {currency}{p.sellingPrice}</p>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-8 text-accent font-bold" onClick={() => handleImportFromInventory(p)}>Import</Button>
+                  </div>
+                ))
+              )}
             </div>
           </ScrollArea>
           <DialogFooter className="p-4 bg-muted/20 border-t">
@@ -538,12 +552,14 @@ export default function ShopManagerPage() {
           <DialogHeader>
             <div className="flex items-center gap-3 text-destructive mb-2">
               <div className="p-2 bg-red-50 rounded-xl"><Lock className="w-6 h-6" /></div>
-              <DialogTitle className="font-black uppercase tracking-tighter">Remove from Web</DialogTitle>
+              <DialogTitle className="font-black uppercase tracking-tighter">Remove from Web Only</DialogTitle>
             </div>
-            <DialogDescription className="text-xs">Enter 'specsxr' to remove this item from your online shop catalog only.</DialogDescription>
+            <DialogDescription className="text-xs">
+              Confirm 'specsxr' to remove this item from your online catalog. <b>This will NOT delete the item from your inventory.</b>
+            </DialogDescription>
           </DialogHeader>
           <div className="py-4"><Input type="password" placeholder="••••••••" className="h-14 text-center text-2xl font-black rounded-2xl" value={deletePass} onChange={e => setDeletePass(e.target.value)} /></div>
-          <DialogFooter><Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleDeleteConfirm}>Authorize & Remove</Button></DialogFooter>
+          <DialogFooter><Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleDeleteConfirm}>Authorize & Remove from Web</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
