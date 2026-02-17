@@ -21,6 +21,7 @@
         "unit": { "type": "string" },
         "category": { "type": "string" },
         "imageUrl": { "type": "string", "description": "Base64 data URI of the main product photo" },
+        "showInShop": { "type": "boolean", "default": true },
         "reviewImages": { 
           "type": "array", 
           "items": { "type": "string" },

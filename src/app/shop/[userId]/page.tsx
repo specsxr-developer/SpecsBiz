@@ -5,14 +5,13 @@ import { useState, useMemo, use } from "react"
 import { 
   Lock, 
   Store, 
-  ChevronRight, 
   ShoppingBag, 
   Tag, 
   Package, 
   AlertCircle,
-  Clock,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Quote
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -45,7 +44,13 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
     return query(collection(db, 'users', userId, 'products'), orderBy('name'));
   }, [db, userId]);
 
-  const { data: products, isLoading: productsLoading } = useCollection(productsQuery);
+  const { data: allProducts, isLoading: productsLoading } = useCollection(productsQuery);
+
+  // Filter products that are marked as visible for the shop
+  const visibleProducts = useMemo(() => {
+    if (!allProducts) return [];
+    return allProducts.filter(p => p.showInShop !== false);
+  }, [allProducts]);
 
   const handleUnlock = () => {
     if (config?.accessCode && code === config.accessCode) {
@@ -146,23 +151,35 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
               <div className="p-2 bg-accent rounded-xl shadow-lg"><Store className="w-6 h-6 text-white" /></div>
               <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter">{config.shopName || "Our Shop"}</h1>
             </div>
-            <p className="text-sm font-bold text-accent uppercase tracking-[0.3em] opacity-80">Welcome to our Digital Gallery</p>
+            <p className="text-sm font-bold text-accent uppercase tracking-[0.3em] opacity-80">Online Digital Gallery</p>
           </div>
           <Badge className="bg-white/10 backdrop-blur-md border border-white/20 h-10 px-6 text-xs font-black uppercase tracking-widest rounded-full">
-            {products?.length || 0} Products Live
+            {visibleProducts.length} Items Available
           </Badge>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-6 -mt-8 space-y-8 relative z-20">
+        {/* Welcome Message Section */}
+        {config.welcomeMsg && (
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden animate-in slide-in-from-top-4 duration-700">
+            <CardContent className="p-6 md:p-8 flex gap-4">
+              <Quote className="w-8 h-8 text-accent opacity-20 shrink-0" />
+              <p className="text-sm md:text-lg font-medium text-primary leading-relaxed italic">
+                {config.welcomeMsg}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {productsLoading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
             <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
             <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Updating Catalog...</p>
           </div>
-        ) : products && products.length > 0 ? (
+        ) : visibleProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((p) => (
+            {visibleProducts.map((p) => (
               <Card key={p.id} className="overflow-hidden border-none shadow-xl rounded-[2.5rem] bg-white hover:shadow-2xl transition-all group active:scale-[0.98]">
                 <div className="relative aspect-square overflow-hidden bg-muted">
                   {p.imageUrl ? (
@@ -180,13 +197,13 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
                   <div className="space-y-1">
                     <h3 className="text-xl font-black text-primary leading-tight truncate">{p.name}</h3>
                     <p className="text-[10px] font-bold text-accent uppercase tracking-widest flex items-center gap-1">
-                      <Tag className="w-3 h-3" /> Available in {p.unit || 'pcs'}
+                      <Tag className="w-3 h-3" /> Unit: {p.unit || 'pcs'}
                     </p>
                   </div>
                   
                   <div className="flex items-center justify-between pt-2 border-t border-black/5">
                     <div className="space-y-0.5">
-                      <p className="text-[9px] font-black uppercase text-muted-foreground opacity-50">Best Price</p>
+                      <p className="text-[9px] font-black uppercase text-muted-foreground opacity-50">Retail Price</p>
                       <p className="text-2xl font-black text-primary">৳{p.sellingPrice?.toLocaleString()}</p>
                     </div>
                     <div className={cn(
@@ -204,8 +221,8 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
           <div className="py-32 text-center space-y-6 bg-white/50 backdrop-blur-sm rounded-[3rem] border border-white shadow-xl">
             <div className="p-6 bg-muted rounded-full w-fit mx-auto opacity-20"><Package className="w-16 h-16" /></div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-black text-primary uppercase">No Products Found</h3>
-              <p className="text-sm font-medium text-muted-foreground opacity-60">The owner hasn't added any products to the shop yet.</p>
+              <h3 className="text-2xl font-black text-primary uppercase">No Featured Products</h3>
+              <p className="text-sm font-medium text-muted-foreground opacity-60">The owner hasn't enabled any products for this digital catalog yet.</p>
             </div>
           </div>
         )}
@@ -218,7 +235,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
           <span className="h-px w-8 bg-primary/10" />
         </div>
         <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] opacity-40">
-          Created with SpecsBiz Smart Manager
+          Digital Shop Powered by SpecsBiz
         </p>
       </footer>
     </div>

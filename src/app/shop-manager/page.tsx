@@ -7,7 +7,6 @@ import {
   Lock, 
   Settings2, 
   Copy, 
-  ExternalLink, 
   CheckCircle2, 
   Store,
   Share2,
@@ -16,13 +15,20 @@ import {
   X,
   Maximize2,
   RefreshCw,
-  ShieldAlert
+  ShieldAlert,
+  LayoutTemplate,
+  PackageCheck,
+  Eye,
+  EyeOff,
+  MessageSquareText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useBusinessData } from "@/hooks/use-business-data"
 import { useUser } from "@/firebase"
 import { translations } from "@/lib/translations"
@@ -40,11 +46,12 @@ import {
 export default function ShopManagerPage() {
   const { user } = useUser()
   const { toast } = useToast()
-  const { shopConfig, actions, language } = useBusinessData()
+  const { shopConfig, products, actions, language } = useBusinessData()
   const t = translations[language]
 
   const [shopName, setShopName] = useState("")
   const [accessCode, setAccessCode] = useState("")
+  const [welcomeMsg, setWelcomeMsg] = useState("")
   const [isActive, setIsActive] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -53,6 +60,7 @@ export default function ShopManagerPage() {
     if (shopConfig) {
       setShopName(shopConfig.shopName || "")
       setAccessCode(shopConfig.accessCode || "")
+      setWelcomeMsg(shopConfig.welcomeMsg || "")
       setIsActive(shopConfig.isActive || false)
     }
   }, [shopConfig])
@@ -65,10 +73,16 @@ export default function ShopManagerPage() {
     actions.updateShopConfig({
       shopName,
       accessCode,
+      welcomeMsg,
       isActive
     })
-    toast({ title: "Settings Saved" })
-    setRefreshKey(prev => prev + 1) // Refresh iframe preview
+    toast({ title: "Shop Configuration Updated" })
+    setRefreshKey(prev => prev + 1)
+  }
+
+  const toggleProductVisibility = (productId: string, currentStatus: boolean) => {
+    actions.updateProduct(productId, { showInShop: !currentStatus })
+    toast({ title: currentStatus ? "Hidden from Shop" : "Visible in Shop" })
   }
 
   const shopUrl = user ? `${window.location.origin}/shop/${user.uid}` : ""
@@ -88,7 +102,7 @@ export default function ShopManagerPage() {
           </div>
           <div>
             <h2 className="text-xl md:text-2xl font-black text-primary uppercase tracking-tighter">{t.shopManager}</h2>
-            <p className="text-[9px] font-bold text-accent uppercase tracking-[0.3em]">Live Digital Catalog Preview</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-[0.3em]">Administrator Dashboard</p>
           </div>
         </div>
 
@@ -105,17 +119,17 @@ export default function ShopManagerPage() {
           <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
             <DialogTrigger asChild>
               <Button className="bg-accent hover:bg-accent/90 h-12 px-6 rounded-2xl shadow-xl font-black uppercase gap-2 transition-all active:scale-95">
-                <Settings className="w-5 h-5" /> {language === 'bn' ? 'সেটিংস' : 'Settings'}
+                <Settings className="w-5 h-5" /> {language === 'bn' ? 'অ্যাডমিন সেটিংস' : 'Admin Settings'}
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] sm:max-w-[600px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
+            <DialogContent className="w-[95vw] sm:max-w-[750px] rounded-[2.5rem] p-0 overflow-hidden border-accent/20 shadow-2xl">
               <DialogHeader className="p-6 bg-accent/5 border-b shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white rounded-xl border border-accent/10 shadow-sm"><Settings2 className="w-6 h-6 text-accent" /></div>
                     <div>
-                      <DialogTitle className="text-xl font-black text-primary uppercase tracking-tighter">{t.shopSettings}</DialogTitle>
-                      <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Manage your online presence</DialogDescription>
+                      <DialogTitle className="text-xl font-black text-primary uppercase tracking-tighter">Shop Administrator</DialogTitle>
+                      <DialogDescription className="text-[10px] font-bold uppercase opacity-60">Full Control Panel</DialogDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mr-8">
@@ -127,65 +141,104 @@ export default function ShopManagerPage() {
                 </div>
               </DialogHeader>
               
-              <div className="p-8 space-y-8 bg-white">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">{t.shopName}</Label>
-                    <div className="relative">
-                      <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent opacity-40" />
-                      <Input 
-                        value={shopName} 
-                        onChange={e => setShopName(e.target.value)} 
-                        placeholder="e.g. Rohim General Store" 
-                        className="h-14 pl-12 rounded-2xl bg-muted/20 border-none font-bold text-primary focus-visible:ring-accent"
-                      />
+              <Tabs defaultValue="general" className="w-full">
+                <TabsList className="w-full justify-start rounded-none bg-muted/30 px-6 h-12 border-b">
+                  <TabsTrigger value="general" className="gap-2 text-[10px] font-black uppercase tracking-widest"><Settings className="w-3.5 h-3.5" /> General</TabsTrigger>
+                  <TabsTrigger value="content" className="gap-2 text-[10px] font-black uppercase tracking-widest"><LayoutTemplate className="w-3.5 h-3.5" /> Customization</TabsTrigger>
+                  <TabsTrigger value="products" className="gap-2 text-[10px] font-black uppercase tracking-widest"><PackageCheck className="w-3.5 h-3.5" /> Inventory Control</TabsTrigger>
+                </TabsList>
+
+                <div className="p-8 bg-white max-h-[60vh] overflow-y-auto">
+                  <TabsContent value="general" className="space-y-8 mt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">{t.shopName}</Label>
+                        <Input value={shopName} onChange={e => setShopName(e.target.value)} className="h-14 rounded-2xl bg-muted/20 border-none font-bold text-primary" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">{t.shopCode}</Label>
+                        <Input value={accessCode} onChange={e => setAccessCode(e.target.value)} className="h-14 rounded-2xl bg-muted/20 border-none font-bold text-primary" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">{t.shopCode}</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-accent opacity-40" />
-                      <Input 
-                        value={accessCode} 
-                        onChange={e => setAccessCode(e.target.value)} 
-                        placeholder="e.g. 1234" 
-                        className="h-14 pl-12 rounded-2xl bg-muted/20 border-none font-bold text-primary focus-visible:ring-accent"
-                      />
+
+                    <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-[1.5rem] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Share2 className="w-5 h-5 text-emerald-600" />
+                        <h4 className="text-xs font-black uppercase text-emerald-900">{t.shareLink}</h4>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 bg-white border border-emerald-200 p-3 rounded-xl truncate text-[10px] font-mono text-emerald-800 shadow-inner">
+                          {shopUrl || 'Login required'}
+                        </div>
+                        <Button variant="outline" size="sm" className="bg-white border-emerald-200 text-emerald-700 font-bold rounded-xl" onClick={copyToClipboard} disabled={!user}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  </TabsContent>
+
+                  <TabsContent value="content" className="space-y-6 mt-0">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1 flex items-center gap-2">
+                        <MessageSquareText className="w-3.5 h-3.5 text-accent" /> Custom Welcome Message
+                      </Label>
+                      <textarea 
+                        value={welcomeMsg} 
+                        onChange={e => setWelcomeMsg(e.target.value)}
+                        placeholder="Welcome to our shop! Feel free to explore our collection..."
+                        className="w-full min-h-[120px] p-4 rounded-2xl bg-muted/20 border-none font-medium text-sm text-primary focus:ring-2 focus:ring-accent outline-none"
+                      />
+                      <p className="text-[9px] font-bold text-muted-foreground italic px-1">This message will appear at the top of your shop gallery.</p>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="products" className="space-y-4 mt-0">
+                    <div className="flex items-center justify-between mb-4 border-b pb-2">
+                      <h4 className="text-xs font-black uppercase text-primary">Web Catalog Management</h4>
+                      <Badge variant="outline" className="text-[9px] font-black">{products.length} Products</Badge>
+                    </div>
+                    <ScrollArea className="h-[300px] pr-4">
+                      <div className="grid gap-3">
+                        {products.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between p-3 bg-muted/10 rounded-xl border border-black/5 hover:bg-muted/20 transition-all">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-white overflow-hidden border">
+                                {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-accent/5 flex items-center justify-center text-[8px] font-bold">N/A</div>}
+                              </div>
+                              <div>
+                                <p className="text-[11px] font-black text-primary leading-none mb-1">{p.name}</p>
+                                <p className="text-[9px] font-bold text-accent uppercase">{p.category || 'General'}</p>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className={cn(
+                                "h-8 rounded-lg font-black text-[9px] uppercase gap-2 transition-all",
+                                p.showInShop !== false ? "text-green-600 bg-green-50" : "text-muted-foreground bg-muted/50"
+                              )}
+                              onClick={() => toggleProductVisibility(p.id, p.showInShop !== false)}
+                            >
+                              {p.showInShop !== false ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                              {p.showInShop !== false ? "Visible" : "Hidden"}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
                 </div>
 
-                <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-[1.5rem] space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Share2 className="w-5 h-5 text-emerald-600" />
-                    <h4 className="text-xs font-black uppercase text-emerald-900">{t.shareLink}</h4>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="flex-1 bg-white border border-emerald-200 p-3 rounded-xl truncate text-[10px] font-mono text-emerald-800 shadow-inner">
-                      {shopUrl || 'Login required for link'}
-                    </div>
-                    <Button variant="outline" size="sm" className="bg-white border-emerald-200 text-emerald-700 font-bold rounded-xl" onClick={copyToClipboard} disabled={!user}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-xl border border-primary/20">
-                    <ShieldAlert className="w-4 h-4 text-primary shrink-0" />
-                    <p className="text-[9px] font-bold text-primary leading-tight">
-                      {language === 'bn' 
-                        ? 'আপনার লিঙ্কটি এখন প্রাইভেসি শিল্ড দ্বারা সুরক্ষিত। আইডি কেটে কেউ আপনার মেইন অ্যাপে ঢুকতে পারবে না।' 
-                        : 'Your link is now protected by Privacy Shield. No one can access your app by cutting the ID.'}
-                    </p>
-                  </div>
+                <div className="p-6 bg-muted/20 border-t">
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={!user}
+                    className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase shadow-xl transition-all active:scale-95 gap-2"
+                  >
+                    <CheckCircle2 className="w-5 h-5" /> Deploy All Changes
+                  </Button>
                 </div>
-
-                <Button 
-                  onClick={handleSave} 
-                  disabled={!user}
-                  className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-black uppercase shadow-xl transition-all active:scale-95 gap-2"
-                >
-                  <CheckCircle2 className="w-5 h-5" /> Save Configuration
-                </Button>
-              </div>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>
@@ -230,7 +283,7 @@ export default function ShopManagerPage() {
                   আপনার শপটি বর্তমানে বন্ধ আছে। সেটিংস থেকে <b>Active</b> করে সেভ করুন এখানে প্রিভিউ দেখার জন্য।
                 </p>
                 <Button variant="outline" className="mt-4 border-accent text-accent rounded-xl font-bold" onClick={() => setIsSettingsOpen(true)}>
-                  Open Settings
+                  Open Admin Settings
                 </Button>
               </div>
             </div>
