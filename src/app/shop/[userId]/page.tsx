@@ -99,7 +99,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const script = document.createElement('script');
-      script.src = "https://pl28726334.effectivegatecpm.com/52/c3/f7/52c3f78501c6a5e4f66885863b6715df.js";
+      script.src = "https://pl28730615.effectivegatecpm.com/52/c3/f7/52c3f78501c6a5e4f66885863b6715df.js";
       script.async = true;
       document.body.appendChild(script);
     }
@@ -263,11 +263,11 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-6 -mt-8 space-y-8 relative z-20">
+      <div className="max-w-6xl mx-auto p-4 md:p-6 -mt-8 space-y-8 relative z-20">
         {config.welcomeMsg && (
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
-            <CardContent className="p-6 md:p-8 flex gap-4">
-              <Quote className="w-8 h-8 text-accent opacity-20 shrink-0" />
+            <CardContent className="p-4 md:p-8 flex gap-4">
+              <Quote className="w-6 h-6 md:w-8 md:h-8 text-accent opacity-20 shrink-0" />
               <p className="text-sm md:text-lg font-medium text-primary leading-relaxed italic">{config.welcomeMsg}</p>
             </CardContent>
           </Card>
@@ -281,7 +281,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
           </div>
           <Input 
             placeholder="Search products..."
-            className="h-14 pl-12 pr-4 rounded-2xl border-none bg-white shadow-lg text-lg font-medium text-primary placeholder:text-primary/30 focus-visible:ring-2 focus-visible:ring-accent transition-all"
+            className="h-12 md:h-14 pl-12 pr-4 rounded-2xl border-none bg-white shadow-lg text-base md:text-lg font-medium text-primary placeholder:text-primary/30 focus-visible:ring-2 focus-visible:ring-accent transition-all"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -311,36 +311,40 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {visibleProducts.map((p) => {
               const hasDiscount = p.originalPrice > p.sellingPrice;
               const discountPercent = hasDiscount ? Math.round(((p.originalPrice - p.sellingPrice) / p.originalPrice) * 100) : 0;
               
               return (
-                <Card key={p.id} className="overflow-hidden border-none shadow-xl rounded-[2.5rem] bg-white hover:shadow-2xl transition-all group active:scale-[0.98] flex flex-col h-full">
+                <Card key={p.id} className="overflow-hidden border-none shadow-md hover:shadow-xl transition-all group active:scale-[0.98] flex flex-col h-full bg-white rounded-2xl md:rounded-[2.5rem]">
                   <div className="relative aspect-square overflow-hidden bg-muted">
                     {p.imageUrl ? (
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground opacity-20"><Package className="w-16 h-16" /></div>
+                      <div className="flex items-center justify-center h-full text-muted-foreground opacity-20"><Package className="w-8 h-8 md:w-16 md:h-16" /></div>
                     )}
-                    <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
-                      <Badge className="bg-primary/80 backdrop-blur-md border-none text-[10px] font-black uppercase h-7 px-4 shadow-xl">{p.category || 'General'}</Badge>
-                      {hasDiscount && <Badge className="bg-red-500 text-white border-none text-[10px] font-black h-7 px-3 shadow-xl animate-pulse">{discountPercent}% OFF</Badge>}
+                    <div className="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col gap-1 md:gap-2 items-end">
+                      <Badge className="bg-primary/80 backdrop-blur-md border-none text-[7px] md:text-[10px] font-black uppercase h-5 md:h-7 px-2 md:px-4 shadow-lg">{p.category || 'General'}</Badge>
+                      {hasDiscount && <Badge className="bg-red-500 text-white border-none text-[7px] md:text-[10px] font-black h-5 md:h-7 px-2 md:px-3 shadow-lg animate-pulse">{discountPercent}% OFF</Badge>}
                     </div>
                   </div>
-                  <CardContent className="p-6 md:p-8 space-y-4 flex-1 flex flex-col justify-between">
+                  <CardContent className="p-3 md:p-6 space-y-2 md:space-y-4 flex-1 flex flex-col justify-between">
                     <div className="space-y-1">
-                      <h3 className="text-xl font-black text-primary leading-tight truncate">{p.name}</h3>
-                      <p className="text-[10px] font-bold text-accent uppercase tracking-widest flex items-center gap-1"><Tag className="w-3 h-3" /> Unit: {p.unit || 'pcs'}</p>
+                      <h3 className="text-xs md:text-lg font-black text-primary leading-tight truncate">{p.name}</h3>
+                      <p className="text-[8px] md:text-[10px] font-bold text-accent uppercase tracking-widest flex items-center gap-1"><Tag className="w-2 h-2 md:w-3 md:h-3" /> {p.unit || 'pcs'}</p>
                     </div>
                     
-                    <div className="pt-4 border-t border-black/5 flex items-center justify-between gap-4">
-                      <div className="space-y-0.5">
-                        {hasDiscount && <p className="text-[10px] font-black text-red-500 line-through opacity-60">৳{p.originalPrice?.toLocaleString()}</p>}
-                        <p className="text-2xl font-black text-primary">৳{p.sellingPrice?.toLocaleString()}</p>
+                    <div className="pt-2 md:pt-4 border-t border-black/5 flex flex-col gap-2">
+                      <div className="flex items-end justify-between">
+                        <div className="space-y-0">
+                          {hasDiscount && <p className="text-[8px] md:text-[10px] font-black text-red-500 line-through opacity-60">৳{p.originalPrice?.toLocaleString()}</p>}
+                          <p className="text-sm md:text-2xl font-black text-primary">৳{p.sellingPrice?.toLocaleString()}</p>
+                        </div>
                       </div>
-                      <Button onClick={() => setSelectedProduct(p)} variant="outline" className="h-12 px-6 rounded-2xl border-accent text-accent font-black uppercase text-[10px] tracking-widest hover:bg-accent hover:text-white transition-all gap-2">View Details <ChevronRight className="w-4 h-4" /></Button>
+                      <Button onClick={() => setSelectedProduct(p)} variant="outline" className="w-full h-8 md:h-12 rounded-xl md:rounded-2xl border-accent text-accent font-black uppercase text-[8px] md:text-[10px] tracking-widest hover:bg-accent hover:text-white transition-all gap-1 md:gap-2">
+                        Details <ChevronRight className="w-3 h-3" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -351,7 +355,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
       </div>
 
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto rounded-[3rem] p-0 border-none shadow-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto rounded-[2rem] md:rounded-[3rem] p-0 border-none shadow-2xl">
           {selectedProduct && (
             <>
               <div className="sr-only">
@@ -361,9 +365,9 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
 
               <div className="relative">
                 <div className="grid grid-cols-1 md:grid-cols-2">
-                  <div className="space-y-4 bg-muted/30 p-6 md:p-8">
+                  <div className="space-y-4 bg-muted/30 p-4 md:p-8">
                     <div 
-                      className="aspect-square rounded-[2rem] overflow-hidden shadow-2xl bg-white cursor-zoom-in group/main relative"
+                      className="aspect-square rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl bg-white cursor-zoom-in group/main relative"
                       onClick={() => selectedProduct.imageUrl && setZoomImage(selectedProduct.imageUrl)}
                     >
                       {selectedProduct.imageUrl ? (
@@ -394,19 +398,19 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
                     )}
                   </div>
                   
-                  <div className="p-8 md:p-10 space-y-8 flex flex-col justify-center">
+                  <div className="p-6 md:p-10 space-y-6 md:space-y-8 flex flex-col justify-center">
                     <div className="space-y-2">
                       <Badge className="bg-accent/10 text-accent border-none text-[9px] font-black uppercase h-6 px-3">{selectedProduct.category || 'General'}</Badge>
-                      <h2 className="text-3xl font-black text-primary leading-tight">{selectedProduct.name}</h2>
+                      <h2 className="text-xl md:text-3xl font-black text-primary leading-tight">{selectedProduct.name}</h2>
                       <p className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-2"><Package className="w-4 h-4 text-accent" /> Quantity: {selectedProduct.unit || 'pcs'}</p>
                     </div>
 
-                    <div className="bg-primary/5 p-6 rounded-[2rem] border border-primary/10">
+                    <div className="bg-primary/5 p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-primary/10">
                       <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Our Best Price</p>
                       <div className="flex items-center gap-4">
-                        <span className="text-4xl font-black text-primary">৳{selectedProduct.sellingPrice?.toLocaleString()}</span>
+                        <span className="text-2xl md:text-4xl font-black text-primary">৳{selectedProduct.sellingPrice?.toLocaleString()}</span>
                         {selectedProduct.originalPrice > selectedProduct.sellingPrice && (
-                          <span className="text-lg font-black text-red-500 line-through opacity-40">৳{selectedProduct.originalPrice?.toLocaleString()}</span>
+                          <span className="text-sm md:text-lg font-black text-red-500 line-through opacity-40">৳{selectedProduct.originalPrice?.toLocaleString()}</span>
                         )}
                       </div>
                     </div>
@@ -418,23 +422,23 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
 
                     <div className="flex flex-col gap-3">
                       <div className={cn(
-                        "w-full h-12 rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-[0.2em] shadow-sm border",
+                        "w-full h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-[0.2em] shadow-sm border",
                         selectedProduct.stockStatus === 'in_stock' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-red-50 text-red-600 border-red-100"
                       )}>
-                        {selectedProduct.stockStatus === 'in_stock' ? 'In Stock Now' : 'Currently Unavailable'}
+                        {selectedProduct.stockStatus === 'in_stock' ? 'In Stock' : 'Unavailable'}
                       </div>
                       
                       <Button 
                         onClick={() => handleWhatsAppOrder(selectedProduct)}
-                        className="w-full h-16 bg-green-600 hover:bg-green-700 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-sm shadow-xl transition-all active:scale-95"
+                        className="w-full h-12 md:h-16 bg-green-600 hover:bg-green-700 text-white rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 font-black uppercase text-sm shadow-xl transition-all active:scale-95"
                       >
-                        <MessageCircle className="w-6 h-6 fill-white text-green-600" />
+                        <MessageCircle className="w-5 h-5 md:w-6 md:h-6 fill-white text-green-600" />
                         Order via WhatsApp
                       </Button>
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 h-10 w-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl hover:bg-red-500 hover:text-white transition-all"><X className="w-6 h-6" /></button>
+                <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 md:top-6 md:right-6 h-8 w-8 md:h-10 md:w-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl hover:bg-red-500 hover:text-white transition-all"><X className="w-5 h-5" /></button>
               </div>
             </>
           )}
@@ -442,7 +446,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
       </Dialog>
 
       <Dialog open={!!zoomImage} onOpenChange={(open) => !open && setZoomImage(null)}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-black/90 backdrop-blur-xl shadow-none flex items-center justify-center overflow-hidden rounded-3xl">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-none bg-black/90 backdrop-blur-xl shadow-none flex items-center justify-center overflow-hidden rounded-2xl md:rounded-3xl">
           <div className="sr-only">
             <DialogTitle>Image Preview</DialogTitle>
             <DialogDescription>Full screen view of product photo</DialogDescription>
