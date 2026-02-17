@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Store, LogIn, LogOut, ShieldCheck, Loader2, UserPlus } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
+import { sendWelcomeEmail } from '@/actions/send-welcome-email';
 
 export default function AuthPage() {
   const { user, isUserLoading } = useUser();
@@ -49,6 +50,9 @@ export default function AuthPage() {
             createdAt: new Date().toISOString()
           });
         }
+        
+        // Send Official Welcome Email (Non-blocking background call)
+        sendWelcomeEmail(email).catch(err => console.error("Welcome email failed", err));
         
         toast({ 
           title: "Account Created!", 

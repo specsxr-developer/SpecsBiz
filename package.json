@@ -84,12 +84,14 @@
     "zod": "^3.24.2",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
-    "buffer": "^6.0.3"
+    "buffer": "^6.0.3",
+    "nodemailer": "^6.9.16"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
+    "@types/nodemailer": "^6.4.17",
     "electron": "^34.0.0",
     "electron-builder": "^25.1.8",
     "genkit-cli": "latest",
