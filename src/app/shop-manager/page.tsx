@@ -15,7 +15,6 @@ import {
   X,
   Maximize2,
   RefreshCw,
-  ShieldAlert,
   LayoutTemplate,
   PackageCheck,
   Eye,
@@ -30,7 +29,10 @@ import {
   Tag,
   DollarSign,
   Package,
-  Import
+  Import,
+  Percent,
+  PlusCircle,
+  FileText
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -87,9 +89,12 @@ export default function ShopManagerPage() {
   const [newProduct, setNewProduct] = useState({
     name: "",
     category: "",
+    originalPrice: "",
     sellingPrice: "",
     unit: "pcs",
     imageUrl: "",
+    galleryImages: [] as string[],
+    description: "",
     isVisible: true,
     stockStatus: "in_stock"
   })
@@ -123,25 +128,46 @@ export default function ShopManagerPage() {
     toast({ title: currentStatus ? "Hidden from Shop" : "Visible in Shop" })
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'new' | 'edit') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'new' | 'edit' | 'gallery-new' | 'gallery-edit') => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64 = reader.result as string
       if (type === 'new') setNewProduct(prev => ({ ...prev, imageUrl: base64 }))
-      else setEditingProduct((prev: any) => ({ ...prev, imageUrl: base64 }))
+      else if (type === 'edit') setEditingProduct((prev: any) => ({ ...prev, imageUrl: base64 }))
+      else if (type === 'gallery-new') {
+        setNewProduct(prev => ({ ...prev, galleryImages: [...prev.galleryImages, base64].slice(0, 5) }))
+      }
+      else if (type === 'gallery-edit') {
+        setEditingProduct((prev: any) => ({ ...prev, galleryImages: [...(prev.galleryImages || []), base64].slice(0, 5) }))
+      }
     }
     reader.readAsDataURL(file)
+  }
+
+  const removeGalleryImage = (idx: number, isEdit: boolean) => {
+    if (isEdit) {
+      setEditingProduct((prev: any) => ({
+        ...prev,
+        galleryImages: prev.galleryImages.filter((_: any, i: number) => i !== idx)
+      }))
+    } else {
+      setNewProduct(prev => ({
+        ...prev,
+        galleryImages: prev.galleryImages.filter((_, i) => i !== idx)
+      }))
+    }
   }
 
   const handleAddProduct = () => {
     if (!newProduct.name.trim()) return
     actions.addShopProduct({
       ...newProduct,
+      originalPrice: parseFloat(newProduct.originalPrice) || 0,
       sellingPrice: parseFloat(newProduct.sellingPrice) || 0
     })
-    setNewProduct({ name: "", category: "", sellingPrice: "", unit: "pcs", imageUrl: "", isVisible: true, stockStatus: "in_stock" })
+    setNewProduct({ name: "", category: "", originalPrice: "", sellingPrice: "", unit: "pcs", imageUrl: "", galleryImages: [], description: "", isVisible: true, stockStatus: "in_stock" })
     setIsAddProductOpen(false)
     toast({ title: "Product added to shop catalog" })
   }
@@ -150,6 +176,7 @@ export default function ShopManagerPage() {
     if (!editingProduct) return
     actions.updateShopProduct(editingProduct.id, {
       ...editingProduct,
+      originalPrice: parseFloat(editingProduct.originalPrice) || 0,
       sellingPrice: parseFloat(editingProduct.sellingPrice) || 0
     })
     setEditingProduct(null)
@@ -159,7 +186,6 @@ export default function ShopManagerPage() {
   const handleDeleteConfirm = () => {
     if (deletePass === "specsxr") {
       if (deleteId) {
-        // This only deletes from shopProducts collection
         actions.deleteShopProduct(deleteId)
         setDeleteId(null)
         setDeletePass("")
@@ -174,9 +200,12 @@ export default function ShopManagerPage() {
     actions.addShopProduct({
       name: p.name,
       category: p.category || "",
+      originalPrice: p.sellingPrice || 0,
       sellingPrice: p.sellingPrice || 0,
       unit: p.unit || "pcs",
       imageUrl: p.imageUrl || "",
+      galleryImages: p.reviewImages || [],
+      description: p.description || "",
       isVisible: true,
       stockStatus: (p.stock || 0) > 0 ? "in_stock" : "out_of_stock"
     })
@@ -187,7 +216,6 @@ export default function ShopManagerPage() {
     return shopProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
   }, [shopProducts, search])
 
-  // Filter products that are NOT already in the web catalog to prevent duplicate imports
   const importableProducts = useMemo(() => {
     return inventoryProducts.filter(ip => 
       !shopProducts.some(sp => sp.name.toLowerCase().trim() === ip.name.toLowerCase().trim())
@@ -258,7 +286,6 @@ export default function ShopManagerPage() {
                 </TabsList>
 
                 <div className="p-6 md:p-8 bg-white max-h-[65vh] overflow-y-auto">
-                  {/* General Tab */}
                   <TabsContent value="general" className="space-y-8 mt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
@@ -290,7 +317,6 @@ export default function ShopManagerPage() {
                     </div>
                   </TabsContent>
 
-                  {/* Customization Tab */}
                   <TabsContent value="content" className="space-y-6 mt-0">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1 flex items-center gap-2">
@@ -302,16 +328,14 @@ export default function ShopManagerPage() {
                         placeholder="Welcome to our shop! Feel free to explore our collection..."
                         className="w-full min-h-[120px] p-4 rounded-2xl bg-muted/20 border-none font-medium text-sm text-primary focus:ring-2 focus:ring-accent outline-none"
                       />
-                      <p className="text-[9px] font-bold text-muted-foreground italic px-1">This message will appear at the top of your shop gallery.</p>
                     </div>
                   </TabsContent>
 
-                  {/* A to Z Inventory Control Tab */}
                   <TabsContent value="products" className="space-y-6 mt-0">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b pb-4">
                       <div>
                         <h4 className="text-xs font-black uppercase text-primary">Web Catalog Manager</h4>
-                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Operations here only affect the website</p>
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Separate from main inventory</p>
                       </div>
                       <div className="flex gap-2 w-full md:w-auto">
                         <div className="relative flex-1 md:w-64">
@@ -329,7 +353,7 @@ export default function ShopManagerPage() {
 
                     <div className="grid gap-3">
                       {filteredProducts.length === 0 ? (
-                        <div className="py-12 text-center text-muted-foreground italic text-xs">Web catalog is empty. Click New or Import.</div>
+                        <div className="py-12 text-center text-muted-foreground italic text-xs">Web catalog is empty.</div>
                       ) : (
                         filteredProducts.map((p) => (
                           <div key={p.id} className="flex items-center justify-between p-3 bg-muted/5 rounded-2xl border border-black/5 hover:bg-muted/10 transition-all group">
@@ -389,17 +413,15 @@ export default function ShopManagerPage() {
       </div>
 
       {!user ? (
-        <Card className="bg-amber-50 border-amber-200 p-6 rounded-[2rem] flex items-start gap-4">
+        <Card className="bg-amber-50 border-amber-200 p-6 rounded-[2rem] flex items-start gap-4 mx-2">
           <AlertCircle className="w-6 h-6 text-amber-600 mt-1 shrink-0" />
           <div>
             <h4 className="font-black text-amber-800 uppercase text-sm">Cloud Login Required</h4>
-            <p className="text-xs font-medium text-amber-700/80 mt-1 leading-relaxed">
-              Your online shop needs a cloud connection to work publicly. Please go to the <b>Auth</b> page and connect your account first.
-            </p>
+            <p className="text-xs font-medium text-amber-700/80 mt-1">Please connect your account to activate your online shop.</p>
           </div>
         </Card>
       ) : (
-        <div className="flex-1 min-h-0 bg-white rounded-[2.5rem] overflow-hidden border-4 border-accent/10 shadow-2xl relative group">
+        <div className="flex-1 min-h-0 bg-white rounded-[2.5rem] overflow-hidden border-4 border-accent/10 shadow-2xl relative group mx-2 mb-2">
           {isActive ? (
             <>
               <iframe 
@@ -424,32 +446,26 @@ export default function ShopManagerPage() {
               <div className="space-y-2">
                 <h3 className="text-2xl font-black text-primary uppercase">Preview Offline</h3>
                 <p className="text-sm font-medium text-muted-foreground max-w-xs mx-auto">
-                  আপনার শপটি বর্তমানে বন্ধ আছে। সেটিংস থেকে <b>Active</b> করে সেভ করুন এখানে প্রিভিউ দেখার জন্য।
+                  Activate your shop from Admin Settings to see the live preview.
                 </p>
-                <Button variant="outline" className="mt-4 border-accent text-accent rounded-xl font-bold" onClick={() => setIsSettingsOpen(true)}>
-                  Open Admin Settings
-                </Button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* A to Z: Import from Inventory Dialog - Updated with Duplicate Prevention Filter */}
+      {/* Import Dialog */}
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden">
           <DialogHeader className="p-6 bg-accent/5 border-b">
             <DialogTitle className="text-primary font-black uppercase flex items-center gap-2">
               <Import className="w-5 h-5" /> Import from Inventory
             </DialogTitle>
-            <DialogDescription className="text-[10px] font-bold uppercase">Showing only items not in web catalog</DialogDescription>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] p-4">
             <div className="grid gap-2">
               {importableProducts.length === 0 ? (
-                <div className="py-10 text-center text-xs font-bold text-muted-foreground italic">
-                  All inventory items are already in your web catalog.
-                </div>
+                <div className="py-10 text-center text-xs font-bold text-muted-foreground italic">No new items to import.</div>
               ) : (
                 importableProducts.map(p => (
                   <div key={p.id} className="flex items-center justify-between p-3 border rounded-xl hover:bg-muted/10 transition-all">
@@ -463,103 +479,146 @@ export default function ShopManagerPage() {
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="p-4 bg-muted/20 border-t">
-            <Button variant="ghost" onClick={() => setIsImportOpen(false)}>Close</Button>
-          </DialogFooter>
+          <DialogFooter className="p-4 bg-muted/20 border-t"><Button variant="ghost" onClick={() => setIsImportOpen(false)}>Close</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* A to Z: Add Product Dialog */}
+      {/* Add Product Dialog */}
       <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-[2rem]">
-          <DialogHeader>
-            <DialogTitle className="text-primary font-black uppercase">Add Web Catalog Item</DialogTitle>
-            <DialogDescription className="text-[10px] font-bold">This will NOT affect your main inventory</DialogDescription>
+        <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto rounded-[2.5rem] p-0">
+          <DialogHeader className="p-6 bg-accent/5 border-b">
+            <DialogTitle className="text-primary font-black uppercase">New Web Catalog Item</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative w-28 h-28 rounded-2xl bg-muted flex items-center justify-center border-2 border-dashed overflow-hidden">
-                {newProduct.imageUrl ? <img src={newProduct.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-8 h-8 opacity-20" />}
-                <Label htmlFor="shop-new-image" className="absolute inset-0 cursor-pointer bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-white"><Upload /></Label>
-                <input id="shop-new-image" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'new')} />
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="relative w-full aspect-square rounded-2xl bg-muted flex items-center justify-center border-2 border-dashed overflow-hidden">
+                    {newProduct.imageUrl ? <img src={newProduct.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-10 h-10 opacity-20" />}
+                    <Label htmlFor="shop-new-image" className="absolute inset-0 cursor-pointer bg-black/40 opacity-0 hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white">
+                      <Upload className="w-6 h-6 mb-1" />
+                      <span className="text-[8px] font-black">MAIN PHOTO</span>
+                    </Label>
+                    <input id="shop-new-image" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'new')} />
+                  </div>
+                  <Label className="text-[9px] font-black uppercase opacity-50">Cover Photo</Label>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Product Name</Label><Input value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="h-11 rounded-xl" /></div>
+                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Category</Label><Input value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="h-11 rounded-xl" /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Old Price</Label><Input type="number" value={newProduct.originalPrice} onChange={e => setNewProduct({...newProduct, originalPrice: e.target.value})} className="h-11 rounded-xl text-red-600 font-bold" /></div>
+                  <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Sell Price</Label><Input type="number" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl text-green-600 font-bold" /></div>
+                </div>
+                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Unit Type</Label><Input value={newProduct.unit} onChange={e => setNewProduct({...newProduct, unit: e.target.value})} className="h-11 rounded-xl" /></div>
               </div>
             </div>
-            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Display Name</Label><Input value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="h-11" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Category</Label><Input value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="h-11" /></div>
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Web Price</Label><Input type="number" value={newProduct.sellingPrice} onChange={e => setNewProduct({...newProduct, sellingPrice: e.target.value})} className="h-11" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Stock Status</Label>
-                <Select value={newProduct.stockStatus} onValueChange={(val) => setNewProduct({...newProduct, stockStatus: val})}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                  </SelectContent>
-                </Select>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase flex items-center gap-2"><ImageIcon className="w-3 h-3 text-accent" /> Gallery Photos (Max 5)</Label>
+                <span className="text-[10px] font-bold text-accent">{newProduct.galleryImages.length}/5</span>
               </div>
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Unit</Label><Input value={newProduct.unit} onChange={e => setNewProduct({...newProduct, unit: e.target.value})} className="h-11" /></div>
+              <div className="grid grid-cols-5 gap-2">
+                {newProduct.galleryImages.map((img, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <button onClick={() => removeGalleryImage(idx, false)} className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                {newProduct.galleryImages.length < 5 && (
+                  <Label htmlFor="gallery-new" className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-accent/5 transition-all text-accent">
+                    <PlusCircle className="w-6 h-6" />
+                    <input id="gallery-new" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'gallery-new')} />
+                  </Label>
+                )}
+              </div>
             </div>
+
+            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Description (Optional)</Label><textarea value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full h-24 rounded-xl border p-3 text-xs" /></div>
           </div>
-          <DialogFooter><Button className="w-full h-14 bg-accent font-black uppercase" onClick={handleAddProduct}>Save Web Item</Button></DialogFooter>
+          <DialogFooter className="p-6 bg-muted/20 border-t"><Button className="w-full h-14 bg-accent font-black uppercase rounded-2xl" onClick={handleAddProduct}>Save Product to Web</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* A to Z: Edit Product Dialog */}
+      {/* Edit Product Dialog */}
       <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] overflow-y-auto rounded-[2rem]">
-          <DialogHeader><DialogTitle className="text-primary font-black uppercase">Edit Web Item Details</DialogTitle></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative w-28 h-28 rounded-2xl bg-muted flex items-center justify-center border-2 border-dashed overflow-hidden">
-                {editingProduct?.imageUrl ? <img src={editingProduct.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-8 h-8 opacity-20" />}
-                <Label htmlFor="shop-edit-image" className="absolute inset-0 cursor-pointer bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-white"><Upload /></Label>
-                <input id="shop-edit-image" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'edit')} />
+        <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto rounded-[2.5rem] p-0">
+          <DialogHeader className="p-6 bg-accent/5 border-b"><DialogTitle className="text-primary font-black uppercase">Edit Web Item</DialogTitle></DialogHeader>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="relative w-full aspect-square rounded-2xl bg-muted flex items-center justify-center border-2 border-dashed overflow-hidden">
+                    {editingProduct?.imageUrl ? <img src={editingProduct.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon className="w-10 h-10 opacity-20" />}
+                    <Label htmlFor="shop-edit-image" className="absolute inset-0 cursor-pointer bg-black/40 opacity-0 hover:opacity-100 flex flex-col items-center justify-center transition-opacity text-white">
+                      <Upload className="w-6 h-6 mb-1" />
+                      <span className="text-[8px] font-black">CHANGE COVER</span>
+                    </Label>
+                    <input id="shop-edit-image" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'edit')} />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Display Name</Label><Input value={editingProduct?.name || ""} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="h-11" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Category</Label><Input value={editingProduct?.category || ""} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="h-11" /></div>
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Web Price</Label><Input type="number" value={editingProduct?.sellingPrice || ""} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} className="h-11" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Stock Status</Label>
-                <Select value={editingProduct?.stockStatus || "in_stock"} onValueChange={(val) => setEditingProduct({...editingProduct, stockStatus: val})}>
-                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="in_stock">In Stock</SelectItem>
-                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase">Shop Visibility</Label>
-                <div className="flex items-center gap-2 h-11">
-                  <Switch checked={editingProduct?.isVisible !== false} onCheckedChange={(val) => setEditingProduct({...editingProduct, isVisible: val})} />
-                  <span className="text-[10px] font-bold">{editingProduct?.isVisible !== false ? 'Show' : 'Hide'}</span>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Product Name</Label><Input value={editingProduct?.name || ""} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} className="h-11 rounded-xl" /></div>
+                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Category</Label><Input value={editingProduct?.category || ""} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} className="h-11 rounded-xl" /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Old Price</Label><Input type="number" value={editingProduct?.originalPrice || ""} onChange={e => setEditingProduct({...editingProduct, originalPrice: e.target.value})} className="h-11 rounded-xl text-red-600 font-bold" /></div>
+                  <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Sell Price</Label><Input type="number" value={editingProduct?.sellingPrice || ""} onChange={e => setEditingProduct({...editingProduct, sellingPrice: e.target.value})} className="h-11 rounded-xl text-green-600 font-bold" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Stock Status</Label>
+                    <Select value={editingProduct?.stockStatus || "in_stock"} onValueChange={(val) => setEditingProduct({...editingProduct, stockStatus: val})}>
+                      <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent><SelectItem value="in_stock">In Stock</SelectItem><SelectItem value="out_of_stock">Out of Stock</SelectItem></SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase">Shop Status</Label>
+                    <div className="flex items-center gap-2 h-11"><Switch checked={editingProduct?.isVisible !== false} onCheckedChange={(val) => setEditingProduct({...editingProduct, isVisible: val})} /><span className="text-[9px] font-bold">{editingProduct?.isVisible !== false ? 'Shown' : 'Hidden'}</span></div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase flex items-center gap-2"><ImageIcon className="w-3 h-3 text-accent" /> Gallery Photos (Max 5)</Label>
+                <span className="text-[10px] font-bold text-accent">{(editingProduct?.galleryImages || []).length}/5</span>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {(editingProduct?.galleryImages || []).map((img: string, idx: number) => (
+                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <button onClick={() => removeGalleryImage(idx, true)} className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                {(editingProduct?.galleryImages || []).length < 5 && (
+                  <Label htmlFor="gallery-edit" className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-accent/5 transition-all text-accent">
+                    <PlusCircle className="w-6 h-6" />
+                    <input id="gallery-edit" type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'gallery-edit')} />
+                  </Label>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase">Description</Label><textarea value={editingProduct?.description || ""} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full h-24 rounded-xl border p-3 text-xs" /></div>
           </div>
-          <DialogFooter><Button className="w-full h-14 bg-primary font-black uppercase" onClick={handleUpdateProduct}>Save All Changes</Button></DialogFooter>
+          <DialogFooter className="p-6 bg-muted/20 border-t"><Button className="w-full h-14 bg-primary font-black uppercase rounded-2xl shadow-xl" onClick={handleUpdateProduct}>Save All Changes</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* A to Z: Delete Authorization Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <DialogContent className="sm:max-w-[400px] rounded-[2rem]">
           <DialogHeader>
-            <div className="flex items-center gap-3 text-destructive mb-2">
-              <div className="p-2 bg-red-50 rounded-xl"><Lock className="w-6 h-6" /></div>
-              <DialogTitle className="font-black uppercase tracking-tighter">Remove from Web Only</DialogTitle>
-            </div>
-            <DialogDescription className="text-xs">
-              Confirm 'specsxr' to remove this item from your online catalog. <b>This will NOT delete the item from your inventory.</b>
-            </DialogDescription>
+            <div className="flex items-center gap-3 text-destructive mb-2"><div className="p-2 bg-red-50 rounded-xl"><Lock className="w-6 h-6" /></div><DialogTitle className="font-black uppercase tracking-tighter">Web Catalog Wipe</DialogTitle></div>
+            <DialogDescription className="text-xs">Confirm 'specsxr' to remove from website. <b>Main inventory will not be affected.</b></DialogDescription>
           </DialogHeader>
           <div className="py-4"><Input type="password" placeholder="••••••••" className="h-14 text-center text-2xl font-black rounded-2xl" value={deletePass} onChange={e => setDeletePass(e.target.value)} /></div>
-          <DialogFooter><Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleDeleteConfirm}>Authorize & Remove from Web</Button></DialogFooter>
+          <DialogFooter><Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleDeleteConfirm}>Authorize & Wipe from Web</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

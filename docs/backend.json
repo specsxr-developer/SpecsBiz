@@ -39,10 +39,17 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "category": { "type": "string" },
-        "sellingPrice": { "type": "number" },
+        "originalPrice": { "type": "number", "description": "The struck-through old price" },
+        "sellingPrice": { "type": "number", "description": "The current offer price" },
         "stockStatus": { "type": "string", "enum": ["in_stock", "out_of_stock"] },
         "unit": { "type": "string" },
-        "imageUrl": { "type": "string" },
+        "imageUrl": { "type": "string", "description": "Main display image" },
+        "galleryImages": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Up to 5 additional gallery photos"
+        },
+        "description": { "type": "string" },
         "isVisible": { "type": "boolean", "default": true }
       },
       "required": ["id", "name"]
