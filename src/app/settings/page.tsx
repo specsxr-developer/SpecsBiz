@@ -123,7 +123,7 @@ function MasterDeveloperPanel() {
   if (user?.email !== 'specsxr@gmail.com') return null;
 
   return (
-    <Card className="border-red-500/30 shadow-2xl bg-white overflow-hidden ring-4 ring-red-500/5 rounded-[2.5rem]">
+    <Card className="border-red-500/30 shadow-2xl bg-white overflow-hidden ring-4 ring-red-500/5 rounded-[2.5rem] mb-8">
       <div className="bg-red-600 text-white p-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md border border-white/30">
@@ -210,7 +210,7 @@ function MasterDeveloperPanel() {
                     {c.isUsed && (
                       <div className="pl-14">
                         <p className="text-[9px] font-medium text-primary/60 flex items-center gap-1.5">
-                          <UserCheck className="w-3 h-3" /> Used by: <span className="font-bold text-primary">{c.userEmail}</span>
+                          <UserCheck className="w-3.5 h-3.5" /> Used by: <span className="font-bold text-primary">{c.userEmail}</span>
                         </p>
                       </div>
                     )}
@@ -351,7 +351,8 @@ export default function SettingsPage() {
             <CardContent>
               <Button className="w-full h-12 bg-accent rounded-xl font-bold gap-2" onClick={() => setIsExportOptionsOpen(true)}><FileText className="w-4 h-4" /> Export Data</Button>
             </CardContent>
-          </div>
+          </Card>
+        </div>
 
         {/* Danger Zone */}
         <Card className="border-red-500/50 bg-red-50/50 rounded-[2rem] overflow-hidden">
