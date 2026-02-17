@@ -40,8 +40,8 @@ function ShieldGuard({ children }: { children: React.ReactNode }) {
   const { data: codes, isLoading } = useCollection(codeQuery);
   const codeData = codes && codes.length > 0 ? codes[0] : null;
 
-  // Allow developer account always
-  if (user?.email === 'specsxr@gmail.com') return <>{children}</>;
+  // CRITICAL RECOVERY: Allow developer and special recovery account always
+  if (user?.email === 'specsxr@gmail.com' || user?.email === 'xrratul4763@gmail.com') return <>{children}</>;
 
   // Don't block the Auth page itself (required for registration flow)
   if (isAuthPage) return <>{children}</>;
