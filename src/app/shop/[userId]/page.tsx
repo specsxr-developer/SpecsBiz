@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useMemo, use } from "react"
@@ -17,7 +16,8 @@ import {
   ImageIcon,
   DollarSign,
   ShoppingCart,
-  Percent
+  Percent,
+  FileText
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
