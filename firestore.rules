@@ -3,75 +3,38 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
+    // চেক করে ইউজার লগইন করা আছে কিনা এবং সে কি এই ডাটার মালিক
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth != null && request.auth.uid == userId;
     }
 
+    // ইউজার ডিরেক্টরি এবং তার নিচের সবকিছুর জন্য রুলস
     match /users/{userId} {
-      // Allow owner full access to their own profile and sub-collections
+      
+      // মালিক হিসেবে নিজের পুরো ডিরেক্টরিতে সব করার অনুমতি (রিড এবং রাইট)
+      // এটি ছবি আপলোড এবং ডিলিট করার সমস্যা সমাধান করবে
       allow read, write: if isOwner(userId);
 
-      // Public access for Shop feature
+      // মালিকের ডিরেক্টরির ভেতরে থাকা সব সাব-কালেকশনের জন্য মালিকের পূর্ণ ক্ষমতা
+      match /{allPaths=**} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // কাস্টমারদের জন্য পাবলিক রিড এক্সেস (যাতে তারা আপনার ওয়েবসাইট দেখতে পারে)
       match /products/{productId} {
-        allow get, list: if true; 
-        allow write: if isOwner(userId);
+        allow get, list: if true;
       }
 
       match /shopProducts/{productId} {
-        allow get, list: if true; 
-        allow write: if isOwner(userId);
+        allow get, list: if true;
       }
 
       match /shopConfig/{configId} {
-        allow get: if true; 
-        allow write: if isOwner(userId);
-      }
-
-      match /sales/{saleId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
-      }
-
-      match /procurements/{procurementId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
-      }
-
-      match /aiMessages/{messageId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
-      }
-
-      match /advisorMessages/{messageId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
-      }
-
-      match /customers/{customerId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
-
-        match /bakiRecords/{recordId} {
-          allow get, list: if isOwner(userId);
-          allow write: if isOwner(userId);
-        }
-      }
-
-      match /notes/{noteId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
-      }
-
-      match /reports/{reportId} {
-        allow get, list: if isOwner(userId);
-        allow write: if isOwner(userId);
+        allow get: if true;
       }
     }
 
+    // অন্য কোনো পাথ সরাসরি এক্সেস করা যাবে না
     match /{path=**} {
       allow read, write: if false;
     }
