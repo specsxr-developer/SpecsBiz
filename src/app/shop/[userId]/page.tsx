@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, use } from "react"
+import { useState, useMemo, use, useEffect } from "react"
 import { 
   Lock, 
   Store, 
@@ -56,6 +56,13 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
   }, [db, userId]);
 
   const { data: config, isLoading: configLoading } = useDoc(shopConfigRef);
+
+  // Auto-unlock if no access code is set
+  useEffect(() => {
+    if (config && (!config.accessCode || config.accessCode.trim() === "" || config.accessCode === "0")) {
+      setIsUnlocked(true);
+    }
+  }, [config]);
 
   // Fetch Public Products
   const shopProductsQuery = useMemoFirebase(() => {

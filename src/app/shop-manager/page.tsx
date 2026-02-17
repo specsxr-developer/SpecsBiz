@@ -331,11 +331,11 @@ export default function ShopManagerPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">{t.shopName}</Label>
-                        <Input value={shopName} onChange={e => setShopName(e.target.value)} className="h-14 rounded-2xl bg-muted/20 border-none font-bold text-primary" />
+                        <input value={shopName} onChange={e => setShopName(e.target.value)} className="w-full h-14 px-4 rounded-2xl bg-muted/20 border-none font-bold text-primary outline-none focus:ring-2 focus:ring-accent" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">{t.shopCode}</Label>
-                        <Input value={accessCode} onChange={e => setAccessCode(e.target.value)} className="h-14 rounded-2xl bg-muted/20 border-none font-bold text-primary" />
+                        <input value={accessCode} onChange={e => setAccessCode(e.target.value)} className="w-full h-14 px-4 rounded-2xl bg-muted/20 border-none font-bold text-primary outline-none focus:ring-2 focus:ring-accent" />
                       </div>
                     </div>
 
@@ -343,31 +343,31 @@ export default function ShopManagerPage() {
                       <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1 flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5 text-green-600" /> WhatsApp Number (Contact)
                       </Label>
-                      <Input 
+                      <input 
                         placeholder="88017xxxxxxxx" 
                         value={whatsappNumber} 
                         onChange={e => setWhatsappNumber(e.target.value)} 
-                        className="h-14 rounded-2xl bg-muted/20 border-none font-bold text-primary" 
+                        className="w-full h-14 px-4 rounded-2xl bg-muted/20 border-none font-bold text-primary outline-none focus:ring-2 focus:ring-accent" 
                       />
                       <p className="text-[9px] font-medium text-muted-foreground ml-1 italic">* Enter with country code, no "+" sign. Example: 8801712345678</p>
                     </div>
 
                     <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-[1.5rem] space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-3">
                           <Share2 className="w-5 h-5 text-emerald-600" />
                           <h4 className="text-xs font-black uppercase text-emerald-900">{t.shareLink}</h4>
                         </div>
                         <Badge className="bg-emerald-100 text-emerald-700 border-none text-[8px] font-black uppercase h-5">Public</Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <div 
                           onClick={copyToClipboard}
-                          className="flex-1 bg-white border border-emerald-200 p-3 rounded-xl truncate text-[10px] font-mono text-emerald-800 shadow-inner cursor-pointer hover:bg-emerald-50/50 transition-colors"
+                          className="flex-1 bg-white border border-emerald-200 p-3 rounded-xl truncate text-[10px] font-mono text-emerald-800 shadow-inner cursor-pointer hover:bg-emerald-50/50 transition-all min-w-0"
                         >
                           {shopUrl || 'Login required'}
                         </div>
-                        <Button variant="outline" size="sm" className="bg-white border-emerald-200 text-emerald-700 font-bold rounded-xl" onClick={copyToClipboard} disabled={!user}>
+                        <Button variant="outline" size="sm" className="bg-white border-emerald-200 text-emerald-700 font-bold rounded-xl shrink-0" onClick={copyToClipboard} disabled={!user}>
                           <Copy className="w-4 h-4" />
                         </Button>
                       </div>
