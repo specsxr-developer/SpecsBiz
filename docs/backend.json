@@ -127,8 +127,9 @@
         "isUsed": { "type": "boolean" },
         "userId": { "type": "string" },
         "userEmail": { "type": "string" },
-        "assignedTo": { "type": "string", "description": "Name or note about who this code is for." },
-        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "assignedTo": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive", "pending_deletion", "deleted"] },
+        "deleteRequestedAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },

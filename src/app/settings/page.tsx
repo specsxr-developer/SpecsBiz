@@ -27,7 +27,9 @@ import {
   Power,
   Copy,
   Edit2,
-  Save
+  Save,
+  Clock,
+  RotateCcw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -56,8 +58,8 @@ import { useToast } from "@/hooks/use-toast";
 import { translations } from "@/lib/translations";
 import { verifyAiKey } from "@/ai/flows/verify-ai-key";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, setDoc, updateDoc, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, doc, setDoc, updateDoc, query, orderBy, serverTimestamp, deleteDoc, getDocs, writeBatch } from "firebase/firestore";
 
 /**
  * MASTER ADMIN PANEL
@@ -115,6 +117,47 @@ function MasterDeveloperPanel() {
     }
   };
 
+  const handleCancelDelete = async (code: string) => {
+    try {
+      await updateDoc(doc(db, 'registrationCodes', code), { 
+        status: 'active', 
+        deleteRequestedAt: null 
+      });
+      toast({ title: "Deletion Cancelled" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Failed to cancel" });
+    }
+  };
+
+  const handleFinalConfirmDelete = async (code: string, userId: string) => {
+    if (!db) return;
+    try {
+      // 1. Wipe User's Main Firestore Data (Products, Sales, Customers)
+      const userRef = doc(db, 'users', userId);
+      const subCollections = ['products', 'sales', 'customers', 'procurements', 'aiMessages', 'advisorMessages', 'notes'];
+      
+      for (const coll of subCollections) {
+        const snap = await getDocs(collection(db, 'users', userId, coll));
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      
+      // 2. Delete User Profile
+      await deleteDoc(userRef);
+
+      // 3. Update Code Status to Deleted
+      await updateDoc(doc(db, 'registrationCodes', code), { 
+        status: 'deleted',
+        isUsed: true // Keep it as used to prevent re-registration with same code
+      });
+
+      toast({ title: "Account & Data Permanently Wiped" });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Wipe failed", description: "Internal storage error." });
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Copied to clipboard" });
@@ -146,17 +189,21 @@ function MasterDeveloperPanel() {
             <div className="divide-y">
               {codes?.map((c) => {
                 const isInactive = c.status === 'inactive';
-                const isPending = !c.isUsed && !isInactive;
-                const isActive = c.isUsed && !isInactive;
+                const isPendingDel = c.status === 'pending_deletion';
+                const isDeleted = c.status === 'deleted';
+                const isActive = c.isUsed && !isInactive && !isPendingDel && !isDeleted;
+                const isUnused = !c.isUsed && !isInactive && !isPendingDel && !isDeleted;
 
                 return (
-                  <div key={c.id} className="p-4 space-y-3 hover:bg-red-50/30 transition-all">
+                  <div key={c.id} className={cn("p-4 space-y-3 transition-all", isPendingDel ? "bg-red-50" : "hover:bg-red-50/30")}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className={cn(
                           "h-10 w-10 rounded-xl flex items-center justify-center font-black text-xs border shadow-sm",
                           isActive ? "bg-green-50 text-green-700 border-green-100" : 
                           isInactive ? "bg-red-50 text-red-700 border-red-100" :
+                          isPendingDel ? "bg-orange-50 text-orange-700 border-orange-100" :
+                          isDeleted ? "bg-gray-50 text-gray-700 border-gray-100" :
                           "bg-amber-50 text-amber-700 border-amber-100"
                         )}>
                           {c.code.slice(0, 2)}
@@ -168,13 +215,7 @@ function MasterDeveloperPanel() {
                           </div>
                           {editingCodeId === c.id ? (
                             <div className="flex items-center gap-2 mt-1">
-                              <Input 
-                                size={1} 
-                                className="h-7 text-[10px] w-32" 
-                                placeholder="Assign to name..." 
-                                value={assignName} 
-                                onChange={e => setAssignName(e.target.value)} 
-                              />
+                              <Input size={1} className="h-7 text-[10px] w-32" placeholder="Assign to name..." value={assignName} onChange={e => setAssignName(e.target.value)} />
                               <Button size="icon" className="h-7 w-7 bg-green-600" onClick={() => handleUpdateAssignedTo(c.code)}><Save className="w-3 h-3" /></Button>
                               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingCodeId(null)}><X className="w-3 h-3" /></Button>
                             </div>
@@ -195,19 +236,37 @@ function MasterDeveloperPanel() {
                         <div className="text-right mr-2">
                           <p className="text-[8px] font-black uppercase opacity-40">Status</p>
                           <Badge className={cn(
-                            "border-none text-[8px] font-black h-5", 
-                            isActive ? "bg-green-500" : isInactive ? "bg-red-500" : "bg-amber-500"
+                            "border-none text-[8px] font-black h-5 uppercase", 
+                            isActive ? "bg-green-500" : isInactive ? "bg-red-500" : isPendingDel ? "bg-orange-500" : isDeleted ? "bg-gray-500" : "bg-amber-500"
                           )}>
-                            {isInactive ? 'INACTIVE' : (isActive ? 'ACTIVE' : 'PENDING')}
+                            {c.status === 'active' && c.isUsed ? 'ACTIVE' : c.status.replace('_', ' ')}
                           </Badge>
                         </div>
                         <Switch 
-                          checked={!isInactive} 
+                          checked={!isInactive && !isDeleted} 
                           onCheckedChange={() => toggleUserStatus(c.code, c.status)} 
+                          disabled={isDeleted || isPendingDel}
                         />
                       </div>
                     </div>
-                    {c.isUsed && (
+
+                    {isPendingDel && (
+                      <div className="pl-14 pt-2 flex flex-col gap-2">
+                        <p className="text-[10px] font-black text-red-600 flex items-center gap-1.5 uppercase">
+                          <AlertTriangle className="w-3.5 h-3.5" /> User requested permanent deletion
+                        </p>
+                        <div className="flex gap-2">
+                          <Button size="sm" className="h-8 bg-red-600 hover:bg-red-700 text-[9px] font-black uppercase rounded-lg" onClick={() => handleFinalConfirmDelete(c.code, c.userId)}>
+                            <Trash2 className="w-3 h-3 mr-1" /> Confirm Delete & Wipe
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 border-primary text-primary text-[9px] font-black uppercase rounded-lg" onClick={() => handleCancelDelete(c.code)}>
+                            <RotateCcw className="w-3 h-3 mr-1" /> Cancel Delete
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {c.isUsed && !isDeleted && (
                       <div className="pl-14">
                         <p className="text-[9px] font-medium text-primary/60 flex items-center gap-1.5">
                           <UserCheck className="w-3.5 h-3.5" /> Used by: <span className="font-bold text-primary">{c.userEmail}</span>
@@ -229,19 +288,30 @@ function MasterDeveloperPanel() {
 }
 
 export default function SettingsPage() {
+  const { user } = useUser();
+  const db = useFirestore();
   const { products, sales, aiApiKey, aiModel, language, actions } = useBusinessData();
   const { toast } = useToast();
   const t = translations[language];
   
   const [isResetOpen, setIsResetOpen] = useState(false);
+  const [isDeleteAccOpen, setIsDeleteAccOpen] = useState(false);
   const [isExportOptionsOpen, setIsExportOptionsOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [deleteCodeInput, setDeleteCodeInput] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [newAiKey, setNewAiKey] = useState(aiApiKey || "");
   const [isVerifying, setIsVerifying] = useState(false);
   const [detectedModel, setDetectedModel] = useState<string | null>(aiModel || null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  // Fetch User Profile to check used code for deletion
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user?.uid || !db) return null;
+    return doc(db, 'users', user.uid);
+  }, [user?.uid, db]);
+  const { data: profile } = useDoc(userProfileRef);
 
   useEffect(() => {
     setNewAiKey(aiApiKey || "");
@@ -280,6 +350,27 @@ export default function SettingsPage() {
       toast({ title: "System Reset" });
     } else {
       toast({ title: "Wrong Password", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteAccountRequest = async () => {
+    if (!profile?.usedCode || !db) return;
+    if (deleteCodeInput.toUpperCase() === profile.usedCode.toUpperCase()) {
+      setIsDeleting(true);
+      try {
+        await updateDoc(doc(db, 'registrationCodes', profile.usedCode), {
+          status: 'pending_deletion',
+          deleteRequestedAt: serverTimestamp()
+        });
+        toast({ title: "Deletion Request Sent", description: "Account will be wiped in 3 days." });
+        setIsDeleteAccOpen(false);
+      } catch (e) {
+        toast({ variant: "destructive", title: "Request failed" });
+      } finally {
+        setIsDeleting(false);
+      }
+    } else {
+      toast({ variant: "destructive", title: "Invalid Activation Code" });
     }
   };
 
@@ -357,11 +448,23 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <Card className="border-red-500/50 bg-red-50/50 rounded-[2rem] overflow-hidden">
           <CardHeader className="bg-red-500/10"><CardTitle className="text-sm font-black text-red-600 uppercase flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {t.dangerZone}</AlertTriangle></CardHeader>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
+          <CardContent className="p-6 space-y-6">
+            <div className="flex justify-between items-center border-b border-red-500/10 pb-4">
               <p className="text-xs font-bold text-red-700">Wipe all data from cloud and local.</p>
               <Button variant="destructive" className="rounded-xl font-black text-[10px] uppercase" onClick={() => setIsResetOpen(true)}>{t.resetSystem}</Button>
             </div>
+            
+            {user?.email !== 'specsxr@gmail.com' && (
+              <div className="flex justify-between items-center">
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-red-800 uppercase">Permanently Delete Account</p>
+                  <p className="text-[10px] text-red-600/70 font-medium">Cloud account and all linked data will be wiped.</p>
+                </div>
+                <Button variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 rounded-xl font-black text-[10px] uppercase h-10 px-6" onClick={() => setIsDeleteAccOpen(true)}>
+                  Delete Forever
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -373,6 +476,45 @@ export default function SettingsPage() {
             <Input type="password" value={password} onChange={e => setPassword(e.target.value)} className="h-14 text-center text-2xl font-black rounded-2xl" placeholder="••••••••" />
           </div>
           <DialogFooter><Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase" onClick={handleReset} disabled={isDeleting}>Confirm Format</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteAccOpen} onOpenChange={setIsDeleteAccOpen}>
+        <DialogContent className="rounded-[2.5rem] sm:max-w-[450px]">
+          <DialogHeader>
+            <div className="mx-auto bg-red-100 p-4 rounded-full w-fit mb-4"><ShieldAlert className="w-10 h-10 text-red-600" /></div>
+            <DialogTitle className="text-center text-2xl font-black text-primary uppercase">Security Verification</DialogTitle>
+            <DialogDescription className="text-center font-medium text-sm">
+              Sir, to permanently delete your account, please enter your original **Activation Code** received from the developer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Your Activation Code</Label>
+              <Input 
+                placeholder="XXXXXX" 
+                value={deleteCodeInput} 
+                onChange={e => setDeleteCodeInput(e.target.value)} 
+                className="h-16 text-3xl font-black text-center bg-red-50 border-red-100 rounded-2xl tracking-[5px] text-red-700" 
+              />
+            </div>
+            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-[10px] text-amber-800 leading-relaxed font-bold">
+                NOTE: You will have **3 days** before the data is permanently wiped. Contact developer if you wish to cancel during this time.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="destructive" 
+              className="w-full h-16 rounded-2xl font-black uppercase text-lg shadow-xl transition-all active:scale-95" 
+              onClick={handleDeleteAccountRequest} 
+              disabled={isDeleting || !deleteCodeInput}
+            >
+              {isDeleting ? <Loader2 className="w-6 h-6 animate-spin" /> : "Request Permanent Deletion"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
