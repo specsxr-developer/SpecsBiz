@@ -51,6 +51,8 @@ export function NavMain() {
     setMounted(true)
   }, [])
 
+  if (pathname?.startsWith('/shop/')) return null;
+
   const t = translations[language]
   const logoUrl = PlaceHolderImages.find(img => img.id === 'app-logo')?.imageUrl
 

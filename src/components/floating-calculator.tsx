@@ -6,8 +6,10 @@ import { createPortal } from "react-dom"
 import { Calculator as CalcIcon, Eraser, X, ChevronLeft, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { usePathname } from "next/navigation"
 
 export function FloatingCalculator() {
+  const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [expression, setExpression] = useState("0")
   const [history, setHistory] = useState("")
@@ -18,7 +20,7 @@ export function FloatingCalculator() {
     setMounted(true)
   }, [])
 
-  if (!mounted) return null
+  if (!mounted || pathname?.startsWith('/shop/')) return null
 
   const handleNumber = (num: string) => {
     if (expression === "Error" || expression === "0") {

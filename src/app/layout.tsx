@@ -1,5 +1,7 @@
 
-import type { Metadata } from 'next';
+'use client';
+
+import { usePathname } from 'next/navigation';
 import './globals.css';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { NavMain } from "@/components/nav-main";
@@ -11,19 +13,18 @@ import { NotificationBell } from '@/components/notification-bell';
 import { FloatingCalculator } from '@/components/floating-calculator';
 import Script from 'next/script';
 
-export const metadata: Metadata = {
-  title: 'SpecsBiz | Smart Business Manager',
-  description: 'AI-powered business management platform',
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isShopPage = pathname?.startsWith('/shop/');
+
   return (
     <html lang="en">
       <head>
+        <title>SpecsBiz | Smart Business Manager</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -59,26 +60,32 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background text-foreground overflow-x-hidden">
         <FirebaseClientProvider>
           <BusinessProvider>
-            <SidebarProvider defaultOpen={true}>
-              <NavMain />
-              <SidebarInset className="max-w-full overflow-hidden">
-                <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 border-b px-2 md:px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10 w-full">
-                  <SidebarTrigger className="-ml-1" />
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-base md:text-xl font-headline font-bold text-primary truncate">
-                      <span className="hidden xs:inline">SpecsBiz | Smart Manager</span>
-                      <span className="xs:hidden">SpecsBiz</span>
-                    </h1>
-                  </div>
-                  <NotificationBell />
-                </header>
-                <main className="flex-1 p-2 md:p-6 pb-20 md:pb-6 w-full max-w-full overflow-x-hidden">
-                  {children}
-                </main>
-                <BottomNav />
-              </SidebarInset>
-            </SidebarProvider>
-            <FloatingCalculator />
+            {isShopPage ? (
+              <main className="w-full h-full min-h-screen">
+                {children}
+              </main>
+            ) : (
+              <SidebarProvider defaultOpen={true}>
+                <NavMain />
+                <SidebarInset className="max-w-full overflow-hidden">
+                  <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 border-b px-2 md:px-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10 w-full">
+                    <SidebarTrigger className="-ml-1" />
+                    <div className="flex-1 min-w-0">
+                      <h1 className="text-base md:text-xl font-headline font-bold text-primary truncate">
+                        <span className="hidden xs:inline">SpecsBiz | Smart Manager</span>
+                        <span className="xs:hidden">SpecsBiz</span>
+                      </h1>
+                    </div>
+                    <NotificationBell />
+                  </header>
+                  <main className="flex-1 p-2 md:p-6 pb-20 md:pb-6 w-full max-w-full overflow-x-hidden">
+                    {children}
+                  </main>
+                  <BottomNav />
+                </SidebarInset>
+              </SidebarProvider>
+            )}
+            {!isShopPage && <FloatingCalculator />}
             <Toaster />
           </BusinessProvider>
         </FirebaseClientProvider>
