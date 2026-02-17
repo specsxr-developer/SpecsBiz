@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useMemo, use, useEffect } from "react"
+import { useState, useMemo, use, useEffect, useRef } from "react"
 import { 
   Lock, 
   Store, 
@@ -42,6 +42,41 @@ import {
   DialogFooter
 } from "@/components/ui/dialog"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
+
+/**
+ * Internal Component to safely inject the Top Banner Ad
+ */
+function TopBannerAd() {
+  const adRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (adRef.current && adRef.current.childNodes.length === 0) {
+      const script1 = document.createElement('script')
+      script1.innerHTML = `
+        atOptions = {
+          'key' : '44d28b6f7e3567f40fd2e068a8084c0c',
+          'format' : 'iframe',
+          'height' : 60,
+          'width' : 468,
+          'params' : {}
+        };
+      `
+      const script2 = document.createElement('script')
+      script2.src = 'https://www.highperformanceformat.com/44d28b6f7e3567f40fd2e068a8084c0c/invoke.js'
+      script2.type = 'text/javascript'
+      
+      adRef.current.appendChild(script1)
+      adRef.current.appendChild(script2)
+    }
+  }, [])
+
+  return (
+    <div className="w-full flex flex-col items-center justify-center min-h-[80px] mb-6 animate-in fade-in duration-1000">
+      <div className="text-[8px] font-black uppercase text-primary/20 tracking-[0.4em] mb-2">Sponsored Partner</div>
+      <div ref={adRef} className="flex justify-center w-full overflow-x-auto no-scrollbar" />
+    </div>
+  )
+}
 
 export default function PublicShopPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params)
@@ -223,6 +258,9 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
             </CardContent>
           </Card>
         )}
+
+        {/* Top Banner Ad Placed Just Above Search Box */}
+        <TopBannerAd />
 
         <div className="relative group/search max-w-2xl mx-auto">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
