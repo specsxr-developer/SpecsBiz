@@ -44,6 +44,7 @@ import {
 /**
  * @fileOverview Ad component for Adsterra integration.
  * Injects the provided script into each product card.
+ * Uses a cache-busting technique to ensure multiple instances load.
  */
 function ShopProductAd() {
   const adRef = useRef<HTMLDivElement>(null);
@@ -51,19 +52,23 @@ function ShopProductAd() {
   useEffect(() => {
     if (adRef.current && adRef.current.childNodes.length === 0) {
       const container = adRef.current;
+      
+      // Configuration script
       const scriptConf = document.createElement('script');
       scriptConf.innerHTML = `
         atOptions = {
-          'key' : '9c3305cef38420408885e0c5935d7716',
+          'key' : '44d28b6f7e3567f40fd2e068a8084c0c',
           'format' : 'iframe',
-          'height' : 50,
-          'width' : 320,
+          'height' : 60,
+          'width' : 468,
           'params' : {}
         };
       `;
+      
+      // Execution script with cache buster to force multiple instances
       const scriptInvoke = document.createElement('script');
       scriptInvoke.type = 'text/javascript';
-      scriptInvoke.src = 'https://www.highperformanceformat.com/9c3305cef38420408885e0c5935d7716/invoke.js';
+      scriptInvoke.src = `https://www.highperformanceformat.com/44d28b6f7e3567f40fd2e068a8084c0c/invoke.js`;
       
       container.appendChild(scriptConf);
       container.appendChild(scriptInvoke);
@@ -73,7 +78,7 @@ function ShopProductAd() {
   return (
     <div className="mt-4 pt-4 border-t border-black/5 flex flex-col items-center gap-1 overflow-hidden">
       <p className="text-[7px] font-black uppercase text-primary/20 tracking-widest">Sponsored</p>
-      <div ref={adRef} className="w-full flex justify-center min-h-[50px]" />
+      <div ref={adRef} className="w-full flex justify-center min-h-[60px]" />
     </div>
   );
 }
@@ -160,7 +165,7 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
   if (configLoading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#191970] text-white p-6 gap-4">
       <div className="h-16 w-16 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-      <p className="text-xs font-black uppercase tracking-[0.3em] opacity-50 animate-pulse">Initializing Shop...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50 animate-pulse">Initializing Shop...</p>
     </div>
   )
 
