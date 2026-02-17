@@ -42,18 +42,16 @@ import {
 } from "@/components/ui/dialog"
 
 /**
- * @fileOverview Ad component for Adsterra integration.
- * Injects the provided script into each product card.
- * Uses a cache-busting technique to ensure multiple instances load.
+ * @fileOverview Top banner ad component for Adsterra integration.
+ * Placed above the search box as requested.
  */
-function ShopProductAd() {
+function ShopTopBannerAd() {
   const adRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (adRef.current && adRef.current.childNodes.length === 0) {
       const container = adRef.current;
       
-      // Configuration script
       const scriptConf = document.createElement('script');
       scriptConf.innerHTML = `
         atOptions = {
@@ -65,7 +63,6 @@ function ShopProductAd() {
         };
       `;
       
-      // Execution script with cache buster to force multiple instances
       const scriptInvoke = document.createElement('script');
       scriptInvoke.type = 'text/javascript';
       scriptInvoke.src = `https://www.highperformanceformat.com/44d28b6f7e3567f40fd2e068a8084c0c/invoke.js`;
@@ -76,7 +73,7 @@ function ShopProductAd() {
   }, []);
 
   return (
-    <div className="mt-4 pt-4 border-t border-black/5 flex flex-col items-center gap-1 overflow-hidden">
+    <div className="mb-8 flex flex-col items-center gap-1 overflow-hidden w-full">
       <p className="text-[7px] font-black uppercase text-primary/20 tracking-widest">Sponsored</p>
       <div ref={adRef} className="w-full flex justify-center min-h-[60px]" />
     </div>
@@ -238,6 +235,9 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
           </Card>
         )}
 
+        {/* Adsterra Banner Ad above search box */}
+        <ShopTopBannerAd />
+
         <div className="relative group/search max-w-2xl mx-auto">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search className="w-5 h-5 text-primary opacity-40 group-focus-within/search:opacity-100 group-focus-within/search:text-accent transition-all" />
@@ -314,9 +314,6 @@ export default function PublicShopPage({ params }: { params: Promise<{ userId: s
                       </div>
                       <Button onClick={() => setSelectedProduct(p)} variant="outline" className="h-12 px-6 rounded-2xl border-accent text-accent font-black uppercase text-[10px] tracking-widest hover:bg-accent hover:text-white transition-all gap-2">View Details <ChevronRight className="w-4 h-4" /></Button>
                     </div>
-
-                    {/* Integrated Adsterra Ad under every product */}
-                    <ShopProductAd />
                   </CardContent>
                 </Card>
               );
