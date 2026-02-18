@@ -20,6 +20,16 @@ export function FloatingCalculator() {
     setMounted(true)
   }, [])
 
+  // CRITICAL FIX: Blur any active input to hide the keyboard when calculator opens
+  useEffect(() => {
+    if (isOpen && typeof document !== 'undefined') {
+      const activeEl = document.activeElement as HTMLElement;
+      if (activeEl && typeof activeEl.blur === 'function') {
+        activeEl.blur();
+      }
+    }
+  }, [isOpen]);
+
   if (!mounted || pathname?.startsWith('/shop/')) return null
 
   const handleNumber = (num: string) => {
@@ -97,8 +107,15 @@ export function FloatingCalculator() {
         e.stopPropagation();
         onClick();
       }}
-      onPointerDown={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
+      // FIX: preventDefault on pointer events prevents focus shift and keyboard triggers
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       className={cn(
         "h-16 sm:h-18 text-xl sm:text-2xl font-black rounded-2xl transition-all active:scale-90 floating-calc-element shadow-sm border-none",
         className
@@ -113,8 +130,6 @@ export function FloatingCalculator() {
       {/* Floating Toggle Button */}
       <div 
         className="fixed bottom-40 md:bottom-48 right-6 md:right-8 z-[10001] print:hidden pointer-events-auto floating-calc-element"
-        onPointerDown={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
       >
         <Button
           onClick={(e) => {
@@ -122,7 +137,10 @@ export function FloatingCalculator() {
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           className="h-16 w-16 md:h-20 md:w-20 rounded-full shadow-[0_20px_50px_rgba(0,128,128,0.6)] bg-accent hover:bg-accent/90 border-4 border-white animate-in zoom-in duration-300 floating-calc-element transition-all active:scale-90"
           size="icon"
         >
@@ -165,6 +183,7 @@ export function FloatingCalculator() {
                   e.stopPropagation();
                   setIsOpen(false);
                 }}
+                onPointerDown={(e) => e.preventDefault()}
               >
                 <X className="w-6 h-6" />
               </Button>
